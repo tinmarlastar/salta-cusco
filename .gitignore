@@ -1,3 +1,5 @@
 .DS_Store
 __pycache__/
 tools/.cache-parcours.json
+.worktrees/
+.superpowers/

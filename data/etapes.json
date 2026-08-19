@@ -1,0 +1,268 @@
+{
+  "voyage": {
+    "titre": "Aventure des 4 Nations",
+    "sousTitre": "Horizons sud-américains, de Salta à Cusco",
+    "operateur": "Vintage Rides",
+    "duree": "15 jours, dont 12 jours de ride",
+    "formule": "Tour Leader",
+    "niveau": "Soutenu — Aventure",
+    "hebergement": "Standard",
+    "pension": "Pension complète",
+    "moto": "Royal Enfield Himalayan 450",
+    "distanceKm": 3036,
+    "pisteKm": 875,
+    "altitudeMaxM": 5152,
+    "photo": "img/etapes/hero-salar.jpg",
+    "presentation": "Une aventure moto à travers les merveilles andines de l'Amérique du Sud : quatre pays de haute altitude en quinze jours. Au départ de Salta, en Argentine, on traverse les paysages grandioses du nord chilien et du désert d'Atacama, puis le sud de la Bolivie et ses lagunes colorées, jusqu'à l'unique Salar de Uyuni, le plus vaste désert de sel du monde. Le périple continue en Bolivie avant d'atteindre les rives mystiques du lac Titicaca, le plus haut lac navigable de la planète, puis traverse le sud du Pérou pour s'achever à Cusco, porte d'entrée inca du monde andin.",
+    "pays": [
+      { "code": "AR", "nom": "Argentine", "drapeau": "🇦🇷", "couleur": "#6aa9d8" },
+      { "code": "CL", "nom": "Chili", "drapeau": "🇨🇱", "couleur": "#d96b5b" },
+      { "code": "BO", "nom": "Bolivie", "drapeau": "🇧🇴", "couleur": "#c9a227" },
+      { "code": "PE", "nom": "Pérou", "drapeau": "🇵🇪", "couleur": "#5fa87c" }
+    ],
+    "hebergements": [
+      "img/etapes/hebergement-1.jpg",
+      "img/etapes/hebergement-2.jpg",
+      "img/etapes/hebergement-3.jpg",
+      "img/etapes/hebergement-4.jpg",
+      "img/etapes/hebergement-5.jpg",
+      "img/etapes/hebergement-6.jpg"
+    ]
+  },
+
+  "etapes": [
+    {
+      "jour": 1,
+      "titre": "Arrivée à Salta",
+      "ride": false,
+      "pays": ["AR"],
+      "km": 0,
+      "kmPiste": 0,
+      "depart": { "nom": "Salta", "lat": -24.7859, "lon": -65.4117, "altitudeM": 1183 },
+      "arrivee": { "nom": "Salta", "lat": -24.7859, "lon": -65.4117, "altitudeM": 1183 },
+      "recit": "Dans une vallée fertile au pied de la Cordillère des Andes orientale se trouve Salta, la deuxième plus importante cité du nord de l'Argentine. Surnommée Salta la Linda, c'est la ville argentine qui a le mieux préservé son architecture coloniale : le Cabildo et la Cathédrale en sont de bons exemples, et l'église San Francisco est célèbre pour sa façade et ses murs rouges. L'équipe de Vintage Rides Argentina nous invite à un dîner barbecue dans ses locaux, pour faire connaissance et partager une première soirée. Nuit à l'hôtel sur la grande place de Salta.",
+      "points": [
+        { "nom": "Église San Francisco", "lat": -24.7897, "lon": -65.4085, "altitudeM": 1183, "note": "Façade et murs rouges, emblème de la ville coloniale." },
+        { "nom": "Locaux Vintage Rides Argentina", "lat": -24.7859, "lon": -65.4117, "altitudeM": 1183, "note": "Dîner barbecue de bienvenue et remise des motos." }
+      ],
+      "photos": ["img/etapes/j01-salta-san-francisco.jpg", "img/etapes/j01-locaux-vintage-rides.jpg"]
+    },
+    {
+      "jour": 2,
+      "titre": "Salta → Humahuaca",
+      "ride": true,
+      "pays": ["AR"],
+      "km": 280,
+      "kmPiste": 60,
+      "depart": { "nom": "Salta", "lat": -24.7859, "lon": -65.4117, "altitudeM": 1183 },
+      "arrivee": { "nom": "Humahuaca", "lat": -23.2044, "lon": -65.3489, "altitudeM": 2949 },
+      "recit": "Nous quittons Salta et empruntons la magnifique route de corniche sur la route 9 jusqu'à San Salvador de Jujuy, en direction du nord de l'Argentine. Nous nous dirigeons vers la merveilleuse Quebrada de Humahuaca sur une route asphaltée, et déjeunons dans la belle ville de Tilcara, célèbre pour son carnaval. Puis nous escaladons El Hornocal, la montagne aux quatorze couleurs cachée à 4 350 mètres d'altitude au cœur de la Quebrada. Nous passons la nuit dans le pittoresque village de Humahuaca, à 3 000 mètres, pour nous acclimater à l'altitude des jours suivants.",
+      "points": [
+        { "nom": "San Salvador de Jujuy", "lat": -24.1853, "lon": -65.2995, "altitudeM": 1271, "note": "Fin de la route de corniche de la route 9." },
+        { "nom": "Tilcara", "lat": -23.5769, "lon": -65.3934, "altitudeM": 2476, "note": "Déjeuner. Village célèbre pour son carnaval." },
+        { "nom": "El Hornocal", "lat": -23.1974, "lon": -65.1935, "altitudeM": 4330, "note": "La montagne aux quatorze couleurs, point haut du jour." }
+      ],
+      "photos": ["img/etapes/j02-humahuaca.jpg"]
+    },
+    {
+      "jour": 3,
+      "titre": "Humahuaca → Susques",
+      "ride": true,
+      "pays": ["AR"],
+      "km": 217,
+      "kmPiste": 15,
+      "depart": { "nom": "Humahuaca", "lat": -23.2044, "lon": -65.3489, "altitudeM": 2949 },
+      "arrivee": { "nom": "Susques", "lat": -23.3992, "lon": -66.3676, "altitudeM": 3609 },
+      "recit": "Aujourd'hui est un grand jour de moto. Après un délicieux café sur la place de Purmamarca, dont le marché régional nous ouvre ses portes, nous gravissons la plus impressionnante route asphaltée du pays, la Cuesta de Lipán. Une belle route qui grimpe à 4 200 mètres d'altitude et qui nous permet d'atteindre les imposantes Salinas Grandes, un lac salé volcanique que nous traversons à moto. Nous irons au milieu du lac salé pour un pique-nique inoubliable. Après plusieurs heures dans ce paysage lunaire, nous nous dirigeons vers Susques, le plus haut village d'Argentine accessible par asphalte, où nous dormons dans un hôtel de motards à 3 900 mètres.",
+      "points": [
+        { "nom": "Purmamarca", "lat": -23.7466, "lon": -65.4992, "altitudeM": 2323, "note": "Café sur la place et marché régional." },
+        { "nom": "Cuesta de Lipán", "lat": -23.6800, "lon": -65.6600, "altitudeM": 4170, "note": "La plus impressionnante route asphaltée d'Argentine." },
+        { "nom": "Salinas Grandes", "lat": -23.5964, "lon": -65.8823, "altitudeM": 3409, "note": "Traversée à moto et pique-nique au milieu du lac salé." }
+      ],
+      "photos": ["img/etapes/j03-salinas-grandes.jpg"]
+    },
+    {
+      "jour": 4,
+      "titre": "Susques → San Pedro de Atacama",
+      "ride": true,
+      "pays": ["AR", "CL"],
+      "km": 274,
+      "kmPiste": 0,
+      "depart": { "nom": "Susques", "lat": -23.3992, "lon": -66.3676, "altitudeM": 3609 },
+      "arrivee": { "nom": "San Pedro de Atacama", "lat": -22.9110, "lon": -68.2005, "altitudeM": 2444 },
+      "recit": "Aujourd'hui on passe au Chili. La première frontière du voyage, El Paso de Jama, à 4 200 mètres d'altitude, nous attend afin de traverser la cordillère des Andes d'est en ouest. Une zone totalement désolée où nous ne croiserons aucune âme pendant plus de 200 kilomètres à travers la montagne. L'arrivée au Chili par le désert d'Atacama est tout simplement splendide : une immensité comme peu d'endroits dans le monde, une vue à plus de 250 kilomètres à la ronde. Bienvenue dans le désert le plus aride du monde.",
+      "points": [
+        { "nom": "Paso de Jama", "lat": -23.2350, "lon": -67.0300, "altitudeM": 4200, "note": "Première frontière du voyage, Argentine → Chili.", "frontiere": true }
+      ],
+      "photos": ["img/etapes/j04-paso-de-jama.jpg"]
+    },
+    {
+      "jour": 5,
+      "titre": "San Pedro de Atacama → Laguna Colorada",
+      "ride": true,
+      "pays": ["CL", "BO"],
+      "km": 145,
+      "kmPiste": 100,
+      "depart": { "nom": "San Pedro de Atacama", "lat": -22.9110, "lon": -68.2005, "altitudeM": 2444 },
+      "arrivee": { "nom": "Laguna Colorada", "lat": -22.2063, "lon": -67.7794, "altitudeM": 4288 },
+      "recit": "D'Atacama au Sud Lipez. Nous prenons de la hauteur aujourd'hui et rentrons en Bolivie dès le matin. Nouveau paysage de frontière à plus de 4 400 mètres d'altitude, et s'ouvrent devant nous les grandes lagunes colorées du sud bolivien. Une piste sablonneuse et poussiéreuse de plus de 100 kilomètres nous attend cet après-midi. Un bon niveau off-road est nécessaire pour réaliser cette étape qui nous emmène dans l'un des recoins les plus isolés des Andes. Un spectacle pour les yeux et un vrai plaisir de pilotage sur ces pistes de haute montagne, avec des passages à plus de 5 000 mètres. Nous dormons dans un refuge à 4 400 mètres : rustique, mais authentique.",
+      "points": [
+        { "nom": "Hito Cajón", "lat": -22.8807, "lon": -67.7986, "altitudeM": 4483, "note": "Deuxième frontière : Chili → Bolivie, à 4 480 mètres.", "frontiere": true },
+        { "nom": "Laguna Verde", "lat": -22.7830, "lon": -67.8180, "altitudeM": 4355, "note": "Au pied du volcan Licancabur." },
+        { "nom": "Sol de Mañana", "lat": -22.4300, "lon": -67.7500, "altitudeM": 4885, "note": "Champ de geysers et de fumerolles, point haut de l'étape." }
+      ],
+      "photos": ["img/etapes/j05-laguna-colorada.jpg", "img/etapes/j05-lagunes-vue-aerienne.jpg"]
+    },
+    {
+      "jour": 6,
+      "titre": "Laguna Colorada → Uyuni",
+      "ride": true,
+      "pays": ["BO"],
+      "km": 285,
+      "kmPiste": 200,
+      "depart": { "nom": "Laguna Colorada", "lat": -22.2063, "lon": -67.7794, "altitudeM": 4288 },
+      "arrivee": { "nom": "Uyuni", "lat": -20.4628, "lon": -66.8239, "altitudeM": 3675 },
+      "recit": "La traversée du Grand Sud Lipez continue vers le nord, à travers les déserts et les volcans à plus de 5 500 mètres. Nous sommes seuls au monde. Nous croiserons sur notre chemin le mythique arbre de pierre bolivien, une incroyable formation rocheuse dessinée par les vents de ces dix derniers millions d'années. Une piste intense ce matin : de la tôle ondulée, du sable, de la poussière, jusqu'à retrouver la route nationale 5 qui nous conduira à la ville d'Uyuni, où nous passerons la nuit.",
+      "points": [
+        { "nom": "Árbol de Piedra", "lat": -22.0517, "lon": -67.8829, "altitudeM": 4576, "note": "Formation rocheuse sculptée par le vent, au milieu du désert de Siloli." }
+      ],
+      "photos": ["img/etapes/j06-arbol-de-piedra.jpg"]
+    },
+    {
+      "jour": 7,
+      "titre": "Uyuni → Tahua",
+      "ride": true,
+      "pays": ["BO"],
+      "km": 140,
+      "kmPiste": 140,
+      "depart": { "nom": "Uyuni", "lat": -20.4628, "lon": -66.8239, "altitudeM": 3675 },
+      "arrivee": { "nom": "Tahua", "lat": -19.9800, "lon": -67.6200, "altitudeM": 3661 },
+      "recit": "Le grand jour est arrivé : la traversée intégrale en moto du plus grand salar du monde. 11 000 km² de sel, que nous allons traverser sur 140 kilomètres. Une étendue d'un blanc pur à perte de vue. Ici on roule à la boussole, direction nord-ouest. On vise l'une des grandes îles en plein milieu du salar d'Uyuni, l'Isla Pescado. Nous organiserons un pique-nique inoubliable sur l'île, avec une vue unique sur le salar entouré de cactus centenaires de haute altitude. Sans nul doute, ce ride restera l'une des journées les plus mémorables dans la vie d'un motard. Arrivée en fin de journée au nord du salar, dans le petit village de Tahua, où nous dormirons dans un hôtel de sel. Un coucher de soleil splendide pour terminer une journée bien salée.",
+      "points": [
+        { "nom": "Colchani", "lat": -20.3000, "lon": -66.9333, "altitudeM": 3668, "note": "Entrée sur le salar, dernier village avant le sel." },
+        { "nom": "Isla Incahuasi", "lat": -20.2426, "lon": -67.6256, "altitudeM": 3707, "note": "L'île aux cactus centenaires, au milieu du désert de sel. Pique-nique." }
+      ],
+      "photos": ["img/etapes/j07-salar-uyuni.jpg", "img/etapes/hero-salar.jpg"]
+    },
+    {
+      "jour": 8,
+      "titre": "Tahua → Oruro",
+      "ride": true,
+      "pays": ["BO"],
+      "km": 305,
+      "kmPiste": 45,
+      "depart": { "nom": "Tahua", "lat": -19.9800, "lon": -67.6200, "altitudeM": 3661 },
+      "arrivee": { "nom": "Oruro", "lat": -17.9696, "lon": -67.1147, "altitudeM": 3730 },
+      "recit": "On continue notre traversée de la Bolivie du sud au nord, en démarrant la journée par 45 kilomètres de piste autour du volcan Tunupa, culminant à plus de 5 400 mètres. Un vrai spectacle. Déjeuner au bord du lac Poopó, dans le village de Challapata, pour s'imprégner de la culture andine. Puis nous reprenons la route en direction d'Oruro, la mythique ville minière d'altitude du pays, très connue pour son carnaval classé par l'Unesco.",
+      "points": [
+        { "nom": "Volcán Tunupa", "lat": -19.8333, "lon": -67.6413, "altitudeM": 5152, "note": "45 kilomètres de piste autour du volcan qui surplombe le salar." },
+        { "nom": "Challapata", "lat": -18.9022, "lon": -66.7751, "altitudeM": 3727, "note": "Déjeuner au bord du lac Poopó." }
+      ],
+      "photos": ["img/etapes/j08-carnaval-oruro.jpg"]
+    },
+    {
+      "jour": 9,
+      "titre": "Oruro → Copacabana",
+      "ride": true,
+      "pays": ["BO"],
+      "km": 350,
+      "kmPiste": 70,
+      "depart": { "nom": "Oruro", "lat": -17.9696, "lon": -67.1147, "altitudeM": 3730 },
+      "arrivee": { "nom": "Copacabana", "lat": -16.1666, "lon": -69.0856, "altitudeM": 3863 },
+      "recit": "En route vers le lac navigable le plus haut du monde : le majestueux lac Titicaca. On alterne entre asphalte et pistes poussiéreuses pour remonter plein nord, en évitant volontairement La Paz, mégalopole d'un million d'habitants à plus de 3 500 mètres d'altitude, difficile d'accès pour un groupe de motos. On préférera le calme des plages du lac Titicaca et les communautés d'habitants vivant sur des îles flottantes. Arrivée à Copacabana, où nous passerons deux nuits.",
+      "points": [
+        { "nom": "La Paz (contournée)", "lat": -16.4956, "lon": -68.1336, "altitudeM": 3640, "note": "Volontairement évitée : une fourmilière difficile d'accès à moto." }
+      ],
+      "photos": ["img/etapes/j09-titicaca-nuit.jpg"]
+    },
+    {
+      "jour": 10,
+      "titre": "Journée libre à Copacabana",
+      "ride": false,
+      "pays": ["BO"],
+      "km": 0,
+      "kmPiste": 0,
+      "depart": { "nom": "Copacabana", "lat": -16.1666, "lon": -69.0856, "altitudeM": 3863 },
+      "arrivee": { "nom": "Copacabana", "lat": -16.1666, "lon": -69.0856, "altitudeM": 3863 },
+      "recit": "Journée de pause bien méritée pour tout le monde, sur la plus belle plage bolivienne, à 3 500 mètres d'altitude. Pour les plus aventuriers, l'Isla del Sol, à 45 minutes de bateau, offre une incroyable randonnée à travers les ruines incas. Les pêcheurs autochtones nous garderont leurs meilleurs poissons du jour pour un grand barbecue en fin de journée, accompagné de l'un des plus beaux couchers de soleil d'Amérique du Sud.",
+      "points": [
+        { "nom": "Isla del Sol", "lat": -16.0180, "lon": -69.1770, "altitudeM": 3993, "note": "45 minutes de bateau. Randonnée à travers les ruines incas." }
+      ],
+      "photos": ["img/etapes/j10-coucher-titicaca.jpg"]
+    },
+    {
+      "jour": 11,
+      "titre": "Copacabana → Llachón",
+      "ride": true,
+      "pays": ["BO", "PE"],
+      "km": 240,
+      "kmPiste": 50,
+      "depart": { "nom": "Copacabana", "lat": -16.1666, "lon": -69.0856, "altitudeM": 3863 },
+      "arrivee": { "nom": "Llachón", "lat": -15.7229, "lon": -69.7839, "altitudeM": 3873 },
+      "recit": "Ce matin nous quittons la Bolivie pour passer notre dernière frontière du voyage et entrer au Pérou. Nous longeons les côtes du lac Titicaca sur une splendide route et nous découvrons la culture péruvienne au fil de la journée. Quelques kilomètres de piste à travers les champs de quinoa et les élevages de cuys nous permettent d'éviter les grandes villes de Puno et de Juliaca. La communauté du village de Llachón nous attend afin de partager un grand moment de vie locale.",
+      "points": [
+        { "nom": "Kasani", "lat": -16.2269, "lon": -69.0952, "altitudeM": 3857, "note": "Troisième et dernière frontière : Bolivie → Pérou.", "frontiere": true },
+        { "nom": "Puno (évitée)", "lat": -15.8402, "lon": -70.0219, "altitudeM": 3830, "note": "Contournée par la piste, à travers champs de quinoa et élevages de cuys." }
+      ],
+      "photos": ["img/etapes/j11-route-titicaca.jpg", "img/etapes/j11-communaute-llachon.jpg"]
+    },
+    {
+      "jour": 12,
+      "titre": "Llachón → Macusani",
+      "ride": true,
+      "pays": ["PE"],
+      "km": 275,
+      "kmPiste": 115,
+      "depart": { "nom": "Llachón", "lat": -15.7229, "lon": -69.7839, "altitudeM": 3873 },
+      "arrivee": { "nom": "Macusani", "lat": -14.0572, "lon": -70.4570, "altitudeM": 4341 },
+      "recit": "Nous quittons le lac Titicaca en direction des plus hauts sommets des Andes. Hérissée de petites chaînes montagneuses, de beaux reliefs et de corniches enneigées, la route nous conduit vers Macusani. On remonte en altitude par une magnifique route asphaltée aux mille virages.",
+      "points": [
+        { "nom": "Juliaca (évitée)", "lat": -15.4932, "lon": -70.1356, "altitudeM": 3825, "note": "Contournée elle aussi, pour rester sur les petites routes." }
+      ],
+      "photos": ["img/etapes/j12-altiplano-macusani.jpg"]
+    },
+    {
+      "jour": 13,
+      "titre": "Macusani → Quince Mil",
+      "ride": true,
+      "pays": ["PE"],
+      "km": 225,
+      "kmPiste": 0,
+      "depart": { "nom": "Macusani", "lat": -14.0572, "lon": -70.4570, "altitudeM": 4341 },
+      "arrivee": { "nom": "Quince Mil", "lat": -13.2308, "lon": -70.7543, "altitudeM": 642 },
+      "recit": "Après une nuit en altitude sur les plateaux andins, nous entamons une descente progressive vers les forêts luxuriantes du bassin amazonien. Une journée très roulante, facile, sur de superbes routes, avec un beau dénivelé négatif de 3 700 mètres jusqu'aux portes de la jungle. Le murmure des insectes nocturnes nous bercera pour une nuit paisible en pleine nature tropicale.",
+      "points": [],
+      "photos": ["img/etapes/j13-portes-amazonie.jpg"]
+    },
+    {
+      "jour": 14,
+      "titre": "Quince Mil → Cusco",
+      "ride": true,
+      "pays": ["PE"],
+      "km": 300,
+      "kmPiste": 80,
+      "depart": { "nom": "Quince Mil", "lat": -13.2308, "lon": -70.7543, "altitudeM": 642 },
+      "arrivee": { "nom": "Cusco", "lat": -13.5168, "lon": -71.9788, "altitudeM": 3403 },
+      "recit": "Nous quittons la forêt tropicale pour retrouver l'air vif des hauteurs andines. Une longue étape aujourd'hui, mais facile, grâce à de belles routes goudronnées sur presque tout le trajet. Nous empruntons la spectaculaire Interocéanique, cette route moderne qui relie l'Atlantique aux Andes, puis longeons la rivière Urubamba jusqu'à la charmante ville de Pisac, où une pause s'impose. Nous retrouvons peu à peu l'ambiance mystique de la vallée sacrée et ses paysages d'altitude.",
+      "points": [
+        { "nom": "Pisac", "lat": -13.4211, "lon": -71.8505, "altitudeM": 2976, "note": "Pause dans la vallée sacrée, au bord de l'Urubamba." }
+      ],
+      "photos": ["img/etapes/j14-cusco.jpg"]
+    },
+    {
+      "jour": 15,
+      "titre": "Cusco — fin du voyage",
+      "ride": false,
+      "pays": ["PE"],
+      "km": 0,
+      "kmPiste": 0,
+      "depart": { "nom": "Cusco", "lat": -13.5168, "lon": -71.9788, "altitudeM": 3403 },
+      "arrivee": { "nom": "Cusco", "lat": -13.5168, "lon": -71.9788, "altitudeM": 3403 },
+      "recit": "L'aventure touche à sa fin : transfert à l'aéroport de Cusco en fonction de l'horaire du vol international retour. En option, une excursion au Machu Picchu — transfert jusqu'à la gare, puis un train spectaculaire à travers les sommets enneigés et la vallée luxuriante. Sur place, un guide francophone accompagne la visite de la citadelle classée au patrimoine mondial de l'Unesco. Retour en navette puis en train, et transfert privé jusqu'à Cusco.",
+      "points": [
+        { "nom": "Machu Picchu", "lat": -13.1643, "lon": -72.5450, "altitudeM": 2440, "note": "Excursion en option, une journée au départ de Cusco.", "option": true }
+      ],
+      "photos": ["img/etapes/j15-machu-picchu.jpg"]
+    }
+  ]
+}

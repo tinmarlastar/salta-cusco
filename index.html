@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Aventure des 4 Nations — Salta → Cusco à moto</title>
+<meta name="description" content="Le parcours jour par jour du raid moto Salta–Cusco : 3 036 km, 875 km de piste, quatre pays andins, du désert d'Atacama au Machu Picchu.">
+<meta name="theme-color" content="#101B31">
+
+<meta property="og:type" content="website">
+<meta property="og:title" content="Aventure des 4 Nations — Salta → Cusco à moto">
+<meta property="og:description" content="3 036 km, 875 km de piste, quatre pays andins. Le parcours jour par jour.">
+<meta property="og:image" content="img/etapes/hero-salar.jpg">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&family=Spline+Sans+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="css/vendor/leaflet.css">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<a class="saut-contenu" href="#panneau">Aller au détail de l'étape</a>
+
+<header class="bandeau">
+  <div class="bandeau__identite">
+    <p class="eyebrow" id="eyebrow-voyage"></p>
+    <h1 class="bandeau__titre" id="titre-voyage"></h1>
+  </div>
+
+  <dl class="chiffres" id="chiffres-voyage"></dl>
+
+  <div class="fonds" role="group" aria-label="Fond de carte">
+    <button type="button" class="fonds__bouton" data-fond="satellite" aria-pressed="true">Satellite</button>
+    <button type="button" class="fonds__bouton" data-fond="relief" aria-pressed="false">Relief</button>
+    <button type="button" class="fonds__bouton" data-fond="plan" aria-pressed="false">Plan</button>
+  </div>
+</header>
+
+<main class="scene">
+  <div id="carte" class="carte" role="application" aria-label="Carte du parcours"></div>
+
+  <button type="button" class="panneau__poignee" id="poignee" aria-expanded="false" aria-controls="panneau">
+    <span class="panneau__poignee-barre" aria-hidden="true"></span>
+    <span id="poignee-texte">Voir le détail</span>
+  </button>
+
+  <aside class="panneau" id="panneau" tabindex="-1" aria-live="polite"></aside>
+</main>
+
+<footer class="frise">
+  <div class="frise__defilement">
+    <svg class="frise__svg" id="frise" role="img"
+         aria-label="Profil d'altitude du voyage entier, du jour 1 au jour 15. Cliquez une étape pour la détailler."></svg>
+  </div>
+  <p class="frise__aide">Cliquez une étape pour la détailler. Le relief est à l'échelle des distances réelles.</p>
+</footer>
+
+<script src="js/vendor/leaflet.js"></script>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

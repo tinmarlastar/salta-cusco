@@ -1,0 +1,18 @@
+name = "souvenirs-salta-cusco"
+main = "index.js"
+compatibility_date = "2024-09-23"
+
+# Les identifiants sont renseignés au déploiement (tâche 10) : ils sont propres
+# au compte Cloudflare et n'ont pas de valeur par défaut utile.
+[[d1_databases]]
+binding = "DB"
+database_name = "souvenirs"
+database_id = "à-renseigner-au-deploiement"
+
+[[r2_buckets]]
+binding = "MEDIAS"
+bucket_name = "souvenirs-medias"
+
+[vars]
+# Origines autorisées à appeler le service, séparées par des virgules.
+ORIGINES_AUTORISEES = "https://tinmarlastar.github.io,http://localhost:8123,http://127.0.0.1:8123"

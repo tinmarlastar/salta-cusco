@@ -17,7 +17,11 @@ const FONDS = {
   },
 };
 
-const TRAIT_DORMANT = { color: '#8e99ae', weight: 2, opacity: .55 };
+// Vue d'ensemble (aucune étape choisie) : le tracé complet en blanc du sel,
+// bien visible sur les trois fonds de carte.
+const TRAIT_ENSEMBLE = { color: '#edebe4', weight: 2.5, opacity: .9 };
+// Une étape est choisie : les autres jours s'effacent pour la faire ressortir.
+const TRAIT_DORMANT = { color: '#8e99ae', weight: 2, opacity: .4 };
 const TRAIT_ACTIF = { color: '#e8b33c', weight: 4, opacity: 1 };
 
 export function creerCarte(conteneur, { etapes, traces, surChoixEtape }) {
@@ -131,7 +135,7 @@ export function creerCarte(conteneur, { etapes, traces, surChoixEtape }) {
     etapeCourante = etape;
     for (const [jour, ligne] of lignes) {
       const actif = etape && jour === etape.jour;
-      ligne.setStyle(actif ? TRAIT_ACTIF : TRAIT_DORMANT);
+      ligne.setStyle(actif ? TRAIT_ACTIF : etape ? TRAIT_DORMANT : TRAIT_ENSEMBLE);
       if (actif) ligne.bringToFront();
     }
     for (const [jour, pastille] of jalons) {

@@ -21,6 +21,7 @@ const elements = {
   frise: document.getElementById('frise'),
   poignee: document.getElementById('poignee'),
   poigneeTexte: document.getElementById('poignee-texte'),
+  boutonAccueil: document.getElementById('bouton-accueil'),
 };
 
 // ------------------------------------------------------------------ données
@@ -109,6 +110,7 @@ function choisir(jour, { recentrer = true, majAdresse = true } = {}) {
     if (location.hash !== cible) history.replaceState(null, '', etape ? cible : location.pathname);
   }
   elements.poigneeTexte.textContent = etape ? `Jour ${etape.jour}` : 'Le voyage';
+  elements.boutonAccueil.hidden = !etape;
 }
 
 function redessinerFrise() {
@@ -167,8 +169,6 @@ function afficherPanneau(etape) {
       etat.carte.carte.setView([Number(bouton.dataset.lat), Number(bouton.dataset.lon)], 13);
     });
   }
-  const retour = elements.panneau.querySelector('[data-action="tout"]');
-  retour?.addEventListener('click', () => choisir(null));
 }
 
 function gabaritAccueil(voyage) {
@@ -257,14 +257,14 @@ function gabaritFiche(etape) {
       <button type="button" ${suivante ? `data-jour="${suivante.jour}"` : 'disabled'}>
         <span>Suivant</span>${suivante ? `J${suivante.jour} ${echapper(suivante.arrivee.nom)}` : '—'}</button>
     </div>
-
-    <p style="margin:1rem 0 0"><button type="button" class="fonds__bouton" data-action="tout">Revoir tout le parcours</button></p>
   </div>`;
 }
 
 // ------------------------------------------------------------- interactions
 
 function brancherInterface() {
+  elements.boutonAccueil.addEventListener('click', () => choisir(null));
+
   for (const bouton of document.querySelectorAll('.fonds__bouton[data-fond]')) {
     bouton.addEventListener('click', () => {
       etat.carte.changerFond(bouton.dataset.fond);

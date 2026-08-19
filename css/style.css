@@ -104,6 +104,28 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
   letter-spacing: 0;
 }
 
+/* Retour à la vue d'ensemble, visible uniquement quand une étape est ouverte. */
+
+.bouton-accueil {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: .375rem;
+  padding: .4375rem .75rem;
+  border: 1px solid var(--nuit-3);
+  background: var(--nuit-2);
+  color: var(--sel);
+  font-family: var(--mono);
+  font-size: .6875rem;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color var(--transition), color var(--transition);
+}
+.bouton-accueil:hover { border-color: var(--soufre); color: var(--soufre); }
+.bouton-accueil[hidden] { display: none; }
+
 .chiffres {
   display: flex;
   gap: 1.75rem;
@@ -516,6 +538,7 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
   :root { --frise-h: 7.5rem; }
 
   .bandeau { flex-wrap: wrap; gap: .5rem 1rem; padding: .625rem 1rem; }
+  .bouton-accueil { flex: 1 1 100%; justify-content: center; }
   .bandeau__identite { flex: 1 1 100%; min-width: 0; }
   .bandeau__titre { font-size: 1.0625rem; font-stretch: 100%; }
   .bandeau__titre span { display: block; font-size: .9375rem; }

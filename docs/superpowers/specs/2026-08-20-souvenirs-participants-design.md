@@ -28,8 +28,14 @@ Navigateur (site GitHub Pages)
    │  fetch()
    ▼
 Worker Cloudflare  ──────►  R2   (photos et vidéos, fichiers bruts)
-                   ──────►  KV   (notes texte et métadonnées des médias)
+                   ──────►  D1   (notes texte et métadonnées des médias)
 ```
+
+**Pourquoi D1 et non KV** : KV est éventuellement cohérent — une note postée peut
+mettre jusqu'à une minute à devenir visible. Sur le terrain, un compagnon qui
+poste, ne voit rien apparaître et recommence produirait des doublons et de la
+confusion. D1 (SQLite) est immédiatement cohérent, trie nativement par étape, et
+fait respecter l'unicité de la clé d'idempotence par la base plutôt qu'à la main.
 
 **Pourquoi Cloudflare plutôt que Supabase ou Firebase** : R2 ne facture jamais
 la bande passante de lecture. Des vidéos revisionnées par le groupe pendant des
@@ -42,7 +48,7 @@ voyage.
 
 | Unité | Rôle | Dépend de |
 |---|---|---|
-| `worker/index.js` | routes HTTP, autorisations | R2, KV |
+| `worker/index.js` | routes HTTP, autorisations | R2, D1 |
 | `js/souvenirs.js` | appels au service, file d'attente locale | rien du site |
 | `js/souvenirs-vue.js` | rendu du bloc et du formulaire | `souvenirs.js` |
 | `js/app.js` | branche le bloc dans le panneau d'étape | `souvenirs-vue.js` |
@@ -52,24 +58,26 @@ pas le réseau. Chacun est lisible et testable séparément.
 
 ## Modèle de données
 
-**KV** — une clé par contribution : `etape:<jour>:<id>`
+**D1** — une table `contributions` :
 
-```json
-{
-  "id": "01J8X...",
-  "jour": 7,
-  "auteur": "Martin",
-  "type": "note" | "media",
-  "texte": "…",
-  "media": { "cle": "medias/7/01J8X.jpg", "genre": "image" | "video", "octets": 284910 },
-  "creeLe": "2026-09-14T18:22:41.000Z",
-  "modifieLe": null,
-  "jetonHache": "sha256:…"
-}
-```
+| colonne | type | rôle |
+|---|---|---|
+| `id` | TEXT, clé primaire | identifiant trié par le temps |
+| `jour` | INTEGER | l'étape concernée |
+| `auteur` | TEXT | prénom saisi |
+| `type` | TEXT | `note` ou `media` |
+| `texte` | TEXT | note, ou légende du média |
+| `media_cle` | TEXT | chemin du fichier dans R2 |
+| `media_genre` | TEXT | `image` ou `video` |
+| `media_octets` | INTEGER | taille du fichier |
+| `cree_le` | TEXT | horodatage ISO |
+| `modifie_le` | TEXT | horodatage ISO, ou vide |
+| `jeton_hache` | TEXT | SHA-256 du jeton d'auteur |
+| `cle_idempotence` | TEXT, UNIQUE | empêche les doublons au renvoi |
 
-L'identifiant est un ULID : trié chronologiquement, ce qui permet de lister une
-étape dans l'ordre sans trier après coup.
+L'identifiant préfixe l'horodatage en base 36 sur une largeur fixe, suivi d'un
+tirage aléatoire : il se trie chronologiquement comme une simple chaîne, ce qui
+évite d'ajouter une dépendance pour générer des ULID.
 
 **R2** — les fichiers bruts sous `medias/<jour>/<id>.<ext>`.
 
@@ -88,7 +96,7 @@ public.
 - **Tout supprimer** : mot de passe d'administration, distinct du mot de passe
   de groupe, connu de Martin seul. Page `#admin`.
 
-Côté KV on ne stocke que le **hachage** du jeton : quelqu'un qui lirait la base
+Côté base on ne stocke que le **hachage** du jeton : quelqu'un qui lirait la base
 ne pourrait pas se faire passer pour un auteur.
 
 Un média peut porter une légende : elle se modifie comme une note. Seul le
@@ -180,7 +188,7 @@ Retiré volontairement pour rester simple et robuste :
 ## Déploiement
 
 Une fois : créer un compte Cloudflare (gratuit, sans carte bancaire à ce niveau
-d'usage), créer le bucket R2 et l'espace KV, puis `wrangler deploy`. Les deux
+d'usage), créer le bucket R2 et la base D1, appliquer le schéma, puis `wrangler deploy`. Les deux
 mots de passe sont posés comme secrets Cloudflare — **jamais dans le dépôt**.
 
 L'adresse du Worker est écrite dans `data/config.json`, à côté des autres

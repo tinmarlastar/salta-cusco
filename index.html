@@ -23,9 +23,17 @@
 <a class="saut-contenu" href="#panneau">Aller au détail de l'étape</a>
 
 <header class="bandeau">
-  <button type="button" class="bouton-accueil" id="bouton-accueil" hidden>
-    <span aria-hidden="true">←</span> Tout le parcours
-  </button>
+  <div class="bandeau__navigation">
+    <button type="button" class="bouton-accueil" id="bouton-accueil" hidden>
+      <span aria-hidden="true">←</span> Tout le parcours
+    </button>
+
+    <div class="pas-a-pas" role="group" aria-label="Naviguer d'étape en étape">
+      <button type="button" id="etape-precedente" aria-label="Étape précédente">←</button>
+      <span class="pas-a-pas__position" id="etape-position" aria-live="polite">—</span>
+      <button type="button" id="etape-suivante" aria-label="Étape suivante">→</button>
+    </div>
+  </div>
 
   <div class="bandeau__identite">
     <p class="eyebrow" id="eyebrow-voyage"></p>

@@ -104,6 +104,48 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
   letter-spacing: 0;
 }
 
+/* Bloc de navigation : retour à la vue d'ensemble, et pas-à-pas entre étapes. */
+
+.bandeau__navigation {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  gap: .3125rem;
+}
+
+.pas-a-pas {
+  display: flex;
+  gap: 1px;
+  background: var(--nuit-3);
+  border: 1px solid var(--nuit-3);
+}
+
+.pas-a-pas button {
+  padding: .3125rem .625rem;
+  border: 0;
+  background: var(--nuit-2);
+  color: var(--sel);
+  font-family: var(--mono);
+  font-size: .8125rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: color var(--transition), background var(--transition);
+}
+.pas-a-pas button:hover:not(:disabled) { background: var(--soufre); color: var(--nuit); }
+.pas-a-pas button:disabled { color: var(--nuit-3); cursor: default; }
+
+.pas-a-pas__position {
+  display: grid;
+  place-items: center;
+  min-width: 2.75rem;
+  background: var(--nuit-2);
+  color: var(--soufre);
+  font-family: var(--mono);
+  font-size: .6875rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .04em;
+}
+
 /* Retour à la vue d'ensemble, visible uniquement quand une étape est ouverte. */
 
 .bouton-accueil {
@@ -242,7 +284,12 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 
 .mesures {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  /* Une colonne par valeur, réparties également : les jours sans moto n'en ont
+     que deux, et une troisième colonne vide se verrait. */
+  grid-auto-flow: column;
+  /* minmax(0, …) et non 1fr : le `nowrap` des valeurs empêcherait sinon les
+     colonnes de se répartir également. */
+  grid-auto-columns: minmax(0, 1fr);
   gap: 1px;
   margin: 0 0 1.25rem;
   background: var(--nuit-3);
@@ -538,7 +585,9 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
   :root { --frise-h: 7.5rem; }
 
   .bandeau { flex-wrap: wrap; gap: .5rem 1rem; padding: .625rem 1rem; }
-  .bouton-accueil { flex: 1 1 100%; justify-content: center; }
+  .bandeau__navigation { flex: 1 1 100%; flex-direction: row; align-items: stretch; }
+  .bouton-accueil { flex: 1; justify-content: center; }
+  .pas-a-pas { flex-shrink: 0; }
   .bandeau__identite { flex: 1 1 100%; min-width: 0; }
   .bandeau__titre { font-size: 1.0625rem; font-stretch: 100%; }
   .bandeau__titre span { display: block; font-size: .9375rem; }
@@ -600,8 +649,8 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 }
 
 @media (max-width: 30rem) {
-  .mesures { grid-template-columns: 1fr 1fr; }
-  .mesures div:last-child { grid-column: 1 / -1; }
+  .mesures { grid-auto-flow: row; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .mesures div:nth-child(3) { grid-column: 1 / -1; }
 
   /* Sur un écran étroit, les chiffres occupent déjà toute la ligne : les fonds
      de carte prennent la leur plutôt que de déborder. */

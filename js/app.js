@@ -22,6 +22,9 @@ const elements = {
   poignee: document.getElementById('poignee'),
   poigneeTexte: document.getElementById('poignee-texte'),
   boutonAccueil: document.getElementById('bouton-accueil'),
+  etapePrecedente: document.getElementById('etape-precedente'),
+  etapeSuivante: document.getElementById('etape-suivante'),
+  etapePosition: document.getElementById('etape-position'),
 };
 
 // ------------------------------------------------------------------ données
@@ -111,6 +114,26 @@ function choisir(jour, { recentrer = true, majAdresse = true } = {}) {
   }
   elements.poigneeTexte.textContent = etape ? `Jour ${etape.jour}` : 'Le voyage';
   elements.boutonAccueil.hidden = !etape;
+  majPasAPas(etape);
+}
+
+/** Le pas-à-pas reste visible partout : depuis l'accueil, « suivant » ouvre J1. */
+function majPasAPas(etape) {
+  const jours = etat.etapes.map((e) => e.jour);
+  const index = etape ? jours.indexOf(etape.jour) : -1;
+
+  elements.etapePosition.textContent = etape ? `J${etape.jour}` : '—';
+  elements.etapePrecedente.disabled = index <= 0;
+  elements.etapeSuivante.disabled = index === jours.length - 1;
+}
+
+/** Déplace la sélection d'un cran ; depuis l'accueil, avance sur la première étape. */
+function decaler(pas) {
+  const jours = etat.etapes.map((e) => e.jour);
+  if (!jours.length) return;
+  const index = jours.indexOf(etat.jour);
+  const cible = index === -1 ? (pas > 0 ? jours[0] : null) : jours[index + pas];
+  if (cible !== undefined && cible !== null) choisir(cible);
 }
 
 function redessinerFrise() {
@@ -264,6 +287,8 @@ function gabaritFiche(etape) {
 
 function brancherInterface() {
   elements.boutonAccueil.addEventListener('click', () => choisir(null));
+  elements.etapePrecedente.addEventListener('click', () => decaler(-1));
+  elements.etapeSuivante.addEventListener('click', () => decaler(1));
 
   for (const bouton of document.querySelectorAll('.fonds__bouton[data-fond]')) {
     bouton.addEventListener('click', () => {
@@ -285,11 +310,8 @@ function brancherInterface() {
     const cible = evenement.target;
     if (cible instanceof Element && cible.closest('input, textarea, select')) return;
     if (evenement.key === 'ArrowRight' || evenement.key === 'ArrowLeft') {
-      const pas = evenement.key === 'ArrowRight' ? 1 : -1;
-      const jours = etat.etapes.map((e) => e.jour);
-      const index = jours.indexOf(etat.jour);
-      const suivant = index === -1 ? jours[0] : jours[index + pas];
-      if (suivant) { evenement.preventDefault(); choisir(suivant); }
+      evenement.preventDefault();
+      decaler(evenement.key === 'ArrowRight' ? 1 : -1);
     }
     if (evenement.key === 'Escape' && etat.jour !== null) choisir(null);
   });

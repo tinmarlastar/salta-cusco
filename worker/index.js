@@ -55,18 +55,31 @@ async function listerEtape(jour, env, cors) {
 export default {
   async fetch(requete, env) {
     const cors = entetesCors(requete, env);
-    const url = new URL(requete.url);
-    const chemin = url.pathname;
 
-    if (requete.method === 'OPTIONS') {
-      return new Response(null, { status: 204, headers: cors });
+    try {
+      const url = new URL(requete.url);
+      const chemin = url.pathname;
+
+      if (requete.method === 'OPTIONS') {
+        return new Response(null, { status: 204, headers: cors });
+      }
+
+      const etape = chemin.match(/^\/api\/etape\/(\d{1,2})$/);
+      if (etape && requete.method === 'GET') {
+        // `await` est nécessaire ici : sans lui, un rejet de la promesse
+        // survient après la sortie du bloc `try` et échappe au `catch`.
+        return await listerEtape(Number(etape[1]), env, cors);
+      }
+
+      return erreur('Route inconnue', 404, cors);
+    } catch (e) {
+      // Capture large volontaire : le site doit se dégrader proprement si le
+      // service est injoignable. On journalise pour garder l'erreur
+      // diagnosticable, et on renvoie un message en français avec les
+      // en-têtes CORS déjà calculés, sinon le navigateur ne voit qu'une
+      // erreur CORS opaque au lieu du vrai message.
+      console.error(e);
+      return erreur('Erreur du service, réessayez plus tard', 500, cors);
     }
-
-    const etape = chemin.match(/^\/api\/etape\/(\d{1,2})$/);
-    if (etape && requete.method === 'GET') {
-      return listerEtape(Number(etape[1]), env, cors);
-    }
-
-    return erreur('Route inconnue', 404, cors);
   },
 };

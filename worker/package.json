@@ -8,6 +8,7 @@
     "deploy": "wrangler deploy"
   },
   "devDependencies": {
+    "fake-indexeddb": "^6.2.5",
     "wrangler": "^3.78.0"
   }
 }

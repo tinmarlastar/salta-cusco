@@ -5,7 +5,7 @@
    binaires tels quels. */
 
 import {
-  envoyerNote, envoyerMedia, ErreurReseau, ErreurService, creerCleIdempotence,
+  envoyerNote, envoyerMedia, ErreurService, creerCleIdempotence,
 } from './souvenirs.js';
 
 const BASE = 'souvenirs-salta-cusco';
@@ -15,14 +15,19 @@ const ATTENTE_MIN = 2000;       // premier réessai après 2 s
 const ATTENTE_MAX = 5 * 60_000; // plafonné à 5 min : en zone blanche, insister vide la batterie
 const PERIODE = 2 * 60_000;     // relance périodique tant que l'onglet est ouvert
 
-// Une transaction IndexedDB peut rester pendue sans jamais émettre ni
-// `oncomplete` ni `onerror` — c'est ce qui arrive quand le navigateur ferme
-// de force la connexion pour récupérer du stockage, précisément le sort
-// d'une base pleine de photos sur un téléphone qui sature. `souvenirs.js`
-// borne déjà ses appels réseau pour la même raison (`DELAI_RESEAU_MS`) ; le
-// stockage local a besoin de la même garantie, sans quoi le verrou
-// `enCours` pourrait rester bloqué pour toute la durée de vie de l'onglet.
-const DELAI_STOCKAGE_MS = 8000;
+// Trois délais de garde distincts, sur le modèle de `DELAI_RESEAU_MS` dans
+// `souvenirs.js` : aucune promesse IndexedDB ne doit dépendre d'un événement
+// dont l'émission n'est pas garantie (une transaction peut avorter en
+// silence, une ouverture peut rester pendue).
+//   - Ouverture et lecture : aucune raison légitime de traîner, un délai
+//     court suffit.
+//   - Écriture : peut porter le fichier d'un souvenir — une photo
+//     compressée, voire une vidéo de plusieurs dizaines de Mo — et rester
+//     lente sans être en panne sur un stockage saturé. Un délai aussi court
+//     que celui de la lecture ferait échouer des `put` légitimes.
+const DELAI_OUVERTURE_MS = 8000;
+const DELAI_LECTURE_MS = 8000;
+const DELAI_ECRITURE_MS = 30_000;
 
 let signaler = () => {};
 let enCours = false;
@@ -36,6 +41,26 @@ let basePromise = null;
 function ouvrir() {
   if (!basePromise) {
     basePromise = new Promise((resoudre, rejeter) => {
+      let reglee = false;
+
+      function regler(fn, valeur) {
+        if (reglee) return;
+        reglee = true;
+        clearTimeout(minuteurGarde);
+        fn(valeur);
+      }
+
+      // Une ouverture peut rester pendue indéfiniment sans jamais émettre
+      // `onsuccess` ni `onerror` (cas connu sur WebKit/iOS après restauration
+      // de page, précisément la plateforme visée) : sans ce garde, `enCours`
+      // et `mettreEnFile` resteraient bloqués pour la vie de l'onglet, et la
+      // mémoïsation de la connexion (voir plus bas) aggraverait le problème
+      // en empoisonnant tous les appels futurs avec la même ouverture morte.
+      const minuteurGarde = setTimeout(() => {
+        basePromise = null; // qu'un futur appel puisse retenter une ouverture propre
+        regler(rejeter, new Error('Ouverture IndexedDB sans réponse (délai dépassé)'));
+      }, DELAI_OUVERTURE_MS);
+
       const requete = indexedDB.open(BASE, 1);
       requete.onupgradeneeded = () => {
         const base = requete.result;
@@ -45,6 +70,23 @@ function ouvrir() {
       };
       requete.onsuccess = () => {
         const base = requete.result;
+        if (reglee) {
+          // Le délai de garde (ou `onblocked`) a déjà réglé cette promesse,
+          // et personne ne référence donc cette connexion qui arrive après
+          // coup. La laisser ouverte bloquerait un futur changement de
+          // schéma — exactement ce que la mémoïsation cherche à éviter — on
+          // la referme donc aussitôt plutôt que de la laisser fuiter.
+          base.close();
+          return;
+        }
+        // Le navigateur peut fermer la connexion de force pour récupérer du
+        // stockage (base saturée de photos/vidéos, le cas visé sur le
+        // terrain) : sans écouter `onclose`, la promesse mémoïsée resterait
+        // tenue sur une base morte et TOUTE opération échouerait
+        // définitivement — `mettreEnFile` comprise — jusqu'à rechargement
+        // de la page. En réinitialisant `basePromise`, le prochain appel
+        // rouvre proprement.
+        base.onclose = () => { basePromise = null; };
         // Un autre onglet (ou un futur déploiement avec un schéma v2) peut
         // demander une version supérieure : on ferme alors proprement notre
         // connexion pour ne pas la bloquer indéfiniment derrière `onblocked`.
@@ -52,15 +94,15 @@ function ouvrir() {
           base.close();
           basePromise = null;
         };
-        resoudre(base);
+        regler(resoudre, base);
       };
       requete.onerror = () => {
         basePromise = null;
-        rejeter(requete.error);
+        regler(rejeter, requete.error);
       };
       requete.onblocked = () => {
         basePromise = null;
-        rejeter(new Error("Ouverture d'IndexedDB bloquée par un autre onglet"));
+        regler(rejeter, new Error("Ouverture d'IndexedDB bloquée par un autre onglet"));
       };
     });
   }
@@ -69,14 +111,10 @@ function ouvrir() {
 
 async function transaction(mode, action) {
   const base = await ouvrir();
+  const delaiGarde = mode === 'readonly' ? DELAI_LECTURE_MS : DELAI_ECRITURE_MS;
   return new Promise((resoudre, rejeter) => {
     let reglee = false;
-    // Délai de garde : le verrou de la file ne doit jamais dépendre d'un
-    // événement dont l'émission n'est pas garantie (voir commentaire de
-    // DELAI_STOCKAGE_MS).
-    const minuteurGarde = setTimeout(() => {
-      regler(rejeter, new Error('Transaction IndexedDB sans réponse (délai dépassé)'));
-    }, DELAI_STOCKAGE_MS);
+    let tx;
 
     function regler(fn, valeur) {
       if (reglee) return;
@@ -85,11 +123,28 @@ async function transaction(mode, action) {
       fn(valeur);
     }
 
-    let tx;
+    const minuteurGarde = setTimeout(() => {
+      // Abandonner l'attente ne suffit pas : sans `abort()`, la transaction
+      // continue en arrière-plan et peut committer après coup, ce qui
+      // romprait la garantie « un échec signifie que rien n'a été écrit » et
+      // ouvrirait la porte au doublon que ce module existe pour empêcher —
+      // un `mettreEnFile` qu'on croit raté mais que l'auteur retente avec
+      // une nouvelle clé d'idempotence, alors que le premier a bien été
+      // enregistré.
+      try { tx?.abort(); } catch { /* déjà terminée, rien à faire */ }
+      regler(rejeter, new Error('Transaction IndexedDB sans réponse (délai dépassé)'));
+    }, delaiGarde);
+
     try {
       tx = base.transaction(MAGASIN, mode);
-    } catch (erreurOuverture) {
-      regler(rejeter, erreurOuverture);
+    } catch (erreurTransaction) {
+      // La connexion mémoïsée peut être morte (fermée de force par le
+      // navigateur) sans que `onclose` ait encore eu l'occasion de la
+      // réinitialiser : on force la réouverture dès maintenant, pour que le
+      // PROCHAIN appel — celui-ci échoue — reparte sur une base saine plutôt
+      // que de rester bloqué sur une connexion morte jusqu'à rechargement.
+      basePromise = null;
+      regler(rejeter, erreurTransaction);
       return;
     }
 
@@ -101,7 +156,18 @@ async function transaction(mode, action) {
       return;
     }
 
-    tx.oncomplete = () => regler(resoudre, resultat?.result ?? resultat);
+    tx.oncomplete = () => {
+      // Contrat de retour net : quand l'action rend une IDBRequest (get,
+      // getAll…), on renvoie SA valeur — `.result`, même `undefined` quand
+      // rien n'a été trouvé — jamais la requête elle-même. L'ancienne forme
+      // `resultat?.result ?? resultat` retombait sur l'objet IDBRequest
+      // (toujours "truthy") dès que `.result` valait `undefined`, ce qui
+      // rendait par exemple un garde `if (!actuelle) return;` sur
+      // `magasin.get(...)` inopérant : la vérification passait toujours,
+      // quel que soit le contenu réel de la base.
+      const valeur = resultat instanceof IDBRequest ? resultat.result : resultat;
+      regler(resoudre, valeur);
+    };
     tx.onerror = () => regler(rejeter, tx.error);
     // Une transaction peut avorter sans passer par onerror (quota dépassé,
     // fermeture forcée par le navigateur) : sans onabort, la promesse ne se
@@ -194,8 +260,9 @@ async function traiterEntree(entree) {
     // L'auteur a pu abandonner cet envoi entretemps (`viderEntree`, appelée
     // par la tâche 8) pendant les jusqu'à 120 s que peut prendre un envoi
     // média : réécrire aveuglément la copie mémoire avec `put` recréerait
-    // l'entrée qu'il croyait avoir supprimée. On relit donc l'état actuel et
-    // on n'écrit que si l'entrée existe encore.
+    // l'entrée qu'il croyait avoir supprimée. On relit donc l'état actuel —
+    // `undefined` si elle n'existe plus, grâce au contrat de retour net de
+    // `transaction()` — et on n'écrit que si l'entrée existe encore.
     const actuelle = await transaction('readonly', (magasin) => magasin.get(entree.idLocal));
     if (!actuelle) return;
     await transaction('readwrite', (magasin) => magasin.put({
@@ -259,7 +326,6 @@ export async function renvoyerMaintenant() {
 }
 
 let demarre = false;
-let idIntervalle = null;
 
 function surVisibiliteChangee() {
   if (document.visibilityState === 'visible') renvoyerMaintenant();
@@ -267,18 +333,21 @@ function surVisibiliteChangee() {
 
 /** Arme les trois déclencheurs de renvoi : réseau retrouvé, onglet revu, minuterie.
 
-    Idempotente : la tâche 8 rappelle cette fonction à chaque affichage de
-    fiche d'étape pour renouveler `surChangement`, mais les écouteurs et la
-    minuterie ne doivent être armés qu'une seule fois par onglet — sans quoi
-    quinze étapes consultées dans la soirée laisseraient quinze minuteries et
-    écouteurs `visibilitychange` tourner pour de bon, à gaspiller la batterie
-    d'un téléphone qui doit tenir la journée à 4 400 m. */
+    Les écouteurs et la minuterie ne sont armés qu'une seule fois par onglet
+    — la tâche 8 rappelle cette fonction à chaque affichage de fiche d'étape,
+    et quinze étapes consultées dans la soirée ne doivent pas laisser quinze
+    minuteries et écouteurs `visibilitychange` tourner pour de bon, à
+    gaspiller la batterie d'un téléphone qui doit tenir la journée à 4 400 m.
+    En revanche CHAQUE appel déclenche une tentative immédiate : revenir sur
+    une étape déjà consultée doit relancer les envois en attente tout de
+    suite, sans attendre le réseau, la visibilité ou la minuterie de 2 min. */
 export function demarrerRenvoi({ surChangement } = {}) {
   if (surChangement) signaler = surChangement;
-  if (demarre) return;
-  demarre = true;
-  addEventListener('online', renvoyerMaintenant);
-  addEventListener('visibilitychange', surVisibiliteChangee);
-  idIntervalle = setInterval(renvoyerMaintenant, PERIODE);
+  if (!demarre) {
+    demarre = true;
+    addEventListener('online', renvoyerMaintenant);
+    addEventListener('visibilitychange', surVisibiliteChangee);
+    setInterval(renvoyerMaintenant, PERIODE);
+  }
   renvoyerMaintenant();
 }

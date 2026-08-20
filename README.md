@@ -95,3 +95,174 @@ tracées à la main — Sud Lipez et salar — sont fidèles dans leur intention
 leurs points de passage, mais ne sont pas des traces GPS : ne pas s'en servir
 pour naviguer. Si Vintage Rides fournit les GPX des douze jours, ils
 remplaceront avantageusement le calcul.
+
+## Souvenirs des compagnons
+
+Chaque étape porte un bloc où les participants laissent des notes, photos et
+vidéos. Le site reste statique : ce bloc parle à un petit service Cloudflare
+(dossier `worker/`), qui range les fichiers dans R2 et les notes dans D1.
+
+**Pour poster**, il faut le mot de passe du groupe — donné de vive voix avant le
+départ. Il n'est demandé qu'une fois par téléphone.
+
+**Si le réseau manque** (et il manquera, dans le Sud Lipez comme sur le salar),
+l'envoi est gardé sur le téléphone avec la mention « en attente de réseau », et
+repart tout seul dès que ça capte. Rien ne se perd.
+
+**Chacun peut modifier ou supprimer ses propres souvenirs** : les boutons
+n'apparaissent que sur le téléphone qui les a publiés. Changer d'appareil ou
+vider son navigateur fait perdre cette main — la modération, elle, reste
+valable sur tout.
+
+**Modération** : la page `admin.html` (séparée du site, marquée `noindex` pour
+ne pas apparaître dans les moteurs de recherche), protégée par le mot de passe
+d'administration. Elle permet de supprimer n'importe quelle contribution.
+
+### Développer en local
+
+Le service tourne à côté du site, sur un port différent :
+
+```bash
+cd worker
+npm install
+npx wrangler d1 execute souvenirs --local --file=schema.sql
+npx wrangler dev --local --port 8787
+```
+
+Le site, lui, doit être servi sur le port **8123 exactement** (voir
+« Le faire tourner chez soi » plus haut) : c'est la seule origine locale que le
+service autorise, avec `127.0.0.1:8123`, en plus de l'adresse GitHub Pages —
+voir `ORIGINES_AUTORISEES` dans `worker/wrangler.toml`.
+
+Les mots de passe locaux vont dans `worker/.dev.vars` (non suivi par git, à
+créer soi-même) :
+
+```
+MOT_DE_PASSE_GROUPE=...
+MOT_DE_PASSE_ADMIN=...
+```
+
+> **Important — sécurité.** Le plan d'implémentation de cette fonctionnalité,
+> commité dans ce dépôt (donc public s'il est hébergé sur GitHub), utilise en
+> exemple les mots de passe de développement `uyuni2026` et `admin-de-test`.
+> Ils sont visibles par quiconque lit l'historique du dépôt. **Ne jamais les
+> réutiliser comme mots de passe de production** : choisir, au moment du
+> déploiement (étape « Poser les deux mots de passe » ci-dessous), deux mots
+> de passe différents de ceux-là.
+
+Tests des fonctions d'autorisation et de la file d'attente hors-ligne (12
+tests) :
+
+```bash
+cd worker && node --test test/
+```
+
+### Déployer le service
+
+Ces étapes ne sont à faire qu'une fois, par la personne qui possède (ou crée)
+le compte Cloudflare. Elles ne demandent qu'un compte gratuit.
+
+1. **Se connecter à Cloudflare** — ouvre une page web pour autoriser
+   `wrangler` :
+
+   ```bash
+   cd worker
+   npx wrangler login
+   ```
+
+   Attendu : le navigateur s'ouvre, demande de se connecter (ou de créer un
+   compte gratuit) puis d'autoriser l'accès ; le terminal affiche ensuite
+   `Successfully logged in`.
+
+2. **Créer la base de données D1** — c'est là que vivent les notes :
+
+   ```bash
+   npx wrangler d1 create souvenirs
+   ```
+
+   Attendu : un bloc `[[d1_databases]]` s'affiche, avec un `database_id` (un
+   identifiant du genre `xxxxxxxx-xxxx-...`). **Copier cet identifiant** dans
+   `worker/wrangler.toml`, à la place de `à-renseigner-au-deploiement`.
+
+3. **Créer le bucket R2** — c'est là que vivent les photos et vidéos :
+
+   ```bash
+   npx wrangler r2 bucket create souvenirs-medias
+   ```
+
+   Attendu : une confirmation de création du bucket.
+
+4. **Appliquer le schéma sur la base distante** — crée les tables dans la
+   base créée à l'étape 2 (à ne pas confondre avec `--local`, utilisé plus
+   haut pour le développement) :
+
+   ```bash
+   npx wrangler d1 execute souvenirs --remote --file=schema.sql
+   ```
+
+   Attendu : les deux instructions du schéma s'exécutent sans erreur. Cette
+   étape est indispensable **avant** le déploiement : le service planterait
+   sur sa première requête sans elle.
+
+5. **Poser les deux mots de passe** — ce sont des secrets Cloudflare, jamais
+   écrits dans le dépôt ; chaque commande demande de taper une valeur puis
+   Entrée :
+
+   ```bash
+   npx wrangler secret put MOT_DE_PASSE_GROUPE
+   npx wrangler secret put MOT_DE_PASSE_ADMIN
+   ```
+
+   Choisir un mot de passe de groupe simple à dire de vive voix, et un mot de
+   passe d'administration différent et plus long — **ni l'un ni l'autre ne
+   doit reprendre `uyuni2026` ou `admin-de-test`**, utilisés dans le plan
+   d'implémentation et donc déjà publics.
+
+6. **Déployer** :
+
+   ```bash
+   npx wrangler deploy
+   ```
+
+   Attendu : une adresse du type
+   `https://souvenirs-salta-cusco.<compte>.workers.dev`.
+
+7. **Pointer le site sur le service en ligne** — remplacer le contenu de
+   `data/config.json` (actuellement réglé sur le service local) :
+
+   ```json
+   {
+     "serviceUrl": "https://souvenirs-salta-cusco.<compte>.workers.dev"
+   }
+   ```
+
+   C'est le **seul fichier à changer** pour passer du service local au
+   service déployé, et c'est la **dernière étape** du déploiement.
+
+8. **Vérifier** :
+
+   ```bash
+   curl -s "https://souvenirs-salta-cusco.<compte>.workers.dev/api/etape/7"
+   ```
+
+   Attendu : `{"contributions":[]}`.
+
+9. **Publier le site** — envoyer le commit qui met à jour `data/config.json`
+   sur `main` ; le workflow GitHub Pages republie le site automatiquement.
+   Vérifier ensuite sur le site publié que le bloc souvenirs se charge et
+   qu'une note peut être postée.
+
+### Redéployer le service
+
+Après une modification de `worker/index.js` ou de `worker/lib/` :
+
+```bash
+cd worker && npx wrangler deploy
+```
+
+Les mots de passe restent ceux déjà posés ; il n'y a pas besoin de les
+reposer, sauf pour les changer :
+
+```bash
+cd worker && npx wrangler secret put MOT_DE_PASSE_GROUPE
+```

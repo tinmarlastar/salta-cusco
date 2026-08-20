@@ -178,3 +178,165 @@ test('demarrerRenvoi : un seul armement malgré plusieurs appels, mais une tenta
     globalThis.setInterval = origSetInterval;
   }
 });
+
+/** Rouvre une connexion fraîche et dédiée, dont on n'attend rien d'autre :
+    force la fermeture de la connexion mémoïsée courante (s'il y en a une),
+    puis met en file une entrée jetable pour déclencher une réouverture, afin
+    que les tests de course ci-dessous ne dépendent pas de l'état laissé par
+    les tests précédents. Renvoie la connexion fraîchement ouverte. */
+async function connexionFraiche(jourChauffe) {
+  if (derniereConnexion) {
+    try { forceCloseDatabase(derniereConnexion); } catch { /* déjà fermée, tant mieux */ }
+  }
+  await f.mettreEnFile({
+    jour: jourChauffe, type: 'note', auteur: 'Chauffe', texte: 'réveil connexion',
+    motDePasse: 'x', idempotence: `idem-chauffe-${jourChauffe}-${Math.random().toString(36).slice(2, 8)}`,
+  });
+  return derniereConnexion;
+}
+
+test('transaction qui commite exactement au moment où le garde écriture expire → mettreEnFile réussit, ne rejette pas (Important 1, 3e tour)', async () => {
+  // Ce test attend réellement un peu plus de 30 s (DELAI_ECRITURE_MS, non
+  // modifié, non simulé) : c'est le prix d'une preuve par exécution réelle
+  // plutôt que par minuteur simulé, comme demandé. fake-indexeddb n'a pas de
+  // latence disque réelle (tout est en mémoire) : un `put` y aboutit
+  // naturellement en quelques millisecondes, jamais assez lentement pour
+  // atteindre un vrai garde de 30 s tout seul. On fige donc délibérément son
+  // ordonnancement interne (voir plus bas) pour recréer, à un instant choisi
+  // avec précision, la situation qu'un téléphone sur un stockage saturé
+  // produirait de lui-même : une transaction qui vient tout juste de
+  // committer pile au moment où le garde se déclenche.
+  const jour = 24;
+  reponseFetch = () => new Promise(() => {}); // sans importance ici
+
+  const baseReelle = await connexionFraiche(jour);
+  assert.ok(baseReelle, 'connexion capturée pour ce test');
+
+  // Capture la transaction que `mettreEnFile` va créer sur CETTE connexion,
+  // pour pouvoir appeler `commit()` nous-mêmes au bon moment — un appel
+  // légitime et conforme à la spec IndexedDB (un vrai navigateur l'expose
+  // aussi), qui bascule l'état de la transaction sans dépendre du temps que
+  // met fake-indexeddb à la terminer naturellement.
+  const origTransaction = baseReelle.transaction.bind(baseReelle);
+  let txCapturee = null;
+  baseReelle.transaction = (...args) => {
+    const tx = origTransaction(...args);
+    txCapturee = tx;
+    return tx;
+  };
+
+  // Gèle le traitement interne de fake-indexeddb : les callbacks qu'il
+  // programme via `setImmediate` (démarrage et avancement de la
+  // transaction) sont retenus plutôt qu'exécutés, ce qui la fige à l'état
+  // "active" jusqu'à ce qu'on les relâche nous-mêmes, plus bas. Le module
+  // sous test, lui, continue d'utiliser le VRAI `setTimeout` pour son garde
+  // (on ne touche pas à `setTimeout`) : c'est ce qui rend la course réelle.
+  const enAttente = [];
+  let geler = true;
+  const origSetImmediate = globalThis.setImmediate;
+  globalThis.setImmediate = (fn) => {
+    if (!geler) return origSetImmediate(fn);
+    enAttente.push(fn);
+    return 0;
+  };
+
+  const t0 = Date.now();
+  const attendreJusqua = async (cibleMs) => {
+    const restant = cibleMs - (Date.now() - t0);
+    if (restant > 0) await new Promise((resoudre) => { setTimeout(resoudre, restant); });
+  };
+
+  const promesseMettreEnFile = f.mettreEnFile({
+    jour, type: 'note', auteur: 'Course', texte: 'commit pile au garde',
+    motDePasse: 'x', idempotence: 'idem-race-1',
+  });
+
+  // Laisse le temps à `mettreEnFile` d'atteindre `base.transaction(...)`.
+  await attendreJusqua(50);
+  assert.ok(txCapturee, 'la transaction aurait dû être capturée avant le premier setImmediate gelé');
+
+  // Juste avant le garde écriture réel (DELAI_ECRITURE_MS = 30 000 ms) :
+  // on commite nous-mêmes, plaçant la transaction en état "committing" —
+  // exactement ce qu'un vrai navigateur aurait fait en train de finir
+  // d'écrire, à ce point précis du délai.
+  await attendreJusqua(29700);
+  txCapturee.commit();
+
+  // Continue d'attendre jusqu'un peu après le déclenchement réel du garde.
+  await attendreJusqua(30400);
+
+  // Relâche le traitement interne figé plus haut : la transaction, déjà en
+  // "committing", peut désormais terminer naturellement et déclencher
+  // `oncomplete`.
+  geler = false;
+  globalThis.setImmediate = origSetImmediate;
+  for (const fn of enAttente.splice(0)) origSetImmediate(fn);
+
+  // Avec le bug (rejet inconditionnel par le garde), cette promesse aurait
+  // rejeté ici alors que l'entrée est bel et bien écrite : l'appelant
+  // aurait retenté avec une nouvelle clé d'idempotence, donc un doublon.
+  const idLocal = await promesseMettreEnFile;
+  assert.equal(typeof idLocal, 'string');
+
+  const liste = await f.listerFile(jour);
+  assert.ok(
+    liste.some((e) => e.idLocal === idLocal),
+    "l'entrée doit être dans la file : le put a bien été écrit malgré le déclenchement du garde",
+  );
+
+  await Promise.all(liste.map((e) => f.viderEntree(e.idLocal)));
+});
+
+test('fermeture tardive d\'une ancienne connexion n\'efface pas une nouvelle connexion déjà mémoïsée (Important 2, 3e tour)', async () => {
+  const jour = 25;
+  reponseFetch = () => new Promise(() => {}); // sans importance ici
+
+  // Connexion A, fraîche et dédiée à ce test.
+  const connA = await connexionFraiche(jour);
+  assert.ok(connA);
+
+  // Simule ce qu'un navigateur ferait en interne : la fermeture de A est
+  // déjà entamée (toute transaction suivante sur A est vouée à échouer),
+  // MAIS l'événement `close` ne lui est pas encore parvenu — exactement le
+  // décalage que décrit la revue. `_closePending` est un détail d'implémen-
+  // tation de fake-indexeddb (pas de l'API publique IndexedDB), utilisé ici
+  // en connaissance de cause pour placer précisément cette course.
+  connA._closePending = true;
+
+  // Le prochain appel qui tente d'utiliser A échoue immédiatement
+  // (`InvalidStateError` sur `base.transaction(...)`), ce qui déclenche le
+  // rattrapage déjà en place (reset de `basePromise`, s'il porte encore sur
+  // A) — comportement déjà couvert par un test précédent, pas celui-ci.
+  await assert.rejects(() => f.mettreEnFile({
+    jour, type: 'note', auteur: 'Echoue', texte: 'x', motDePasse: 'x', idempotence: 'idem-late-fail',
+  }));
+
+  // L'appel suivant rouvre : une nouvelle connexion B, saine, est désormais
+  // mémoïsée à la place de A.
+  await f.mettreEnFile({
+    jour, type: 'note', auteur: 'B-chauffe', texte: 'x', motDePasse: 'x', idempotence: 'idem-late-b',
+  });
+  const connB = derniereConnexion;
+  assert.ok(connB && connB !== connA, 'une connexion B distincte doit avoir été ouverte');
+
+  // MAINTENANT — plus tard, « sur une tâche distincte » — l'événement
+  // `close` de A arrive enfin.
+  forceCloseDatabase(connA);
+
+  // La mémoïsation de B ne doit PAS avoir été effacée par cet événement
+  // tardif : l'appel suivant doit réutiliser B sans rouvrir (si `basePromise`
+  // avait été effacé à tort, cet appel aurait dû rouvrir une connexion C,
+  // et `derniereConnexion` ne vaudrait plus `connB`).
+  await f.mettreEnFile({
+    jour, type: 'note', auteur: 'Verif', texte: 'x', motDePasse: 'x', idempotence: 'idem-late-verif',
+  });
+  assert.equal(
+    derniereConnexion,
+    connB,
+    "aucune réouverture : B est toujours la connexion mémoïsée, l'événement tardif de A ne l'a pas effacée",
+  );
+
+  // Nettoyage.
+  const liste = await f.listerFile(jour);
+  await Promise.all(liste.map((e) => f.viderEntree(e.idLocal)));
+});

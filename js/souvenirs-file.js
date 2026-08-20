@@ -39,78 +39,110 @@ let enCours = false;
 let basePromise = null;
 
 function ouvrir() {
-  if (!basePromise) {
-    basePromise = new Promise((resoudre, rejeter) => {
-      let reglee = false;
+  if (basePromise) return basePromise;
 
-      function regler(fn, valeur) {
-        if (reglee) return;
-        reglee = true;
-        clearTimeout(minuteurGarde);
-        fn(valeur);
-      }
-
-      // Une ouverture peut rester pendue indéfiniment sans jamais émettre
-      // `onsuccess` ni `onerror` (cas connu sur WebKit/iOS après restauration
-      // de page, précisément la plateforme visée) : sans ce garde, `enCours`
-      // et `mettreEnFile` resteraient bloqués pour la vie de l'onglet, et la
-      // mémoïsation de la connexion (voir plus bas) aggraverait le problème
-      // en empoisonnant tous les appels futurs avec la même ouverture morte.
-      const minuteurGarde = setTimeout(() => {
-        basePromise = null; // qu'un futur appel puisse retenter une ouverture propre
-        regler(rejeter, new Error('Ouverture IndexedDB sans réponse (délai dépassé)'));
-      }, DELAI_OUVERTURE_MS);
-
-      const requete = indexedDB.open(BASE, 1);
-      requete.onupgradeneeded = () => {
-        const base = requete.result;
-        if (!base.objectStoreNames.contains(MAGASIN)) {
-          base.createObjectStore(MAGASIN, { keyPath: 'idLocal' });
-        }
-      };
-      requete.onsuccess = () => {
-        const base = requete.result;
-        if (reglee) {
-          // Le délai de garde (ou `onblocked`) a déjà réglé cette promesse,
-          // et personne ne référence donc cette connexion qui arrive après
-          // coup. La laisser ouverte bloquerait un futur changement de
-          // schéma — exactement ce que la mémoïsation cherche à éviter — on
-          // la referme donc aussitôt plutôt que de la laisser fuiter.
-          base.close();
-          return;
-        }
-        // Le navigateur peut fermer la connexion de force pour récupérer du
-        // stockage (base saturée de photos/vidéos, le cas visé sur le
-        // terrain) : sans écouter `onclose`, la promesse mémoïsée resterait
-        // tenue sur une base morte et TOUTE opération échouerait
-        // définitivement — `mettreEnFile` comprise — jusqu'à rechargement
-        // de la page. En réinitialisant `basePromise`, le prochain appel
-        // rouvre proprement.
-        base.onclose = () => { basePromise = null; };
-        // Un autre onglet (ou un futur déploiement avec un schéma v2) peut
-        // demander une version supérieure : on ferme alors proprement notre
-        // connexion pour ne pas la bloquer indéfiniment derrière `onblocked`.
-        base.onversionchange = () => {
-          base.close();
-          basePromise = null;
-        };
-        regler(resoudre, base);
-      };
-      requete.onerror = () => {
-        basePromise = null;
-        regler(rejeter, requete.error);
-      };
-      requete.onblocked = () => {
-        basePromise = null;
-        regler(rejeter, new Error("Ouverture d'IndexedDB bloquée par un autre onglet"));
-      };
-    });
+  // `indexedDB.open` peut lever de façon SYNCHRONE (navigation privée
+  // Firefox, contexte restreint) : traité ICI, avant toute mémoïsation, pour
+  // ne rien laisser en cache et permettre à l'appel suivant de retenter
+  // proprement, sans dépendre du délai de garde pour se réparer.
+  let requete;
+  try {
+    requete = indexedDB.open(BASE, 1);
+  } catch (erreurSynchrone) {
+    return Promise.reject(erreurSynchrone);
   }
+
+  const promesse = new Promise((resoudre, rejeter) => {
+    let reglee = false;
+
+    function regler(fn, valeur) {
+      if (reglee) return;
+      reglee = true;
+      clearTimeout(minuteurGarde);
+      fn(valeur);
+    }
+
+    // Cinq endroits peuvent vouloir « oublier » cette connexion mémoïsée
+    // (échec d'ouverture, blocage, délai de garde, fermeture forcée,
+    // changement de version). Mais une fermeture tardive de CETTE tentative
+    // d'ouverture peut arriver APRÈS qu'un appel ultérieur a déjà mémoïsé une
+    // connexion SAINE différente (ex. : la transaction échoue et déclenche un
+    // rattrapage immédiat qui rouvre, pendant que l'événement `close` de
+    // l'ancienne connexion, lui, arrive plus tard sur une tâche distincte).
+    // Effacer `basePromise` sans vérifier effacerait alors cette nouvelle
+    // connexion valide au lieu de la connexion morte — fuite non bornée,
+    // précisément ce que la mémoïsation devait éviter (elle bloquerait à
+    // terme un futur changement de schéma). On ne l'efface donc que si elle
+    // porte encore exactement sur CETTE tentative d'ouverture.
+    function oublierSiCourante() {
+      if (basePromise === promesse) basePromise = null;
+    }
+
+    // Une ouverture peut rester pendue indéfiniment sans jamais émettre
+    // `onsuccess` ni `onerror` (cas connu sur WebKit/iOS après restauration
+    // de page, précisément la plateforme visée) : sans ce garde, `enCours`
+    // et `mettreEnFile` resteraient bloqués pour la vie de l'onglet, et la
+    // mémoïsation de la connexion (voir plus bas) aggraverait le problème
+    // en empoisonnant tous les appels futurs avec la même ouverture morte.
+    const minuteurGarde = setTimeout(() => {
+      oublierSiCourante();
+      regler(rejeter, new Error('Ouverture IndexedDB sans réponse (délai dépassé)'));
+    }, DELAI_OUVERTURE_MS);
+
+    requete.onupgradeneeded = () => {
+      const base = requete.result;
+      if (!base.objectStoreNames.contains(MAGASIN)) {
+        base.createObjectStore(MAGASIN, { keyPath: 'idLocal' });
+      }
+    };
+    requete.onsuccess = () => {
+      const base = requete.result;
+      if (reglee) {
+        // Le délai de garde (ou `onblocked`) a déjà réglé cette promesse,
+        // et personne ne référence donc cette connexion qui arrive après
+        // coup. La laisser ouverte bloquerait un futur changement de
+        // schéma — exactement ce que la mémoïsation cherche à éviter — on
+        // la referme donc aussitôt plutôt que de la laisser fuiter.
+        base.close();
+        return;
+      }
+      // Le navigateur peut fermer la connexion de force pour récupérer du
+      // stockage (base saturée de photos/vidéos, le cas visé sur le
+      // terrain) : sans écouter `onclose`, la promesse mémoïsée resterait
+      // tenue sur une base morte et TOUTE opération échouerait
+      // définitivement — `mettreEnFile` comprise — jusqu'à rechargement
+      // de la page. En réinitialisant `basePromise`, le prochain appel
+      // rouvre proprement.
+      base.onclose = oublierSiCourante;
+      // Un autre onglet (ou un futur déploiement avec un schéma v2) peut
+      // demander une version supérieure : on ferme alors proprement notre
+      // connexion pour ne pas la bloquer indéfiniment derrière `onblocked`.
+      base.onversionchange = () => {
+        base.close();
+        oublierSiCourante();
+      };
+      regler(resoudre, base);
+    };
+    requete.onerror = () => {
+      oublierSiCourante();
+      regler(rejeter, requete.error);
+    };
+    requete.onblocked = () => {
+      oublierSiCourante();
+      regler(rejeter, new Error("Ouverture d'IndexedDB bloquée par un autre onglet"));
+    };
+  });
+
+  basePromise = promesse;
   return basePromise;
 }
 
 async function transaction(mode, action) {
-  const base = await ouvrir();
+  // On capture la promesse elle-même (pas seulement la connexion qu'elle
+  // rend) : c'est ce qui permet, plus bas, de vérifier qu'elle est toujours
+  // LA connexion mémoïsée courante avant de l'effacer sur un échec.
+  const promesseBase = ouvrir();
+  const base = await promesseBase;
   const delaiGarde = mode === 'readonly' ? DELAI_LECTURE_MS : DELAI_ECRITURE_MS;
   return new Promise((resoudre, rejeter) => {
     let reglee = false;
@@ -131,7 +163,23 @@ async function transaction(mode, action) {
       // un `mettreEnFile` qu'on croit raté mais que l'auteur retente avec
       // une nouvelle clé d'idempotence, alors que le premier a bien été
       // enregistré.
-      try { tx?.abort(); } catch { /* déjà terminée, rien à faire */ }
+      //
+      // Mais `abort()` lève `InvalidStateError` si la transaction a DÉJÀ
+      // abouti (commitée, ou déjà interrompue) — ce qui peut arriver pile au
+      // moment où ce délai se déclenche, sur une boucle d'événements chargée
+      // (compression d'image en cours, par exemple). Dans ce cas précis,
+      // « déjà terminée » signifie très précisément « l'écriture a eu
+      // lieu » : rejeter quand même mentirait sur ce qui s'est passé et
+      // ouvrirait exactement le doublon qu'on cherche à empêcher. On ne
+      // rejette donc par ce garde QUE si `abort()` a réellement réussi à
+      // interrompre la transaction ; sinon on laisse `tx.oncomplete` (qui va
+      // se déclencher, puisque la transaction est terminée) régler la
+      // promesse avec le vrai résultat.
+      try {
+        tx?.abort();
+      } catch {
+        return;
+      }
       regler(rejeter, new Error('Transaction IndexedDB sans réponse (délai dépassé)'));
     }, delaiGarde);
 
@@ -143,7 +191,10 @@ async function transaction(mode, action) {
       // réinitialiser : on force la réouverture dès maintenant, pour que le
       // PROCHAIN appel — celui-ci échoue — reparte sur une base saine plutôt
       // que de rester bloqué sur une connexion morte jusqu'à rechargement.
-      basePromise = null;
+      // On ne l'efface que si elle porte encore sur CETTE ouverture : une
+      // fermeture tardive de l'ancienne connexion ne doit pas effacer une
+      // nouvelle connexion saine mémoïsée entre-temps (voir `ouvrir`).
+      if (basePromise === promesseBase) basePromise = null;
       regler(rejeter, erreurTransaction);
       return;
     }
@@ -263,16 +314,31 @@ async function traiterEntree(entree) {
     // l'entrée qu'il croyait avoir supprimée. On relit donc l'état actuel —
     // `undefined` si elle n'existe plus, grâce au contrat de retour net de
     // `transaction()` — et on n'écrit que si l'entrée existe encore.
-    const actuelle = await transaction('readonly', (magasin) => magasin.get(entree.idLocal));
-    if (!actuelle) return;
-    await transaction('readwrite', (magasin) => magasin.put({
-      ...actuelle,
-      tentatives,
-      prochaineTentative: definitif ? Number.MAX_SAFE_INTEGER : Date.now() + attente,
-      dernierSouci: erreurEnvoi.message,
-      bloque: definitif,
-    }));
-    signaler();
+    //
+    // La lecture et l'écriture se font dans la MÊME transaction `readwrite`
+    // (le `put` est émis depuis le gestionnaire `onsuccess` du `get`, ce qui
+    // le garde ouverte) plutôt que dans deux transactions séparées : sans
+    // ça, la garantie « pas de résurrection » ne tiendrait que par une
+    // propriété d'ordonnancement (rien ne s'intercale entre les deux appels)
+    // plutôt que par construction.
+    let entreeEncorePresente = false;
+    await transaction('readwrite', (magasin) => {
+      const requeteGet = magasin.get(entree.idLocal);
+      requeteGet.onsuccess = () => {
+        const actuelle = requeteGet.result;
+        if (!actuelle) return; // supprimée entretemps : rien à réécrire
+        entreeEncorePresente = true;
+        magasin.put({
+          ...actuelle,
+          tentatives,
+          prochaineTentative: definitif ? Number.MAX_SAFE_INTEGER : Date.now() + attente,
+          dernierSouci: erreurEnvoi.message,
+          bloque: definitif,
+        });
+      };
+      return requeteGet;
+    });
+    if (entreeEncorePresente) signaler();
   } catch (souciEcriture) {
     // Le rattrapage lui-même a échoué (ex. stockage saturé pendant le put).
     // Conformément à la garantie structurelle de `renvoyerMaintenant`, on ne

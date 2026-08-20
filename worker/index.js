@@ -250,6 +250,74 @@ async function servirMedia(cle, env, cors) {
   return new Response(objet.body, { headers: entetes });
 }
 
+/** Vrai si la requête porte le mot de passe d'administration.
+    Même raisonnement que `groupeAutorise` : on hache les deux côtés avant de
+    comparer, pour ne pas trahir la longueur d'un mot de passe choisi par un
+    humain (`memeSecret` sort tôt quand les longueurs diffèrent). */
+async function adminAutorise(requete, env) {
+  const fourni = requete.headers.get('X-Mot-De-Passe');
+  if (!fourni || !env.MOT_DE_PASSE_ADMIN) return false;
+  return memeSecret(await hacherJeton(fourni), await hacherJeton(env.MOT_DE_PASSE_ADMIN));
+}
+
+/** Vrai si le jeton présenté est bien celui de cette contribution.
+    `ligne.jeton_hache` et le jeton une fois haché sont deux empreintes
+    SHA-256 de longueur fixe (64 caractères) : `memeSecret` s'y applique
+    directement, sans le hachage supplémentaire qu'exige un mot de passe. */
+async function auteurAutorise(requete, ligne) {
+  const jeton = requete.headers.get('X-Jeton');
+  if (!jeton) return false;
+  return memeSecret(await hacherJeton(jeton), ligne.jeton_hache);
+}
+
+async function modifier(id, requete, env, cors) {
+  const ligne = await env.DB
+    .prepare('SELECT * FROM contributions WHERE id = ?').bind(id).first();
+  if (!ligne) return erreur('Contribution introuvable', 404, cors);
+  if (!await auteurAutorise(requete, ligne)) {
+    return erreur("Seul l'auteur peut modifier cette contribution", 403, cors);
+  }
+
+  const corps = await requete.json().catch(() => ({}));
+  const texte = assainir(corps.texte, TEXTE_MAX);
+  // Une note vide n'a pas de sens ; la légende d'un média, si.
+  if (!texte && ligne.type === 'note') return erreur('La note est vide', 400, cors);
+
+  const modifieLe = new Date().toISOString();
+  await env.DB
+    .prepare('UPDATE contributions SET texte = ?, modifie_le = ? WHERE id = ?')
+    .bind(texte, modifieLe, id)
+    .run();
+
+  return repondre(
+    { contribution: versPublic({ ...ligne, texte, modifie_le: modifieLe }) },
+    { cors },
+  );
+}
+
+async function supprimer(id, requete, env, cors) {
+  const ligne = await env.DB
+    .prepare('SELECT * FROM contributions WHERE id = ?').bind(id).first();
+  if (!ligne) return erreur('Contribution introuvable', 404, cors);
+
+  // Court-circuit volontaire : `auteurAutorise` n'est haché/comparé que si
+  // l'administration n'a pas déjà tranché.
+  const permis = await adminAutorise(requete, env) || await auteurAutorise(requete, ligne);
+  if (!permis) return erreur('Suppression non autorisée', 403, cors);
+
+  if (ligne.media_cle) await env.MEDIAS.delete(ligne.media_cle);
+  await env.DB.prepare('DELETE FROM contributions WHERE id = ?').bind(id).run();
+  return repondre({ supprime: id }, { cors });
+}
+
+/** Liste toutes les contributions, pour la page de modération. */
+async function listerTout(requete, env, cors) {
+  if (!await adminAutorise(requete, env)) return erreur('Mot de passe incorrect', 401, cors);
+  const { results } = await env.DB
+    .prepare('SELECT * FROM contributions ORDER BY id DESC').all();
+  return repondre({ contributions: results.map(versPublic) }, { cors });
+}
+
 export default {
   async fetch(requete, env) {
     const cors = entetesCors(requete, env);
@@ -278,6 +346,17 @@ export default {
 
       if (chemin.startsWith('/media/') && requete.method === 'GET') {
         return await servirMedia(decodeURIComponent(chemin.slice('/media/'.length)), env, cors);
+      }
+
+      const contribution = chemin.match(/^\/api\/contribution\/([0-9a-z]+)$/);
+      if (contribution) {
+        const id = contribution[1];
+        if (requete.method === 'PATCH') return await modifier(id, requete, env, cors);
+        if (requete.method === 'DELETE') return await supprimer(id, requete, env, cors);
+      }
+
+      if (chemin === '/api/tout' && requete.method === 'GET') {
+        return await listerTout(requete, env, cors);
       }
 
       return erreur('Route inconnue', 404, cors);

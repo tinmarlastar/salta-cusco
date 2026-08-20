@@ -5,7 +5,7 @@
 
 import {
   listerEtape, modifierContribution, supprimerContribution,
-  compresserImage, verifierVideo, urlMedia, creerCleIdempotence, ErreurService,
+  compresserImage, verifierVideo, urlMedia, creerCleIdempotence, creerJetonAuteur, ErreurService,
 } from './souvenirs.js';
 import {
   mettreEnFile, listerFile, viderEntree, demarrerRenvoi, renvoyerMaintenant, reprendreEntree,
@@ -21,10 +21,12 @@ const echapper = (texte) => String(texte ?? '').replace(/[&<>"]/g, (c) =>
 const jetons = () => JSON.parse(localStorage.getItem(CLE_JETONS) || '{}');
 
 // Rappel passé à `demarrerRenvoi` : c'est `traiterEntree`, dans
-// souvenirs-file.js, qui l'appelle quand un envoi en file d'attente réussit
-// et que le service a renvoyé un jeton d'auteur (uniquement à la création :
-// le module de file n'a ni localStorage ni DOM, la mémorisation est bien ici,
-// une préoccupation de la vue).
+// souvenirs-file.js, qui l'appelle sur tout envoi en file d'attente réussi,
+// avec l'identifiant attribué par le service et le jeton d'auteur — depuis
+// I3, en général celui généré par la vue à la mise en file (`creerJetonAuteur`
+// dans souvenirs.js), connu dès le départ et non plus tributaire d'une
+// réponse fraîche du service. Le module de file n'a ni localStorage ni DOM,
+// la mémorisation est bien ici, une préoccupation de la vue.
 function retenirJeton(id, jeton) {
   if (!jeton) return;
   const tous = jetons();
@@ -205,6 +207,11 @@ export function monterSouvenirs(conteneur, jour) {
       type: fichier ? 'media' : 'note',
       jour, auteur, texte, fichier, motDePasse,
       idempotence: creerCleIdempotence(),
+      // I3 (revue finale) : généré ici, au même endroit que la clé
+      // d'idempotence — avant tout envoi — pour que le rejeu d'une réponse
+      // perdue en route (le cas nominal en zone de réseau faible) n'empêche
+      // plus jamais l'auteur de retrouver ses boutons Modifier/Supprimer.
+      jeton: creerJetonAuteur(),
     };
 
     // C3 (revue finale) : `mettreEnFile` peut légitimement rejeter (quota de

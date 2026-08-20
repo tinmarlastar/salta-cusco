@@ -67,6 +67,23 @@ export function creerCleIdempotence() {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
+/** Jeton d'auteur généré par le client, au même endroit que la clé
+    d'idempotence (I3, revue finale).
+
+    Le service générait auparavant seul ce jeton et ne le renvoyait qu'à la
+    création : une réponse perdue en route (le cas nominal en zone de réseau
+    faible) faisait perdre pour toujours, sur le rejeu reconnu par la clé
+    d'idempotence, les boutons Modifier/Supprimer du souvenir — pourtant bien
+    publié. En le générant ici et en le transmettant au service (qui n'en
+    garde que le SHA-256), le rejeu devient indifférent : le client connaît
+    déjà son jeton, qu'il lui soit ou non retourné.
+    16 octets aléatoires en hexadécimal : même qualité que l'ancien jeton
+    généré côté service (`creerJeton` dans `worker/lib/securite.js`). */
+export function creerJetonAuteur() {
+  const octets = crypto.getRandomValues(new Uint8Array(16));
+  return [...octets].map((o) => o.toString(16).padStart(2, '0')).join('');
+}
+
 /** Appelle le service et distingue panne réseau et refus explicite.
 
     `delaiMs` borne l'attente : sur le réseau irrégulier des Andes, une
@@ -98,26 +115,35 @@ export async function listerEtape(jour) {
   return donnees.contributions || [];
 }
 
-export async function envoyerNote({ jour, auteur, texte, motDePasse, idempotence }) {
+export async function envoyerNote({ jour, auteur, texte, motDePasse, idempotence, jeton }) {
+  const entetes = {
+    'Content-Type': 'application/json',
+    'X-Mot-De-Passe': motDePasse,
+    'X-Idempotence': idempotence,
+  };
+  // I3 : le jeton client (généré à la mise en file) rend le rejeu indifférent
+  // — voir `creerJetonAuteur`. Optionnel pour ne rien casser sur une entrée
+  // plus ancienne, mise en file avant ce correctif, qui n'en porterait pas.
+  if (jeton) entetes['X-Jeton'] = jeton;
   return appeler(`/api/etape/${jour}`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Mot-De-Passe': motDePasse,
-      'X-Idempotence': idempotence,
-    },
+    headers: entetes,
     body: JSON.stringify({ auteur, texte }),
   });
 }
 
-export async function envoyerMedia({ jour, auteur, texte, fichier, motDePasse, idempotence }) {
+export async function envoyerMedia({
+  jour, auteur, texte, fichier, motDePasse, idempotence, jeton,
+}) {
   const formulaire = new FormData();
   formulaire.set('auteur', auteur);
   formulaire.set('texte', texte || '');
   formulaire.set('fichier', fichier, fichier.name || 'souvenir');
+  const entetes = { 'X-Mot-De-Passe': motDePasse, 'X-Idempotence': idempotence };
+  if (jeton) entetes['X-Jeton'] = jeton; // I3, même raisonnement que pour envoyerNote
   return appeler(`/api/etape/${jour}/media`, {
     method: 'POST',
-    headers: { 'X-Mot-De-Passe': motDePasse, 'X-Idempotence': idempotence },
+    headers: entetes,
     body: formulaire,
   }, DELAI_MEDIA_MS);
 }

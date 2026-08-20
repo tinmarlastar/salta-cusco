@@ -30,10 +30,14 @@ const DELAI_LECTURE_MS = 8000;
 const DELAI_ECRITURE_MS = 30_000;
 
 let signaler = () => {};
-// Le service ne renvoie le jeton d'auteur qu'UNE SEULE FOIS, à la création
-// (jamais sur un rejeu reconnu par la clé d'idempotence) : c'est ici, dans
-// `traiterEntree`, qu'il faut le capter, sinon il est perdu pour de bon et
-// personne ne peut plus jamais modifier ni supprimer son propre souvenir.
+// Depuis I3 (revue finale), le jeton d'auteur est en général déjà connu :
+// généré par la vue à la mise en file (`entree.jeton`), il voyage avec
+// l'entrée à travers ses éventuelles tentatives et survit donc à une réponse
+// perdue en route. `traiterEntree` reste l'endroit où le capter — toujours
+// sur TOUT succès désormais, y compris un rejeu, puisqu'il n'y a plus besoin
+// d'attendre une réponse fraîche du service pour le connaître. (Une entrée
+// mise en file avant ce correctif, sans `jeton`, retombe sur celui,
+// éventuel, de la réponse — ancien comportement, seulement à la création.)
 // Sur le même modèle que `signaler` : une variable de module plutôt qu'un
 // argument transporté de bout en bout, remplacée à chaque appel de
 // `demarrerRenvoi`. Ce module reste sans opinion sur ce qu'on en fait — pas
@@ -319,13 +323,23 @@ async function traiterEntree(entree) {
   }
 
   if (envoiReussi) {
-    // Capter le jeton avant tout le reste : c'est la seule occasion. Protégé
-    // par son propre filet — le rappel vient de l'appelant (la vue) et n'a
-    // aucune raison de pouvoir compromettre la garantie structurelle de
-    // `renvoyerMaintenant` : une entrée déjà envoyée avec succès doit être
-    // retirée localement même si la mémorisation de son jeton échoue.
+    // Capter le jeton avant tout le reste. Protégé par son propre filet — le
+    // rappel vient de l'appelant (la vue) et n'a aucune raison de pouvoir
+    // compromettre la garantie structurelle de `renvoyerMaintenant` : une
+    // entrée déjà envoyée avec succès doit être retirée localement même si la
+    // mémorisation de son jeton échoue.
+    //
+    // I3 : `entree.jeton` — généré par la vue à la mise en file — prime sur
+    // celui, éventuel, de la réponse. Il est donc capté sur TOUT succès, pas
+    // seulement une création (`resultatEnvoi.contribution` suffit, `deja` ou
+    // non) : contrairement à l'ancien jeton généré côté service, celui-ci ne
+    // dépend d'aucune réponse fraîche pour être connu. Le repli sur
+    // `resultatEnvoi?.jeton` ne sert plus qu'aux entrées mises en file avant
+    // ce correctif, qui ne portent pas encore de `jeton`.
     try {
-      if (resultatEnvoi?.jeton && resultatEnvoi?.contribution) {
+      if (entree.jeton && resultatEnvoi?.contribution) {
+        surJeton(resultatEnvoi.contribution.id, entree.jeton);
+      } else if (resultatEnvoi?.jeton && resultatEnvoi?.contribution) {
         surJeton(resultatEnvoi.contribution.id, resultatEnvoi.jeton);
       }
     } catch (souciJeton) {
@@ -479,11 +493,12 @@ function surVisibiliteChangee() {
     suite, sans attendre le réseau, la visibilité ou la minuterie de 2 min.
 
     `memoriserJeton(id, jeton)` est optionnel, sur le même modèle que
-    `surChangement` : appelé par `traiterEntree` quand un envoi réussit et
-    que le service a renvoyé un jeton d'auteur (uniquement à la création,
-    jamais sur un rejeu). C'est la seule occasion de le capter — sans ce
-    rappel, personne ne pourrait plus jamais modifier ni supprimer son propre
-    souvenir une fois l'entrée retirée de la file. */
+    `surChangement` : appelé par `traiterEntree` sur tout envoi réussi (I3,
+    revue finale : le jeton client survit à un rejeu, il n'est donc plus
+    capté à la seule création). C'est le seul endroit où la vue apprend
+    quel identifiant serveur correspond au jeton qu'elle connaît déjà —
+    sans ce rappel, elle ne saurait jamais quels boutons Modifier/Supprimer
+    afficher une fois l'entrée retirée de la file. */
 export function demarrerRenvoi({ surChangement, memoriserJeton } = {}) {
   if (surChangement) signaler = surChangement;
   if (memoriserJeton) surJeton = memoriserJeton;

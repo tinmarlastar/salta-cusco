@@ -87,6 +87,22 @@ function assainir(valeur, longueurMax) {
   return valeur.trim().slice(0, longueurMax);
 }
 
+/** Jeton d'auteur fourni par le client à la création (I3, revue finale), ou
+    `null` s'il n'y en a pas.
+
+    Avant ce correctif, le service générait seul le jeton et ne le renvoyait
+    qu'une fois, à la création : une réponse perdue en route (le cas nominal
+    en zone de réseau faible) faisait retrouver au client, sur le rejeu
+    reconnu par la clé d'idempotence, un `jeton: null` définitif — la
+    contribution restait publiée mais son auteur perdait pour toujours ses
+    boutons Modifier/Supprimer. En laissant le client choisir son propre
+    jeton (généré à la mise en file, avant tout envoi), le rejeu devient
+    indifférent : il le connaît déjà, qu'il l'ait reçu en retour ou non. Le
+    service n'en garde toujours que le SHA-256, jamais le jeton en clair. */
+function jetonFourniParClient(requete) {
+  return assainir(requete.headers.get('X-Jeton'), 128) || null;
+}
+
 /** Insère une contribution ; renvoie l'existante si la clé a déjà servi. */
 async function enregistrer(ligne, env) {
   try {
@@ -134,7 +150,11 @@ async function creerNote(jour, requete, env, cors) {
   if (!auteur) return erreur('Un prénom est nécessaire', 400, cors);
   if (!texte) return erreur('La note est vide', 400, cors);
 
-  const jeton = creerJeton();
+  // I3 : le client fournit en général déjà son jeton (généré à la mise en
+  // file) ; à défaut — client plus ancien, ou entrée mise en file avant ce
+  // correctif — le service en génère un comme auparavant.
+  const jetonFourni = jetonFourniParClient(requete);
+  const jeton = jetonFourni || creerJeton();
   const { ligne, deja } = await enregistrer({
     id: creerId(),
     jour,
@@ -149,10 +169,13 @@ async function creerNote(jour, requete, env, cors) {
     cle_idempotence: idempotence,
   }, env);
 
-  // Sur un renvoi, l'entrée existe déjà et son jeton d'origine est perdu :
-  // seul le premier envoi reçoit un jeton exploitable.
+  // Sur un renvoi, l'entrée existe déjà : son jeton d'origine (fourni par le
+  // client ou généré ici) n'est jamais rejoué. Un client qui a fourni le
+  // sien le connaît déjà, donc peu importe ; un client qui dépendait de la
+  // génération côté service, lui, le perdrait sans recours — exactement ce
+  // que ce correctif élimine pour les clients à jour.
   return repondre(
-    { contribution: versPublic(ligne), jeton: deja ? null : jeton },
+    { contribution: versPublic(ligne), jeton: (deja || jetonFourni) ? null : jeton },
     { statut: deja ? 200 : 201, cors },
   );
 }
@@ -212,7 +235,10 @@ async function creerMedia(jour, requete, env, cors) {
     httpMetadata: { contentType: typeNormalise },
   });
 
-  const jeton = creerJeton();
+  // I3 : voir le commentaire de `jetonFourniParClient` — même raisonnement
+  // que pour une note.
+  const jetonFourni = jetonFourniParClient(requete);
+  const jeton = jetonFourni || creerJeton();
   const { ligne, deja } = await enregistrer({
     id,
     jour,
@@ -240,7 +266,7 @@ async function creerMedia(jour, requete, env, cors) {
   }
 
   return repondre(
-    { contribution: versPublic(ligne), jeton: deja ? null : jeton },
+    { contribution: versPublic(ligne), jeton: (deja || jetonFourni) ? null : jeton },
     { statut: deja ? 200 : 201, cors },
   );
 }

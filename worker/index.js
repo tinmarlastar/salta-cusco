@@ -89,13 +89,22 @@ async function enregistrer(ligne, env) {
     ).run();
     return { ligne, deja: false };
   } catch (souci) {
+    // On vise précisément la contrainte `cle_idempotence`, pas le mot « UNIQUE »
+    // seul : la table porte aussi une clé primaire sur `id`, dont la violation
+    // produit elle aussi « UNIQUE » dans le message SQLite. Un test trop large
+    // confondrait une vraie collision d'identifiant avec un rejeu, et irait
+    // chercher une clé d'idempotence qui n'a jamais été insérée.
+    if (!String(souci).includes('cle_idempotence')) throw souci;
     // Clé d'idempotence déjà vue : un renvoi après une réponse perdue en route.
     // On rend l'existante plutôt que de créer un doublon.
-    if (!String(souci).includes('UNIQUE')) throw souci;
     const existante = await env.DB
       .prepare('SELECT * FROM contributions WHERE cle_idempotence = ?')
       .bind(ligne.cle_idempotence)
       .first();
+    // Garde-fou : si rien ne correspond, le message ne décrivait pas réellement
+    // un rejeu (formulation différente en production par ex.) — on relance
+    // l'erreur d'origine plutôt que de renvoyer une ligne nulle à `versPublic`.
+    if (!existante) throw souci;
     return { ligne: existante, deja: true };
   }
 }

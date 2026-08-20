@@ -7,6 +7,19 @@ import { creerId, creerJeton, hacherJeton, memeSecret } from './lib/securite.js'
 const TEXTE_MAX = 2000;
 const AUTEUR_MAX = 40;
 
+const VIDEO_OCTETS_MAX = 60 * 1024 * 1024; // 60 Mo : au-delà, l'envoi en altitude n'aboutit pas
+const IMAGE_OCTETS_MAX = 12 * 1024 * 1024; // le navigateur compresse déjà ; cette marge couvre les cas non compressés
+
+const EXTENSIONS = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'image/heic': 'heic',
+  'video/mp4': 'mp4',
+  'video/quicktime': 'mov',
+  'video/webm': 'webm',
+};
+
 const JSON_ENTETES = { 'Content-Type': 'application/json; charset=utf-8' };
 
 /** En-têtes CORS pour l'origine appelante, si elle est autorisée. */
@@ -144,6 +157,79 @@ async function creerNote(jour, requete, env, cors) {
   );
 }
 
+async function creerMedia(jour, requete, env, cors) {
+  if (!await groupeAutorise(requete, env)) return erreur('Mot de passe incorrect', 401, cors);
+
+  const idempotence = assainir(requete.headers.get('X-Idempotence'), 80);
+  if (!idempotence) return erreur('En-tête X-Idempotence manquant', 400, cors);
+
+  const formulaire = await requete.formData().catch(() => null);
+  if (!formulaire) return erreur('Envoi illisible', 400, cors);
+
+  const auteur = assainir(formulaire.get('auteur'), AUTEUR_MAX);
+  const texte = assainir(formulaire.get('texte'), TEXTE_MAX);
+  const fichier = formulaire.get('fichier');
+  if (!auteur) return erreur('Un prénom est nécessaire', 400, cors);
+  if (!fichier || typeof fichier.arrayBuffer !== 'function') {
+    return erreur('Aucun fichier reçu', 400, cors);
+  }
+
+  const genre = fichier.type.startsWith('video/') ? 'video' : 'image';
+  const plafond = genre === 'video' ? VIDEO_OCTETS_MAX : IMAGE_OCTETS_MAX;
+  if (fichier.size > plafond) {
+    const mo = Math.round(plafond / (1024 * 1024));
+    return erreur(
+      genre === 'video'
+        ? `Vidéo trop lourde (maximum ${mo} Mo). Raccourcissez le clip ou baissez la qualité.`
+        : `Image trop lourde (maximum ${mo} Mo).`,
+      413, cors,
+    );
+  }
+
+  const extension = EXTENSIONS[fichier.type] || (genre === 'video' ? 'mp4' : 'jpg');
+  const id = creerId();
+  const cle = `medias/${jour}/${id}.${extension}`;
+
+  await env.MEDIAS.put(cle, fichier.stream(), {
+    httpMetadata: { contentType: fichier.type || 'application/octet-stream' },
+  });
+
+  const jeton = creerJeton();
+  const { ligne, deja } = await enregistrer({
+    id,
+    jour,
+    auteur,
+    type: 'media',
+    texte,
+    media_cle: cle,
+    media_genre: genre,
+    media_octets: fichier.size,
+    cree_le: new Date().toISOString(),
+    jeton_hache: await hacherJeton(jeton),
+    cle_idempotence: idempotence,
+  }, env);
+
+  // Renvoi d'un média déjà enregistré : le fichier qu'on vient d'écrire est un
+  // orphelin, on le retire pour ne pas encombrer le stockage.
+  if (deja && ligne.media_cle !== cle) await env.MEDIAS.delete(cle);
+
+  return repondre(
+    { contribution: versPublic(ligne), jeton: deja ? null : jeton },
+    { statut: deja ? 200 : 201, cors },
+  );
+}
+
+async function servirMedia(cle, env, cors) {
+  const objet = await env.MEDIAS.get(cle);
+  if (!objet) return erreur('Média introuvable', 404, cors);
+  const entetes = new Headers(cors);
+  objet.writeHttpMetadata(entetes);
+  entetes.set('etag', objet.httpEtag);
+  // Les fichiers ne changent jamais : le navigateur peut les garder longtemps.
+  entetes.set('Cache-Control', 'public, max-age=31536000, immutable');
+  return new Response(objet.body, { headers: entetes });
+}
+
 export default {
   async fetch(requete, env) {
     const cors = entetesCors(requete, env);
@@ -163,6 +249,15 @@ export default {
         // survient après la sortie du bloc `try` et échappe au `catch`.
         if (requete.method === 'GET') return await listerEtape(jour, env, cors);
         if (requete.method === 'POST') return await creerNote(jour, requete, env, cors);
+      }
+
+      const media = chemin.match(/^\/api\/etape\/(\d{1,2})\/media$/);
+      if (media && requete.method === 'POST') {
+        return await creerMedia(Number(media[1]), requete, env, cors);
+      }
+
+      if (chemin.startsWith('/media/') && requete.method === 'GET') {
+        return await servirMedia(decodeURIComponent(chemin.slice('/media/'.length)), env, cors);
       }
 
       return erreur('Route inconnue', 404, cors);

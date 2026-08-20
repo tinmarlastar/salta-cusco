@@ -21,11 +21,17 @@ test('creerJeton produit un secret de 32 caractères hexadécimaux', () => {
   assert.notEqual(jeton, creerJeton());
 });
 
-test('hacherJeton est stable et ne renvoie pas le jeton en clair', async () => {
+test('hacherJeton calcule SHA-256 et reste stable', async () => {
+  // Vecteur de test standard SHA-256 : input 'abc'
+  assert.equal(
+    await hacherJeton('abc'),
+    'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad',
+  );
+  // Stabilité : même entrée produit même résultat
   const empreinte = await hacherJeton('secret-de-test');
   assert.equal(empreinte, await hacherJeton('secret-de-test'));
+  // Format : 64 caractères hexadécimaux (SHA-256 = 256 bits = 64 hex)
   assert.match(empreinte, /^[0-9a-f]{64}$/);
-  assert.ok(!empreinte.includes('secret'));
 });
 
 test('hacherJeton distingue deux jetons différents', async () => {

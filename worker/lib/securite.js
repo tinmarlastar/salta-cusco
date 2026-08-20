@@ -4,7 +4,7 @@
    le Worker que sous `node --test`. */
 
 // Largeur fixe pour que l'horodatage en base 36 se trie comme une chaîne
-// jusqu'en l'an 5138. Sans cette largeur constante, « 9 » passerait après « 10 ».
+// jusqu'en l'an 5188. Sans cette largeur constante, « 9 » passerait après « 10 ».
 const LARGEUR_TEMPS = 9;
 
 /** Identifiant trié par le temps : horodatage base 36 puis tirage aléatoire. */
@@ -28,7 +28,9 @@ export async function hacherJeton(jeton) {
   return [...new Uint8Array(empreinte)].map((o) => o.toString(16).padStart(2, '0')).join('');
 }
 
-/** Comparaison en temps constant : la durée ne doit pas trahir le secret. */
+/** Comparaison à temps constant du contenu : la durée ne trahit pas le contenu du secret.
+    La longueur peut être révélée par le temps (retour anticipé si mismatch).
+    Suppose des valeurs de longueur fixe (jetons, empreintes SHA-256). */
 export function memeSecret(a, b) {
   if (typeof a !== 'string' || typeof b !== 'string' || !a || !b) return false;
   const ea = new TextEncoder().encode(a);

@@ -190,8 +190,17 @@ async function creerMedia(jour, requete, env, cors) {
   const id = creerId();
   const cle = `medias/${jour}/${id}.${extension}`;
 
+  // Le type MIME annoncé par le client n'est pas fiable : le mot de passe de
+  // groupe circule de vive voix entre plusieurs personnes, et un type inventé
+  // (HTML, SVG…) stocké tel quel serait ensuite resservi à l'identique par
+  // `servirMedia`, exécutable par le navigateur sur le domaine du service. On
+  // ne garde donc que les types qu'on connaît (clés de `EXTENSIONS`) ; tout le
+  // reste — y compris un `application/octet-stream` légitime d'un iPhone pour
+  // un HEIC — est stocké tel quel sous ce type neutre, jamais exécutable.
+  const typeNormalise = EXTENSIONS[fichier.type] ? fichier.type : 'application/octet-stream';
+
   await env.MEDIAS.put(cle, fichier.stream(), {
-    httpMetadata: { contentType: fichier.type || 'application/octet-stream' },
+    httpMetadata: { contentType: typeNormalise },
   });
 
   const jeton = creerJeton();
@@ -210,8 +219,16 @@ async function creerMedia(jour, requete, env, cors) {
   }, env);
 
   // Renvoi d'un média déjà enregistré : le fichier qu'on vient d'écrire est un
-  // orphelin, on le retire pour ne pas encombrer le stockage.
-  if (deja && ligne.media_cle !== cle) await env.MEDIAS.delete(cle);
+  // orphelin, on le retire pour ne pas encombrer le stockage. Ce nettoyage ne
+  // doit jamais faire échouer la réponse : un rejeu idempotent doit répondre
+  // 200 même si R2 refuse la suppression (erreur transitoire par ex.), sinon
+  // le client croit à un échec alors que sa contribution est bien enregistrée
+  // et retente sur un réseau capricieux.
+  if (deja && ligne.media_cle !== cle) {
+    await env.MEDIAS.delete(cle).catch((souci) => {
+      console.error('Nettoyage du média orphelin impossible :', souci);
+    });
+  }
 
   return repondre(
     { contribution: versPublic(ligne), jeton: deja ? null : jeton },
@@ -227,6 +244,9 @@ async function servirMedia(cle, env, cors) {
   entetes.set('etag', objet.httpEtag);
   // Les fichiers ne changent jamais : le navigateur peut les garder longtemps.
   entetes.set('Cache-Control', 'public, max-age=31536000, immutable');
+  // Empêche le navigateur de deviner un type différent du Content-Type stocké
+  // (déjà normalisé au dépôt) et de l'exécuter comme HTML/SVG malgré tout.
+  entetes.set('X-Content-Type-Options', 'nosniff');
   return new Response(objet.body, { headers: entetes });
 }
 

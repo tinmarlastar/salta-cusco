@@ -305,8 +305,19 @@ async function supprimer(id, requete, env, cors) {
   const permis = await adminAutorise(requete, env) || await auteurAutorise(requete, ligne);
   if (!permis) return erreur('Suppression non autorisée', 403, cors);
 
-  if (ligne.media_cle) await env.MEDIAS.delete(ligne.media_cle);
+  // La base fait foi, comme dans `creerMedia` : on l'écrit d'abord, et le
+  // nettoyage R2 vient ensuite avec un `.catch()` qui journalise sans casser
+  // la réponse. Dans l'autre ordre, un DELETE en base qui échoue après un
+  // retrait R2 réussi laisserait une contribution visible pointant vers un
+  // fichier disparu — le pire état résiduel, celui que les participants
+  // voient. Ici, le pire résiduel possible est un objet R2 orphelin,
+  // invisible de tous.
   await env.DB.prepare('DELETE FROM contributions WHERE id = ?').bind(id).run();
+  if (ligne.media_cle) {
+    await env.MEDIAS.delete(ligne.media_cle).catch((souci) => {
+      console.error('Nettoyage du média après suppression impossible :', souci);
+    });
+  }
   return repondre({ supprime: id }, { cors });
 }
 

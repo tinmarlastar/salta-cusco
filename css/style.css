@@ -687,6 +687,11 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 }
 .souvenir-form__souci[hidden] { display: none; }
 
+/* ---------------------------------------------------------- modération */
+
+.page-admin { display: block; overflow: auto; }
+.admin { max-width: 42rem; margin: 0 auto; padding: 1.5rem 1.25rem 3rem; }
+
 /* --------------------------------------------------------------- mobile */
 
 @media (max-width: 60rem) {

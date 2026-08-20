@@ -30,6 +30,16 @@ const DELAI_LECTURE_MS = 8000;
 const DELAI_ECRITURE_MS = 30_000;
 
 let signaler = () => {};
+// Le service ne renvoie le jeton d'auteur qu'UNE SEULE FOIS, à la création
+// (jamais sur un rejeu reconnu par la clé d'idempotence) : c'est ici, dans
+// `traiterEntree`, qu'il faut le capter, sinon il est perdu pour de bon et
+// personne ne peut plus jamais modifier ni supprimer son propre souvenir.
+// Sur le même modèle que `signaler` : une variable de module plutôt qu'un
+// argument transporté de bout en bout, remplacée à chaque appel de
+// `demarrerRenvoi`. Ce module reste sans opinion sur ce qu'on en fait — pas
+// de `localStorage`, pas de DOM ici, c'est la vue qui décide où ranger le
+// jeton.
+let surJeton = () => {};
 let enCours = false;
 
 // Connexion IndexedDB unique, réutilisée par toutes les transactions.
@@ -270,18 +280,33 @@ async function traiterEntree(entree) {
 
   let envoiReussi = false;
   let erreurEnvoi = null;
+  let resultatEnvoi = null;
   try {
-    if (entree.type === 'media') {
-      await envoyerMedia(entree);
-    } else {
-      await envoyerNote(entree);
-    }
+    resultatEnvoi = entree.type === 'media'
+      ? await envoyerMedia(entree)
+      : await envoyerNote(entree);
     envoiReussi = true;
   } catch (souci) {
     erreurEnvoi = souci;
   }
 
   if (envoiReussi) {
+    // Capter le jeton avant tout le reste : c'est la seule occasion. Protégé
+    // par son propre filet — le rappel vient de l'appelant (la vue) et n'a
+    // aucune raison de pouvoir compromettre la garantie structurelle de
+    // `renvoyerMaintenant` : une entrée déjà envoyée avec succès doit être
+    // retirée localement même si la mémorisation de son jeton échoue.
+    try {
+      if (resultatEnvoi?.jeton && resultatEnvoi?.contribution) {
+        surJeton(resultatEnvoi.contribution.id, resultatEnvoi.jeton);
+      }
+    } catch (souciJeton) {
+      console.error(
+        `Souvenir ${entree.idLocal} : le rappel de mémorisation du jeton a échoué.`,
+        souciJeton,
+      );
+    }
+
     // Le serveur a confirmé l'enregistrement : l'entrée a rempli son rôle,
     // il ne reste qu'un rangement local. Si CE rangement échoue (stockage
     // saturé, transaction interrompue), ce n'est pas un échec d'envoi — rien
@@ -406,9 +431,17 @@ function surVisibiliteChangee() {
     gaspiller la batterie d'un téléphone qui doit tenir la journée à 4 400 m.
     En revanche CHAQUE appel déclenche une tentative immédiate : revenir sur
     une étape déjà consultée doit relancer les envois en attente tout de
-    suite, sans attendre le réseau, la visibilité ou la minuterie de 2 min. */
-export function demarrerRenvoi({ surChangement } = {}) {
+    suite, sans attendre le réseau, la visibilité ou la minuterie de 2 min.
+
+    `memoriserJeton(id, jeton)` est optionnel, sur le même modèle que
+    `surChangement` : appelé par `traiterEntree` quand un envoi réussit et
+    que le service a renvoyé un jeton d'auteur (uniquement à la création,
+    jamais sur un rejeu). C'est la seule occasion de le capter — sans ce
+    rappel, personne ne pourrait plus jamais modifier ni supprimer son propre
+    souvenir une fois l'entrée retirée de la file. */
+export function demarrerRenvoi({ surChangement, memoriserJeton } = {}) {
   if (surChangement) signaler = surChangement;
+  if (memoriserJeton) surJeton = memoriserJeton;
   if (!demarre) {
     demarre = true;
     addEventListener('online', renvoyerMaintenant);

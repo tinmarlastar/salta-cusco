@@ -6,6 +6,7 @@
 
 import { creerCarte } from './carte.js';
 import { assemblerVoyage, dessinerFrise, dessinerProfilEtape } from './profil.js';
+import { monterSouvenirs } from './souvenirs-vue.js';
 
 const nombre = (valeur) => valeur.toLocaleString('fr-FR');
 const echapper = (texte) => String(texte).replace(/[&<>"]/g, (c) =>
@@ -182,6 +183,8 @@ function afficherPanneau(etape) {
         surSortie: () => etat.carte.masquerCurseur(),
       });
     }
+    const blocSouvenirs = elements.panneau.querySelector('#souvenirs-etape');
+    if (blocSouvenirs) monterSouvenirs(blocSouvenirs, etape.jour);
   }
 
   for (const bouton of elements.panneau.querySelectorAll('[data-jour]')) {
@@ -273,6 +276,8 @@ function gabaritFiche(etape) {
       .map((photo) => `<img src="${photo}" alt="" loading="lazy">`).join('')}</div>` : ''}
 
     ${points}
+
+    <div class="souvenirs" id="souvenirs-etape"></div>
 
     <div class="navigation">
       <button type="button" ${precedente ? `data-jour="${precedente.jour}"` : 'disabled'}>

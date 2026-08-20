@@ -574,6 +574,119 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 }
 .leaflet-tooltip.infobulle::before { display: none; }
 
+/* ------------------------------------------------------------- souvenirs */
+
+.souvenirs { margin: 1.5rem 0 0; }
+
+.souvenirs__vide, .souvenirs__liste { font-size: .875rem; color: var(--poussiere); }
+
+.souvenir {
+  padding: .625rem 0;
+  border-top: 1px solid var(--nuit-3);
+}
+
+.souvenir__entete {
+  display: flex;
+  align-items: baseline;
+  gap: .5rem;
+  margin: 0 0 .375rem;
+  font-family: var(--mono);
+  font-size: .625rem;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--poussiere);
+}
+.souvenir__entete b { color: var(--sel); font-weight: 500; }
+.souvenir__entete em { font-style: normal; color: var(--soufre); }
+
+.souvenir__media {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin-bottom: .375rem;
+  background: var(--nuit-2);
+}
+
+.souvenir__texte {
+  margin: 0;
+  font-size: .875rem;
+  line-height: 1.55;
+  color: #cdd3de;
+}
+
+.souvenir__actions { display: flex; gap: .5rem; margin: .375rem 0 0; }
+
+.souvenir__actions button {
+  padding: .1875rem .5rem;
+  border: 1px solid var(--nuit-3);
+  background: none;
+  color: var(--poussiere);
+  font-family: var(--mono);
+  font-size: .5625rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color var(--transition), border-color var(--transition);
+}
+.souvenir__actions button:hover { border-color: var(--soufre); color: var(--soufre); }
+
+.souvenir.est-en-attente { opacity: .6; border-left: 2px solid var(--soufre); padding-left: .625rem; }
+
+/* Formulaire */
+
+.souvenir-form { margin: 1rem 0 0; }
+
+.souvenir-form__champ {
+  display: block;
+  width: 100%;
+  margin-bottom: .375rem;
+  padding: .4375rem .5rem;
+  border: 1px solid var(--nuit-3);
+  background: var(--nuit-2);
+  color: var(--sel);
+  font-family: var(--display);
+  font-size: .875rem;
+  resize: vertical;
+}
+.souvenir-form__champ::placeholder { color: var(--poussiere); }
+.souvenir-form__champ:focus { border-color: var(--soufre); outline: none; }
+
+.souvenir-form__pied { display: flex; align-items: center; gap: .5rem; margin: 0; }
+
+.souvenir-form__fichier,
+.souvenir-form__pied button {
+  padding: .375rem .625rem;
+  border: 1px solid var(--nuit-3);
+  background: var(--nuit-2);
+  color: var(--sel);
+  font-family: var(--mono);
+  font-size: .625rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: border-color var(--transition);
+}
+.souvenir-form__fichier:hover,
+.souvenir-form__pied button:hover { border-color: var(--soufre); }
+
+.souvenir-form__pied button { margin-left: auto; background: var(--soufre); color: var(--nuit); border-color: var(--soufre); }
+
+.souvenir-form__choisi {
+  overflow: hidden;
+  font-family: var(--mono);
+  font-size: .5625rem;
+  color: var(--poussiere);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.souvenir-form__souci {
+  margin: .375rem 0 0;
+  font-size: .8125rem;
+  color: var(--colorada);
+}
+.souvenir-form__souci[hidden] { display: none; }
+
 /* --------------------------------------------------------------- mobile */
 
 @media (max-width: 60rem) {

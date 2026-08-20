@@ -45,6 +45,18 @@ let signaler = () => {};
 // jeton.
 let surJeton = () => {};
 let enCours = false;
+// Amélioration A (re-revue) : un appel arrivé PENDANT une passe (ex. le
+// `renvoyerMaintenant()` de C1, juste après la mise en file d'une note,
+// pendant qu'une passe déclenchée par ailleurs traite déjà un média de
+// 60 Mo — jusqu'à 120 s) était jusqu'ici purement avalé par
+// `if (enCours) return;` : la note attendait alors la minuterie de 2 min,
+// exactement le déclencheur de republication que C1 devait supprimer. Ce
+// drapeau mémorise qu'une redemande est arrivée pendant la passe en cours ;
+// `renvoyerMaintenant` la consomme lui-même via une boucle `do…while` autour
+// de son corps inchangé, sans jamais faire tourner deux passes en parallèle
+// (une seule à la fois, comme avant) et sans toucher à la garantie
+// structurelle de la boucle interne.
+let redemandeEnAttente = false;
 
 // Connexion IndexedDB unique, réutilisée par toutes les transactions.
 // Rouvrir à chaque opération (comme le faisait la première version) ouvre
@@ -427,49 +439,63 @@ async function traiterEntree(entree) {
 
 /** Réessaie tous les envois dont l'heure est venue. */
 export async function renvoyerMaintenant() {
-  if (enCours) return;
+  if (enCours) {
+    // Amélioration A : ne PAS avaler cette demande — une passe est déjà en
+    // cours (potentiellement jusqu'à 120 s sur un média), la consommer
+    // maintenant romprait « une seule passe à la fois ». On la mémorise pour
+    // que la passe en cours en relance une autre, fraîche, dès qu'elle se
+    // termine, sans jamais faire tourner deux passes en parallèle.
+    redemandeEnAttente = true;
+    return;
+  }
   enCours = true;
   try {
-    let toutes;
-    try {
-      toutes = (await transaction('readonly', (magasin) => magasin.getAll())) || [];
-    } catch (souciListe) {
-      // Impossible de seulement lire la file (ex. délai de garde atteint) :
-      // rien à tenter ce passage-ci. `enCours` sera quand même libéré par le
-      // `finally`, donc un futur déclencheur (réseau retrouvé, onglet
-      // revisible, minuterie) retentera un passage complet plus tard.
-      console.error("Impossible de lire la file d'attente :", souciListe);
-      return;
-    }
-    // I2 (revue finale) : les notes d'abord, les médias ensuite. Une vidéo
-    // peut consommer jusqu'à 120 s par tentative sur un lien lent (le régime
-    // de croisière attendu du voyage) ; sans ce tri, elle retiendrait les
-    // notes en attente derrière elle dans la boucle strictement séquentielle
-    // ci-dessous. Rien d'autre dans la boucle ne change : sa garantie
-    // structurelle — aucune entrée ne peut en bloquer une autre — reste
-    // intacte.
-    const ordre = [
-      ...toutes.filter((e) => e.type === 'note'),
-      ...toutes.filter((e) => e.type !== 'note'),
-    ];
-    for (const entree of ordre) {
-      // Garantie STRUCTURELLE, et non dépendante du type d'erreur observée :
-      // le traitement d'une entrée — envoi ET rattrapage d'échec compris —
-      // se fait entièrement dans `traiterEntree`, elle-même entourée ici
-      // d'un filet qui ne peut pas être court-circuité. Aucune exception,
-      // qu'elle vienne du réseau, du stockage (quota dépassé) ou même du
-      // rappel `signaler` fourni par l'appelant, ne doit pouvoir s'échapper
-      // de cette itération et faire abandonner les entrées suivantes : une
-      // entrée ne doit jamais pouvoir en bloquer une autre.
+    // La redemande est consommée ICI, en tête de chaque tour : une nouvelle
+    // demande qui arrive PENDANT le tour (donc après cette ligne) sera
+    // fidèlement reprise par le tour suivant plutôt que perdue.
+    do {
+      redemandeEnAttente = false;
+      let toutes;
       try {
-        await traiterEntree(entree);
-      } catch (souciEntree) {
-        console.error(
-          `Souvenir ${entree.idLocal} : anomalie non rattrapée, entrée laissée en l'état pour un prochain passage.`,
-          souciEntree,
-        );
+        toutes = (await transaction('readonly', (magasin) => magasin.getAll())) || [];
+      } catch (souciListe) {
+        // Impossible de seulement lire la file (ex. délai de garde atteint) :
+        // rien à tenter ce passage-ci. `enCours` sera quand même libéré par le
+        // `finally`, donc un futur déclencheur (réseau retrouvé, onglet
+        // revisible, minuterie) retentera un passage complet plus tard.
+        console.error("Impossible de lire la file d'attente :", souciListe);
+        return;
       }
-    }
+      // I2 (revue finale) : les notes d'abord, les médias ensuite. Une vidéo
+      // peut consommer jusqu'à 120 s par tentative sur un lien lent (le régime
+      // de croisière attendu du voyage) ; sans ce tri, elle retiendrait les
+      // notes en attente derrière elle dans la boucle strictement séquentielle
+      // ci-dessous. Rien d'autre dans la boucle ne change : sa garantie
+      // structurelle — aucune entrée ne peut en bloquer une autre — reste
+      // intacte.
+      const ordre = [
+        ...toutes.filter((e) => e.type === 'note'),
+        ...toutes.filter((e) => e.type !== 'note'),
+      ];
+      for (const entree of ordre) {
+        // Garantie STRUCTURELLE, et non dépendante du type d'erreur observée :
+        // le traitement d'une entrée — envoi ET rattrapage d'échec compris —
+        // se fait entièrement dans `traiterEntree`, elle-même entourée ici
+        // d'un filet qui ne peut pas être court-circuité. Aucune exception,
+        // qu'elle vienne du réseau, du stockage (quota dépassé) ou même du
+        // rappel `signaler` fourni par l'appelant, ne doit pouvoir s'échapper
+        // de cette itération et faire abandonner les entrées suivantes : une
+        // entrée ne doit jamais pouvoir en bloquer une autre.
+        try {
+          await traiterEntree(entree);
+        } catch (souciEntree) {
+          console.error(
+            `Souvenir ${entree.idLocal} : anomalie non rattrapée, entrée laissée en l'état pour un prochain passage.`,
+            souciEntree,
+          );
+        }
+      }
+    } while (redemandeEnAttente);
   } finally {
     enCours = false;
   }

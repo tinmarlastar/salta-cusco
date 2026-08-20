@@ -7,6 +7,13 @@
 const IMAGE_LARGEUR_MAX = 1600;
 const IMAGE_QUALITE = 0.82;
 const VIDEO_OCTETS_MAX = 60 * 1024 * 1024;
+// Note ou lecture : réponse courte attendue, mieux vaut échouer vite et
+// laisser la file d'attente retenter que rester bloqué.
+const DELAI_RESEAU_MS = 15 * 1000;
+// Envoi de média : une vidéo de plusieurs dizaines de Mo sur un réseau lent
+// peut légitimement prendre plusieurs minutes. Un délai aussi court que celui
+// des notes ferait échouer tous les envois de vidéos ; il en faut un généreux.
+const DELAI_MEDIA_MS = 120 * 1000;
 
 /** Panne réseau ou service indisponible : un renvoi plus tard a du sens. */
 export class ErreurReseau extends Error {}
@@ -23,13 +30,21 @@ let config = null;
 
 export async function chargerConfig() {
   if (config) return config;
+  let resultat;
   try {
     const reponse = await fetch('data/config.json');
-    config = reponse.ok ? await reponse.json() : { serviceUrl: null };
+    resultat = reponse.ok ? await reponse.json() : { serviceUrl: null };
   } catch {
-    config = { serviceUrl: null };
+    resultat = { serviceUrl: null };
   }
-  return config;
+  // On ne mémorise que les chargements réussis. En zone blanche, c'est
+  // précisément le tout premier appel qui a des chances d'échouer : si on
+  // mettait l'échec en cache, le module resterait persuadé pour le reste de
+  // la session qu'il n'y a pas de service, même une fois le réseau revenu.
+  // Un échec doit donc laisser le prochain appel retenter, sans écrire dans
+  // `config`.
+  if (resultat.serviceUrl) config = resultat;
+  return resultat;
 }
 
 async function base() {
@@ -39,6 +54,11 @@ async function base() {
 }
 
 export function urlMedia(cle) {
+  // Reste volontairement synchrone (imposé par ses appelants) : dans le flux
+  // réel, on ne peut détenir la clé d'un média sans avoir déjà appelé
+  // listerEtape, qui a nécessairement chargé la configuration avant. Cet
+  // avertissement rend le cas contraire diagnosticable plutôt que muet.
+  if (!config) console.warn('urlMedia appelée avant chargerConfig : URL sans hôte, probablement fausse');
   const racine = config?.serviceUrl?.replace(/\/$/, '') || '';
   return `${racine}/media/${cle}`;
 }
@@ -47,13 +67,21 @@ export function creerCleIdempotence() {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-/** Appelle le service et distingue panne réseau et refus explicite. */
-async function appeler(chemin, options = {}) {
+/** Appelle le service et distingue panne réseau et refus explicite.
+
+    `delaiMs` borne l'attente : sur le réseau irrégulier des Andes, une
+    requête peut rester pendue sans jamais aboutir ni échouer, ce qui
+    bloquerait indéfiniment la file d'attente (tâche 7), qui traite les
+    envois un par un sous un verrou. */
+async function appeler(chemin, options = {}, delaiMs = DELAI_RESEAU_MS) {
   const racine = await base();
   let reponse;
   try {
-    reponse = await fetch(`${racine}${chemin}`, options);
+    reponse = await fetch(`${racine}${chemin}`, { ...options, signal: AbortSignal.timeout(delaiMs) });
   } catch (souci) {
+    // Un délai expiré rejette avec une erreur nommée TimeoutError (ou
+    // AbortError) : on la traite comme n'importe quelle panne réseau, pas
+    // comme un refus du service, pour qu'un renvoi ultérieur ait un sens.
     throw new ErreurReseau(souci.message);
   }
   // 5xx : le service est mal en point, un renvoi plus tard peut passer.
@@ -91,7 +119,7 @@ export async function envoyerMedia({ jour, auteur, texte, fichier, motDePasse, i
     method: 'POST',
     headers: { 'X-Mot-De-Passe': motDePasse, 'X-Idempotence': idempotence },
     body: formulaire,
-  });
+  }, DELAI_MEDIA_MS);
 }
 
 export async function modifierContribution({ id, texte, jeton }) {

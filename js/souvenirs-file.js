@@ -269,6 +269,34 @@ export async function viderEntree(idLocal) {
   signaler();
 }
 
+/** Remet une entrée bloquée en état réessayable, avec un mot de passe à jour.
+
+    Bouton « Réessayer » de la revue finale (C2) : sans repasser `bloque` à
+    faux et `prochaineTentative` à 0, l'entrée resterait ignorée pour
+    toujours par `traiterEntree`, même une fois le mot de passe corrigé. Le
+    mot de passe est fourni par l'appelante (la vue) — ce module ne sait pas
+    d'où il vient, seulement où le ranger. */
+export async function reprendreEntree(idLocal, motDePasse) {
+  let existe = false;
+  await transaction('readwrite', (magasin) => {
+    const requeteGet = magasin.get(idLocal);
+    requeteGet.onsuccess = () => {
+      const actuelle = requeteGet.result;
+      if (!actuelle) return; // supprimée entretemps : rien à réessayer
+      existe = true;
+      magasin.put({
+        ...actuelle,
+        motDePasse,
+        bloque: false,
+        prochaineTentative: 0,
+        refusMotDePasse: false,
+      });
+    };
+    return requeteGet;
+  });
+  if (existe) signaler();
+}
+
 /** Envoie une entrée, ou consigne pourquoi ça n'a pas marché.
 
     Ne lève jamais : tout incident (réseau, service, stockage local) est
@@ -328,6 +356,11 @@ async function traiterEntree(entree) {
 
   // L'envoi a réellement échoué.
   const definitif = erreurEnvoi instanceof ErreurService;
+  // Un 401 signifie précisément un mot de passe refusé (`groupeAutorise` dans
+  // le service) : c'est le seul cas où la vue doit effacer le mot de passe
+  // mémorisé, pour que le champ réapparaisse plutôt que de rester bloqué pour
+  // de bon derrière une faute de frappe (revue finale, C2).
+  const refusMotDePasse = definitif && erreurEnvoi.statut === 401;
   const tentatives = entree.tentatives + 1;
   // Premier réessai après ATTENTE_MIN (2 s), puis doublement à chaque échec.
   const attente = Math.min(ATTENTE_MIN * 2 ** (tentatives - 1), ATTENTE_MAX);
@@ -359,6 +392,7 @@ async function traiterEntree(entree) {
           prochaineTentative: definitif ? Number.MAX_SAFE_INTEGER : Date.now() + attente,
           dernierSouci: erreurEnvoi.message,
           bloque: definitif,
+          refusMotDePasse,
         });
       };
       return requeteGet;
@@ -393,7 +427,18 @@ export async function renvoyerMaintenant() {
       console.error("Impossible de lire la file d'attente :", souciListe);
       return;
     }
-    for (const entree of toutes) {
+    // I2 (revue finale) : les notes d'abord, les médias ensuite. Une vidéo
+    // peut consommer jusqu'à 120 s par tentative sur un lien lent (le régime
+    // de croisière attendu du voyage) ; sans ce tri, elle retiendrait les
+    // notes en attente derrière elle dans la boucle strictement séquentielle
+    // ci-dessous. Rien d'autre dans la boucle ne change : sa garantie
+    // structurelle — aucune entrée ne peut en bloquer une autre — reste
+    // intacte.
+    const ordre = [
+      ...toutes.filter((e) => e.type === 'note'),
+      ...toutes.filter((e) => e.type !== 'note'),
+    ];
+    for (const entree of ordre) {
       // Garantie STRUCTURELLE, et non dépendante du type d'erreur observée :
       // le traitement d'une entrée — envoi ET rattrapage d'échec compris —
       // se fait entièrement dans `traiterEntree`, elle-même entourée ici

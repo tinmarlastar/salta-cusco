@@ -496,8 +496,8 @@ Dans `export default`, remplacer le bloc `if (etape && requete.method === 'GET')
 Créer `worker/.dev.vars` (déjà ignoré par `.gitignore` ? sinon l'ajouter) :
 
 ```
-MOT_DE_PASSE_GROUPE=uyuni2026
-MOT_DE_PASSE_ADMIN=admin-de-test
+MOT_DE_PASSE_GROUPE=<mot-de-passe-de-groupe-local>
+MOT_DE_PASSE_ADMIN=<mot-de-passe-admin-local>
 ```
 
 Ajouter `.dev.vars` à `worker/.gitignore` :
@@ -521,7 +521,7 @@ Attendu : `401`
 - [ ] **Step 6: Vérifier la création et l'idempotence**
 
 ```bash
-curl -s -X POST http://127.0.0.1:8787/api/etape/7 -H "X-Mot-De-Passe: uyuni2026" -H "X-Idempotence: test-1" -H "Content-Type: application/json" -d '{"auteur":"Martin","texte":"Le salar est immense"}'
+curl -s -X POST http://127.0.0.1:8787/api/etape/7 -H "X-Mot-De-Passe: <mot-de-passe-de-groupe-local>" -H "X-Idempotence: test-1" -H "Content-Type: application/json" -d '{"auteur":"Martin","texte":"Le salar est immense"}'
 ```
 
 Attendu : un objet avec `"contribution"` et un `"jeton"` de 32 caractères hexadécimaux.
@@ -681,7 +681,7 @@ Le motif de `etape` (`/^\/api\/etape\/(\d{1,2})$/`) se termine par `$` : il ne c
 Relancer le Worker, puis, depuis la racine du projet :
 
 ```bash
-curl -s -X POST http://127.0.0.1:8787/api/etape/7/media -H "X-Mot-De-Passe: uyuni2026" -H "X-Idempotence: media-1" -F "auteur=Martin" -F "texte=Isla Incahuasi" -F "fichier=@img/etapes/j07-salar-uyuni.jpg;type=image/jpeg"
+curl -s -X POST http://127.0.0.1:8787/api/etape/7/media -H "X-Mot-De-Passe: <mot-de-passe-de-groupe-local>" -H "X-Idempotence: media-1" -F "auteur=Martin" -F "texte=Isla Incahuasi" -F "fichier=@img/etapes/j07-salar-uyuni.jpg;type=image/jpeg"
 ```
 
 Attendu : `201` avec une `contribution` dont `media.genre` vaut `"image"` et `media.cle` commence par `medias/7/`.
@@ -700,7 +700,7 @@ Attendu : `200 image/jpeg` et une taille non nulle.
 
 ```bash
 head -c 70000000 /dev/urandom > /tmp/trop-lourd.mp4
-curl -s -X POST http://127.0.0.1:8787/api/etape/7/media -H "X-Mot-De-Passe: uyuni2026" -H "X-Idempotence: media-lourd" -F "auteur=Martin" -F "fichier=@/tmp/trop-lourd.mp4;type=video/mp4" | head -c 200
+curl -s -X POST http://127.0.0.1:8787/api/etape/7/media -H "X-Mot-De-Passe: <mot-de-passe-de-groupe-local>" -H "X-Idempotence: media-lourd" -F "auteur=Martin" -F "fichier=@/tmp/trop-lourd.mp4;type=video/mp4" | head -c 200
 rm -f /tmp/trop-lourd.mp4
 ```
 
@@ -811,7 +811,7 @@ Dans `export default`, juste avant `return erreur('Route inconnue', 404, cors);`
 Relancer le Worker. Créer une note et garder son `id` et son `jeton` :
 
 ```bash
-curl -s -X POST http://127.0.0.1:8787/api/etape/9 -H "X-Mot-De-Passe: uyuni2026" -H "X-Idempotence: modif-1" -H "Content-Type: application/json" -d '{"auteur":"Martin","texte":"Version initiale"}'
+curl -s -X POST http://127.0.0.1:8787/api/etape/9 -H "X-Mot-De-Passe: <mot-de-passe-de-groupe-local>" -H "X-Idempotence: modif-1" -H "Content-Type: application/json" -d '{"auteur":"Martin","texte":"Version initiale"}'
 ```
 
 Puis, avec les valeurs obtenues :
@@ -833,7 +833,7 @@ Attendu : `403`
 - [ ] **Step 5: Vérifier la suppression par l'administration**
 
 ```bash
-curl -s -X DELETE "http://127.0.0.1:8787/api/contribution/<id>" -H "X-Mot-De-Passe: admin-de-test"
+curl -s -X DELETE "http://127.0.0.1:8787/api/contribution/<id>" -H "X-Mot-De-Passe: <mot-de-passe-admin-local>"
 curl -s http://127.0.0.1:8787/api/etape/9
 ```
 
@@ -1052,7 +1052,7 @@ Lancer le Worker (`cd worker && npx wrangler dev --local --port 8787`) et le sit
 const m = await import('./js/souvenirs.js');
 await m.chargerConfig();
 await m.envoyerNote({ jour: 3, auteur: 'Test', texte: 'Depuis le navigateur',
-  motDePasse: 'uyuni2026', idempotence: m.creerCleIdempotence() });
+  motDePasse: '<mot-de-passe-de-groupe-local>', idempotence: m.creerCleIdempotence() });
 await m.listerEtape(3);
 ```
 
@@ -1224,7 +1224,7 @@ const f = await import('./js/souvenirs-file.js');
 const s = await import('./js/souvenirs.js');
 await s.chargerConfig();
 await f.mettreEnFile({ type: 'note', jour: 5, auteur: 'Test', texte: 'Hors ligne',
-  motDePasse: 'uyuni2026', idempotence: s.creerCleIdempotence() });
+  motDePasse: '<mot-de-passe-de-groupe-local>', idempotence: s.creerCleIdempotence() });
 (await f.listerFile(5)).length;
 ```
 
@@ -1722,7 +1722,7 @@ Worker et site lancés, ouvrir <http://127.0.0.1:8123/#j7>. Dans le panneau, sou
 
 Attendu : le titre « Souvenirs des compagnons », la liste (ou « Aucun souvenir pour cette étape »), et le formulaire avec prénom, mot de passe, texte, bouton fichier et « Publier ».
 
-Publier une note avec le mot de passe `uyuni2026`.
+Publier une note avec le mot de passe `<mot-de-passe-de-groupe-local>`.
 
 Attendu : elle apparaît dans la liste avec le prénom et l'heure, et les boutons « Modifier » et « Supprimer » sont visibles **sur cette note**.
 
@@ -1904,7 +1904,7 @@ Attendu : `OK`
 
 Worker et site lancés, ouvrir <http://127.0.0.1:8123/admin.html>.
 
-Attendu : un champ mot de passe. Saisir un mauvais mot de passe → « Mot de passe refusé. » Saisir `admin-de-test` → la liste de toutes les contributions, toutes étapes confondues.
+Attendu : un champ mot de passe. Saisir un mauvais mot de passe → « Mot de passe refusé. » Saisir `<mot-de-passe-admin-local>` → la liste de toutes les contributions, toutes étapes confondues.
 
 Supprimer une entrée, puis revenir au site sur l'étape concernée.
 

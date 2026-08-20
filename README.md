@@ -107,7 +107,9 @@ départ. Il n'est demandé qu'une fois par téléphone.
 
 **Si le réseau manque** (et il manquera, dans le Sud Lipez comme sur le salar),
 l'envoi est gardé sur le téléphone avec la mention « en attente de réseau », et
-repart tout seul dès que ça capte. Rien ne se perd.
+repart tout seul dès que ça capte. Rien ne se perd. Si un souvenir reste
+affiché « en attente » sans jamais repartir alors que le réseau fonctionne de
+nouveau, recharger la page suffit à relancer la file.
 
 **Chacun peut modifier ou supprimer ses propres souvenirs** : les boutons
 n'apparaissent que sur le téléphone qui les a publiés. Changer d'appareil ou
@@ -219,6 +221,12 @@ le compte Cloudflare. Elles ne demandent qu'un compte gratuit.
    d'implémentation et donc déjà publics.
 
 6. **Déployer** :
+
+   Avant de déployer, vérifier `ORIGINES_AUTORISEES` dans `worker/wrangler.toml` :
+   si ce dépôt est hébergé sous un compte GitHub différent de `tinmarlastar`,
+   l'adresse GitHub Pages réelle du site publié doit y être ajoutée. Sans ça,
+   le CORS échoue silencieusement une fois le service en ligne — le bloc
+   souvenirs ne se charge plus, sans message d'erreur visible.
 
    ```bash
    npx wrangler deploy

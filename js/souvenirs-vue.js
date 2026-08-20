@@ -7,7 +7,9 @@ import {
   listerEtape, modifierContribution, supprimerContribution,
   compresserImage, verifierVideo, urlMedia, creerCleIdempotence, ErreurService,
 } from './souvenirs.js';
-import { mettreEnFile, listerFile, viderEntree, demarrerRenvoi } from './souvenirs-file.js';
+import {
+  mettreEnFile, listerFile, viderEntree, demarrerRenvoi, renvoyerMaintenant, reprendreEntree,
+} from './souvenirs-file.js';
 
 const CLE_AUTEUR = 'souvenirs.auteur';
 const CLE_MOT_DE_PASSE = 'souvenirs.motDePasse';
@@ -66,22 +68,35 @@ function gabaritEnAttente(entree) {
   const motif = entree.bloque
     ? `Bloqué : ${echapper(entree.dernierSouci)}`
     : 'En attente de réseau';
+  // Bouton « Réessayer » (C2, revue finale) : sur toute entrée bloquée, pas
+  // seulement un mot de passe refusé — c'est un rattrapage général une fois
+  // la cause corrigée (mot de passe, vidéo trop lourde raccourcie, etc.).
+  const reessayer = entree.bloque
+    ? '<button type="button" data-action="reessayer">Réessayer</button>' : '';
   return `<article class="souvenir est-en-attente" data-local="${echapper(entree.idLocal)}">
     <p class="souvenir__entete"><b>${echapper(entree.auteur)}</b> <time>${motif}</time></p>
     ${entree.texte ? `<p class="souvenir__texte">${echapper(entree.texte)}</p>` : ''}
-    <p class="souvenir__actions"><button type="button" data-action="abandonner">Abandonner</button></p>
+    <p class="souvenir__actions">${reessayer}<button type="button" data-action="abandonner">Abandonner</button></p>
   </article>`;
 }
 
+// Les champs prénom/mot de passe sont toujours présents dans le DOM (jamais
+// omis) : c'est ce qui permet de les faire réapparaître dynamiquement — sans
+// reconstruire tout le formulaire, ce qui perdrait le texte en cours de
+// saisie — quand `souvenirs.motDePasse` est effacé après un refus (C2).
+// `required` a été retiré volontairement : le gestionnaire de soumission
+// valide déjà prénom et mot de passe à la main, et `required` sur un champ
+// masqué (`hidden`) dépend d'un comportement de rendu peu fiable d'un
+// navigateur à l'autre.
 function gabaritFormulaire() {
   const auteur = localStorage.getItem(CLE_AUTEUR) || '';
   const motDePasse = localStorage.getItem(CLE_MOT_DE_PASSE) || '';
+  const connue = Boolean(auteur && motDePasse);
   return `<form class="souvenir-form">
-    ${auteur && motDePasse ? '' : `
-      <input class="souvenir-form__champ" name="auteur" placeholder="Votre prénom"
-             value="${echapper(auteur)}" maxlength="40" required>
-      <input class="souvenir-form__champ" name="motDePasse" type="password"
-             placeholder="Mot de passe du groupe" value="${echapper(motDePasse)}" required>`}
+    <input class="souvenir-form__champ" name="auteur" placeholder="Votre prénom"
+           value="${echapper(auteur)}" maxlength="40" ${connue ? 'hidden' : ''}>
+    <input class="souvenir-form__champ" name="motDePasse" type="password"
+           placeholder="Mot de passe du groupe" value="${echapper(motDePasse)}" ${connue ? 'hidden' : ''}>
     <textarea class="souvenir-form__champ" name="texte" rows="2" maxlength="2000"
               placeholder="Une note, un souvenir…"></textarea>
     <p class="souvenir-form__pied">
@@ -107,7 +122,26 @@ export function monterSouvenirs(conteneur, jour) {
   const nomChoisi = conteneur.querySelector('.souvenir-form__choisi');
 
   async function rafraichir() {
-    const attente = await listerFile(jour);
+    // I1 (revue finale) : `listerFile` peut rejeter (IndexedDB indisponible
+    // en navigation privée Firefox, délai de garde d'ouverture dépassé...).
+    // Sans ce `.catch`, le rejet sortait de cette fonction avant d'atteindre
+    // le filet plus bas prévu pour le service injoignable, et le bloc restait
+    // bloqué sur « Chargement… » pour de bon.
+    const attente = await listerFile(jour).catch(() => []);
+
+    // C2 (revue finale) : une entrée bloquée par un 401 signifie que le mot
+    // de passe mémorisé est faux. On l'efface pour que le champ réapparaisse
+    // — sinon le participant n'a plus aucun moyen de le corriger. `.hidden`
+    // et `.value` sont ajustés directement (pas de reconstruction du
+    // formulaire) pour ne pas perdre un texte en cours de saisie.
+    if (attente.some((e) => e.refusMotDePasse) && localStorage.getItem(CLE_MOT_DE_PASSE)) {
+      localStorage.removeItem(CLE_MOT_DE_PASSE);
+      const champAuteur = formulaire.querySelector('[name="auteur"]');
+      const champMotDePasse = formulaire.querySelector('[name="motDePasse"]');
+      if (champAuteur) champAuteur.hidden = false;
+      if (champMotDePasse) { champMotDePasse.hidden = false; champMotDePasse.value = ''; }
+    }
+
     let publiees = [];
     try {
       // `listerEtape` attend `chargerConfig()` en interne avant toute requête :
@@ -173,12 +207,32 @@ export function monterSouvenirs(conteneur, jour) {
       idempotence: creerCleIdempotence(),
     };
 
+    // C3 (revue finale) : `mettreEnFile` peut légitimement rejeter (quota de
+    // stockage dépassé, transaction avortée, délai de garde IndexedDB). Sans
+    // ce `try/catch`, le rejet partait non rattrapé, aucun message ne
+    // s'affichait, et le formulaire — vidé plus bas AVANT ce correctif —
+    // avait déjà fait disparaître le texte du participant. On ne vide donc le
+    // formulaire QU'APRÈS la mise en file réussie.
+    try {
+      await mettreEnFile(entree);
+    } catch (probleme) {
+      souci.textContent = `Enregistrement impossible pour le moment (${probleme?.message || 'erreur inconnue'}). Le texte est conservé, réessayez.`;
+      souci.hidden = false;
+      return;
+    }
+
     formulaire.reset();
     nomChoisi.textContent = '';
 
-    // On passe systématiquement par la file : c'est elle qui tente l'envoi et
-    // qui garde le souvenir si le réseau manque.
-    await mettreEnFile(entree);
+    // C1 (revue finale) : sans cet appel, rien ne tente l'envoi avant le
+    // prochain déclencheur (retour réseau, onglet revisible, minuterie de
+    // 2 min) — un participant qui poste en pleine 4G voit « En attente de
+    // réseau », croit que rien n'est parti, republie, et chaque republication
+    // crée un vrai doublon (nouvelle clé d'idempotence). Non attendu à
+    // dessein : la file signale déjà `rafraichir` par elle-même (`signaler`)
+    // quand l'entrée est retirée, inutile de bloquer ici sur un envoi qui
+    // peut prendre jusqu'à 120 s (média).
+    renvoyerMaintenant();
     await rafraichir();
   });
 
@@ -190,6 +244,26 @@ export function monterSouvenirs(conteneur, jour) {
 
     if (action === 'abandonner') {
       await viderEntree(carte.dataset.local);
+      await rafraichir();
+      return;
+    }
+
+    if (action === 'reessayer') {
+      // C2 (revue finale) : « le mot de passe courant » — celui tapé à
+      // l'instant dans le champ qui vient de réapparaître prime sur celui,
+      // possiblement encore absent, de `localStorage` (il n'y est réécrit
+      // qu'à une soumission complète du formulaire).
+      const champMotDePasse = formulaire.querySelector('[name="motDePasse"]');
+      const motDePasseCourant = (champMotDePasse && champMotDePasse.value.trim())
+        || localStorage.getItem(CLE_MOT_DE_PASSE) || '';
+      if (!motDePasseCourant) {
+        souci.textContent = 'Indiquez le mot de passe du groupe avant de réessayer.';
+        souci.hidden = false;
+        return;
+      }
+      localStorage.setItem(CLE_MOT_DE_PASSE, motDePasseCourant);
+      await reprendreEntree(carte.dataset.local, motDePasseCourant);
+      renvoyerMaintenant();
       await rafraichir();
       return;
     }

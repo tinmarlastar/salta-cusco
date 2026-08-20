@@ -163,8 +163,17 @@ async function creerMedia(jour, requete, env, cors) {
   const idempotence = assainir(requete.headers.get('X-Idempotence'), 80);
   if (!idempotence) return erreur('En-tête X-Idempotence manquant', 400, cors);
 
+  // Un corps illisible ici n'est presque jamais un envoi malformé exprès :
+  // c'est un multipart de plusieurs dizaines de Mo tronqué en cours de route
+  // par un réseau qui a lâché avant la fin (le cas courant en itinérance
+  // andine). C'est donc un incident de transport, pas un refus légitime du
+  // contenu : on répond en 5xx pour que le client (souvenirs.js) le classe en
+  // ErreurReseau et que la file d'attente renvoie la photo plus tard, au lieu
+  // de la bloquer pour de bon comme le ferait un 4xx. Les autres 400 de cette
+  // fonction (prénom manquant, aucun fichier reçu) restent des refus
+  // définitifs à juste titre : eux ne dépendent pas d'un transport interrompu.
   const formulaire = await requete.formData().catch(() => null);
-  if (!formulaire) return erreur('Envoi illisible', 400, cors);
+  if (!formulaire) return erreur('Envoi illisible, réessayez', 503, cors);
 
   const auteur = assainir(formulaire.get('auteur'), AUTEUR_MAX);
   const texte = assainir(formulaire.get('texte'), TEXTE_MAX);

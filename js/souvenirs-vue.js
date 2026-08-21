@@ -99,7 +99,7 @@ function gabaritEnAttente(entree) {
   // sont sous ses yeux, le prénom est déjà connu, et il ne reste
   // littéralement qu'une chose à taper.
   const reprise = entree.refusMotDePasse ? `
-    <p class="souvenir__consigne">Texte, photo et prénom sont conservés — il ne manque que le mot de passe.</p>
+    <p class="souvenir__consigne">Mot de passe incorrect, retapez-le pour publier.</p>
     <input class="souvenir__mot-de-passe" type="password" data-role="motDePasse"
            placeholder="Mot de passe du groupe" autocomplete="current-password">` : '';
 

@@ -66,6 +66,14 @@ function gabaritContribution(contribution) {
   </article>`;
 }
 
+/** Poids d'un fichier en attente, pour dire à l'auteur qu'il est bien gardé. */
+function poidsLisible(octets) {
+  if (!octets) return '';
+  return octets >= 1024 * 1024
+    ? `${(octets / (1024 * 1024)).toFixed(1)} Mo`
+    : `${Math.max(1, Math.round(octets / 1024))} Ko`;
+}
+
 function gabaritEnAttente(entree) {
   const motif = entree.bloque
     ? `Bloqué : ${echapper(entree.dernierSouci)}`
@@ -75,19 +83,36 @@ function gabaritEnAttente(entree) {
   // la cause corrigée (mot de passe, vidéo trop lourde raccourcie, etc.).
   const reessayer = entree.bloque
     ? '<button type="button" data-action="reessayer">Réessayer</button>' : '';
-  // Le mot de passe refusé est effacé et les champs réapparaissent sous la
-  // liste (voir `rafraichir`), mais rien ne le disait : « Réessayer » avait
-  // l'air du seul geste offert, et cliqué tel quel il rejouait le même mot de
-  // passe faux — l'entrée retombait bloquée, indéfiniment. Cette consigne est
-  // écrite DANS la carte bloquée parce que c'est là que le regard se pose au
-  // moment où l'on cherche quoi faire.
-  const consigne = entree.refusMotDePasse
-    ? '<p class="souvenir__consigne">Retapez le mot de passe du groupe dans le champ ci-dessous, puis « Réessayer ».</p>'
+
+  // Le fichier voyage avec l'entrée depuis la mise en file : il n'a jamais
+  // besoin d'être resélectionné. Mais rien ne le montrait, et une carte qui
+  // n'affiche que du texte donne à croire que la photo est perdue — d'où
+  // l'envie bien naturelle de tout recommencer, ce qui crée un doublon.
+  const jointe = entree.fichier
+    ? `<p class="souvenir__jointe">${echapper(entree.fichier.name || 'Fichier joint')} · ${poidsLisible(entree.fichier.size)} · conservé</p>`
     : '';
-  return `<article class="souvenir est-en-attente" data-local="${echapper(entree.idLocal)}">
+
+  // Reprise après mot de passe refusé, entièrement DANS la carte. Le
+  // formulaire du bas est celui d'un NOUVEAU souvenir : y renvoyer l'auteur
+  // pour corriger un envoi existant lui présentait des champs vides et lui
+  // faisait croire qu'il devait tout ressaisir. Ici, le texte et le fichier
+  // sont sous ses yeux, le prénom est déjà connu, et il ne reste
+  // littéralement qu'une chose à taper.
+  const reprise = entree.refusMotDePasse ? `
+    <p class="souvenir__consigne">Texte, photo et prénom sont conservés — il ne manque que le mot de passe.</p>
+    <input class="souvenir__mot-de-passe" type="password" data-role="motDePasse"
+           placeholder="Mot de passe du groupe" autocomplete="current-password">` : '';
+
+  // `est-refusee` rend sa pleine opacité à la carte : l'atténuation de
+  // `est-en-attente` dit « ça part tout seul, laissez faire », exactement le
+  // contraire du message ici, et elle délaverait le champ dans lequel on
+  // demande de taper.
+  const classes = `souvenir est-en-attente${entree.refusMotDePasse ? ' est-refusee' : ''}`;
+  return `<article class="${classes}" data-local="${echapper(entree.idLocal)}">
     <p class="souvenir__entete"><b>${echapper(entree.auteur)}</b> <time>${motif}</time></p>
     ${entree.texte ? `<p class="souvenir__texte">${echapper(entree.texte)}</p>` : ''}
-    ${consigne}
+    ${jointe}
+    ${reprise}
     <p class="souvenir__actions">${reessayer}<button type="button" data-action="abandonner">Abandonner</button></p>
   </article>`;
 }
@@ -179,28 +204,22 @@ export function monterSouvenirs(conteneur, jour) {
     // ENCORE celui qui a été refusé — jamais un mot de passe différent saisi
     // depuis.
     const motDePasseMemorise = localStorage.getItem(CLE_MOT_DE_PASSE);
-    if (motDePasseMemorise && attente.some((e) => e.refusMotDePasse && e.motDePasse === motDePasseMemorise)) {
-      localStorage.removeItem(CLE_MOT_DE_PASSE);
-      const champAuteur = formulaire.querySelector('[name="auteur"]');
-      const champMotDePasse = formulaire.querySelector('[name="motDePasse"]');
-      if (champAuteur) champAuteur.hidden = false;
-      if (champMotDePasse) {
-        champMotDePasse.hidden = false;
-        champMotDePasse.value = '';
-        // Faire réapparaître le champ ne suffit pas : sur téléphone il tombe
-        // sous la liste, souvent hors de l'écran, et rien ne signale qu'il
-        // attend quelque chose. On y amène donc le curseur — mais seulement
-        // si la personne n'est pas déjà en train d'écrire ailleurs dans le
-        // formulaire : voler le focus pendant la saisie d'une note enverrait
-        // les frappes suivantes dans le champ mot de passe. Cette branche ne
-        // se déclenche qu'une fois par refus (elle efface elle-même le mot de
-        // passe mémorisé qui la conditionne), pas à chaque rafraîchissement.
-        if (!formulaire.contains(document.activeElement)) {
-          champMotDePasse.focus({ preventScroll: true });
-          champMotDePasse.scrollIntoView({ block: 'center' });
-        }
-      }
-    }
+    const refusees = attente.filter((e) => e.refusMotDePasse);
+    // Vrai une seule fois par refus : la branche efface le mot de passe
+    // mémorisé qui la conditionne. C'est ce qui permet de donner le focus
+    // au champ de reprise sans le voler à chaque rafraîchissement.
+    const refusNouveau = Boolean(motDePasseMemorise)
+      && refusees.some((e) => e.motDePasse === motDePasseMemorise);
+    if (refusNouveau) localStorage.removeItem(CLE_MOT_DE_PASSE);
+
+    // Qui demande le mot de passe, et où. Tant qu'une carte porte un refus,
+    // c'est ELLE qui le redemande, à côté du texte et du fichier concernés ;
+    // le formulaire du bas garde ses champs d'identité repliés plutôt que
+    // d'exposer une seconde case vide qui donnerait à croire qu'il faut tout
+    // ressaisir. Il les rouvre de lui-même à la première soumission d'un
+    // nouveau souvenir sans mot de passe en mémoire (voir le gestionnaire de
+    // soumission).
+    ajusterChampsIdentite(refusees.length > 0);
 
     let publiees = [];
     try {
@@ -220,6 +239,41 @@ export function monterSouvenirs(conteneur, jour) {
     liste.innerHTML = publiees.length || attente.length
       ? publiees.map(gabaritContribution).join('') + attente.map(gabaritEnAttente).join('')
       : '<p class="souvenirs__vide">Aucun souvenir pour cette étape. Soyez le premier.</p>';
+    // Le champ de reprise n'existe qu'une fois la liste rendue : c'est donc
+    // ici, et pas dans la branche de refus plus haut, qu'on peut y amener le
+    // curseur. Jamais si la personne écrit déjà quelque part — lui voler le
+    // focus enverrait ses frappes suivantes dans une case mot de passe.
+    if (refusNouveau) donnerFocusReprise();
+  }
+
+  /** Replie ou rouvre prénom + mot de passe du formulaire du bas.
+
+      Un seul endroit doit demander le mot de passe à la fois. Quand une carte
+      bloquée s'en charge, ou quand le mot de passe est déjà mémorisé, ces deux
+      champs n'ont rien à faire à l'écran. */
+  function ajusterChampsIdentite(repriseEnCours) {
+    const champAuteur = formulaire.querySelector('[name="auteur"]');
+    const champMotDePasse = formulaire.querySelector('[name="motDePasse"]');
+    if (!champAuteur || !champMotDePasse) return;
+    const auteurConnu = Boolean(localStorage.getItem(CLE_AUTEUR));
+    const motDePasseConnu = Boolean(localStorage.getItem(CLE_MOT_DE_PASSE));
+    const replier = auteurConnu && (motDePasseConnu || repriseEnCours);
+    champAuteur.hidden = replier;
+    champMotDePasse.hidden = replier;
+    // Un champ replié ne doit rien garder : rouvert plus tard, il présenterait
+    // sinon la faute de frappe qu'on vient d'effacer.
+    if (replier) champMotDePasse.value = '';
+  }
+
+  /** Amène le curseur au champ de reprise de la carte bloquée. */
+  function donnerFocusReprise() {
+    const champ = liste.querySelector('.souvenir__mot-de-passe');
+    if (!champ) return;
+    const ailleurs = document.activeElement;
+    if (ailleurs && ailleurs !== document.body
+        && (formulaire.contains(ailleurs) || liste.contains(ailleurs))) return;
+    champ.focus({ preventScroll: true });
+    champ.scrollIntoView({ block: 'center' });
   }
 
   champFichier.addEventListener('change', () => {
@@ -240,6 +294,17 @@ export function monterSouvenirs(conteneur, jour) {
     if (!auteur || !motDePasse) {
       souci.textContent = 'Indiquez votre prénom et le mot de passe du groupe.';
       souci.hidden = false;
+      // Les champs d'identité peuvent être repliés parce qu'une carte bloquée
+      // se charge du mot de passe (voir `ajusterChampsIdentite`). Publier un
+      // NOUVEAU souvenir en a besoin quand même : on les rouvre ici plutôt que
+      // de reprocher une saisie manquante dans des cases invisibles.
+      const champAuteur = formulaire.querySelector('[name="auteur"]');
+      const champMotDePasse = formulaire.querySelector('[name="motDePasse"]');
+      if (champAuteur) champAuteur.hidden = false;
+      if (champMotDePasse) {
+        champMotDePasse.hidden = false;
+        champMotDePasse.focus({ preventScroll: true });
+      }
       return;
     }
     if (!texte && !fichier) {
@@ -303,6 +368,18 @@ export function monterSouvenirs(conteneur, jour) {
     await rafraichir();
   });
 
+  // Le champ de reprise vit hors du formulaire : « Entrée » n'y déclenche
+  // rien tout seul. Sans ça, taper son mot de passe puis valider au clavier —
+  // le réflexe de tout le monde, et le seul geste commode au pouce sur un
+  // téléphone — ne ferait absolument rien.
+  liste.addEventListener('keydown', (evenement) => {
+    if (evenement.key !== 'Enter') return;
+    if (!evenement.target.classList?.contains('souvenir__mot-de-passe')) return;
+    evenement.preventDefault();
+    evenement.target.closest('[data-local]')
+      ?.querySelector('button[data-action="reessayer"]')?.click();
+  });
+
   liste.addEventListener('click', async (evenement) => {
     const bouton = evenement.target.closest('button[data-action]');
     if (!bouton) return;
@@ -316,24 +393,33 @@ export function monterSouvenirs(conteneur, jour) {
     }
 
     if (action === 'reessayer') {
-      // C2 (revue finale) : « le mot de passe courant » — celui tapé à
-      // l'instant dans le champ qui vient de réapparaître prime sur celui,
-      // possiblement encore absent, de `localStorage` (il n'y est réécrit
-      // qu'à une soumission complète du formulaire).
-      const champMotDePasse = formulaire.querySelector('[name="motDePasse"]');
-      const motDePasseCourant = (champMotDePasse && champMotDePasse.value.trim())
+      // Ordre de priorité : le champ de la carte elle-même (celui qu'on vient
+      // de remplir sous les yeux du texte concerné), puis celui du formulaire
+      // du bas — il reste la source quand l'entrée est bloquée pour une autre
+      // raison que le mot de passe et n'a donc pas de champ à elle —, puis
+      // enfin le mot de passe mémorisé.
+      const champCarte = carte.querySelector('.souvenir__mot-de-passe');
+      const champFormulaire = formulaire.querySelector('[name="motDePasse"]');
+      const motDePasseCourant = (champCarte && champCarte.value.trim())
+        || (champFormulaire && !champFormulaire.hidden && champFormulaire.value.trim())
         || localStorage.getItem(CLE_MOT_DE_PASSE) || '';
       if (!motDePasseCourant) {
-        souci.textContent = 'Indiquez le mot de passe du groupe avant de réessayer.';
-        souci.hidden = false;
-        // Ce message s'affiche en pied de formulaire, sous le bouton Publier :
-        // très loin du « Réessayer » qu'on vient de cliquer, et invisible sur
-        // un écran de téléphone. On mène donc au champ concerné, sinon
-        // l'avertissement passe pour une absence de réaction.
-        if (champMotDePasse) {
-          champMotDePasse.hidden = false;
-          champMotDePasse.focus({ preventScroll: true });
-          champMotDePasse.scrollIntoView({ block: 'center' });
+        // Le message du formulaire s'affiche sous le bouton Publier, très loin
+        // du « Réessayer » qu'on vient de cliquer et hors de l'écran sur un
+        // téléphone. Quand la carte a son propre champ, on parle donc dans la
+        // carte ; le pied de formulaire ne sert plus que de repli.
+        const champ = champCarte || champFormulaire;
+        if (champCarte) {
+          const consigne = carte.querySelector('.souvenir__consigne');
+          if (consigne) consigne.textContent = 'Tapez le mot de passe du groupe ci-dessous, puis « Réessayer ».';
+        } else {
+          souci.textContent = 'Indiquez le mot de passe du groupe avant de réessayer.';
+          souci.hidden = false;
+        }
+        if (champ) {
+          champ.hidden = false;
+          champ.focus({ preventScroll: true });
+          champ.scrollIntoView({ block: 'center' });
         }
         return;
       }

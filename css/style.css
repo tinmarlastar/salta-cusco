@@ -631,17 +631,43 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 .souvenir__actions button:hover { border-color: var(--soufre); color: var(--soufre); }
 
 .souvenir.est-en-attente { opacity: .6; border-left: 2px solid var(--soufre); padding-left: .625rem; }
+/* Une entrée qui attend le réseau se fait discrète ; une entrée qui attend un
+   geste de l'auteur, non. */
+.souvenir.est-en-attente.est-refusee { opacity: 1; }
 
-/* Consigne d'une entrée refusée pour mot de passe : la seule ligne de la
-   carte bloquée qui dise quoi faire. L'`opacity` de `.est-en-attente` forme
-   un groupe et s'applique à toute la carte — un enfant ne peut pas s'en
-   affranchir — c'est donc la couleur, et non l'opacité, qui la fait ressortir
-   parmi les lignes atténuées qui l'entourent. */
+/* Consigne d'une entrée refusée : la ligne qui dit quoi faire. */
 .souvenir__consigne {
   margin: .375rem 0 0;
   font-size: .8125rem;
   color: var(--soufre);
 }
+
+/* Le fichier joint d'une entrée en attente : dire qu'il est gardé évite de
+   tout resélectionner, donc évite un doublon. */
+.souvenir__jointe {
+  margin: .375rem 0 0;
+  font-family: var(--mono);
+  font-size: .625rem;
+  letter-spacing: .04em;
+  color: var(--poussiere);
+}
+
+/* Champ de reprise, dans la carte : le seul endroit où l'on retape un mot de
+   passe refusé. Bordure soufre pour qu'il se distingue des champs du
+   formulaire de saisie, plus bas. */
+.souvenir__mot-de-passe {
+  display: block;
+  width: 100%;
+  margin: .375rem 0 0;
+  padding: .375rem .5rem;
+  border: 1px solid var(--soufre);
+  background: var(--nuit-2);
+  color: var(--sel);
+  font-family: var(--display);
+  font-size: .875rem;
+}
+.souvenir__mot-de-passe::placeholder { color: var(--poussiere); }
+.souvenir__mot-de-passe:focus { outline: none; box-shadow: 0 0 0 1px var(--soufre); }
 
 /* Formulaire */
 

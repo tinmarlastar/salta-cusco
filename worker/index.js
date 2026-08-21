@@ -4,7 +4,7 @@
 
 import { creerId, creerJeton, hacherJeton, memeSecret } from './lib/securite.js';
 
-const TEXTE_MAX = 2000;
+const TEXTE_MAX = 5000; // de quoi raconter une journée entière, pas seulement une légende
 const AUTEUR_MAX = 40;
 
 const VIDEO_OCTETS_MAX = 60 * 1024 * 1024; // 60 Mo : au-delà, l'envoi en altitude n'aboutit pas

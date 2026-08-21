@@ -75,9 +75,19 @@ function gabaritEnAttente(entree) {
   // la cause corrigée (mot de passe, vidéo trop lourde raccourcie, etc.).
   const reessayer = entree.bloque
     ? '<button type="button" data-action="reessayer">Réessayer</button>' : '';
+  // Le mot de passe refusé est effacé et les champs réapparaissent sous la
+  // liste (voir `rafraichir`), mais rien ne le disait : « Réessayer » avait
+  // l'air du seul geste offert, et cliqué tel quel il rejouait le même mot de
+  // passe faux — l'entrée retombait bloquée, indéfiniment. Cette consigne est
+  // écrite DANS la carte bloquée parce que c'est là que le regard se pose au
+  // moment où l'on cherche quoi faire.
+  const consigne = entree.refusMotDePasse
+    ? '<p class="souvenir__consigne">Retapez le mot de passe du groupe dans le champ ci-dessous, puis « Réessayer ».</p>'
+    : '';
   return `<article class="souvenir est-en-attente" data-local="${echapper(entree.idLocal)}">
     <p class="souvenir__entete"><b>${echapper(entree.auteur)}</b> <time>${motif}</time></p>
     ${entree.texte ? `<p class="souvenir__texte">${echapper(entree.texte)}</p>` : ''}
+    ${consigne}
     <p class="souvenir__actions">${reessayer}<button type="button" data-action="abandonner">Abandonner</button></p>
   </article>`;
 }
@@ -106,7 +116,7 @@ function gabaritFormulaire() {
            value="${echapper(auteur)}" maxlength="40" ${connue ? 'hidden' : ''}>
     <input class="souvenir-form__champ" name="motDePasse" type="password"
            placeholder="Mot de passe du groupe" ${connue ? 'hidden' : ''}>
-    <textarea class="souvenir-form__champ" name="texte" rows="2" maxlength="2000"
+    <textarea class="souvenir-form__champ" name="texte" rows="4" maxlength="5000"
               placeholder="Une note, un souvenir…"></textarea>
     <p class="souvenir-form__pied">
       <label class="souvenir-form__fichier">
@@ -174,7 +184,22 @@ export function monterSouvenirs(conteneur, jour) {
       const champAuteur = formulaire.querySelector('[name="auteur"]');
       const champMotDePasse = formulaire.querySelector('[name="motDePasse"]');
       if (champAuteur) champAuteur.hidden = false;
-      if (champMotDePasse) { champMotDePasse.hidden = false; champMotDePasse.value = ''; }
+      if (champMotDePasse) {
+        champMotDePasse.hidden = false;
+        champMotDePasse.value = '';
+        // Faire réapparaître le champ ne suffit pas : sur téléphone il tombe
+        // sous la liste, souvent hors de l'écran, et rien ne signale qu'il
+        // attend quelque chose. On y amène donc le curseur — mais seulement
+        // si la personne n'est pas déjà en train d'écrire ailleurs dans le
+        // formulaire : voler le focus pendant la saisie d'une note enverrait
+        // les frappes suivantes dans le champ mot de passe. Cette branche ne
+        // se déclenche qu'une fois par refus (elle efface elle-même le mot de
+        // passe mémorisé qui la conditionne), pas à chaque rafraîchissement.
+        if (!formulaire.contains(document.activeElement)) {
+          champMotDePasse.focus({ preventScroll: true });
+          champMotDePasse.scrollIntoView({ block: 'center' });
+        }
+      }
     }
 
     let publiees = [];
@@ -301,6 +326,15 @@ export function monterSouvenirs(conteneur, jour) {
       if (!motDePasseCourant) {
         souci.textContent = 'Indiquez le mot de passe du groupe avant de réessayer.';
         souci.hidden = false;
+        // Ce message s'affiche en pied de formulaire, sous le bouton Publier :
+        // très loin du « Réessayer » qu'on vient de cliquer, et invisible sur
+        // un écran de téléphone. On mène donc au champ concerné, sinon
+        // l'avertissement passe pour une absence de réaction.
+        if (champMotDePasse) {
+          champMotDePasse.hidden = false;
+          champMotDePasse.focus({ preventScroll: true });
+          champMotDePasse.scrollIntoView({ block: 'center' });
+        }
         return;
       }
       localStorage.setItem(CLE_MOT_DE_PASSE, motDePasseCourant);

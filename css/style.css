@@ -632,6 +632,17 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 
 .souvenir.est-en-attente { opacity: .6; border-left: 2px solid var(--soufre); padding-left: .625rem; }
 
+/* Consigne d'une entrée refusée pour mot de passe : la seule ligne de la
+   carte bloquée qui dise quoi faire. L'`opacity` de `.est-en-attente` forme
+   un groupe et s'applique à toute la carte — un enfant ne peut pas s'en
+   affranchir — c'est donc la couleur, et non l'opacité, qui la fait ressortir
+   parmi les lignes atténuées qui l'entourent. */
+.souvenir__consigne {
+  margin: .375rem 0 0;
+  font-size: .8125rem;
+  color: var(--soufre);
+}
+
 /* Formulaire */
 
 .souvenir-form { margin: 1rem 0 0; }

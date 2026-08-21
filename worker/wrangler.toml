@@ -7,7 +7,7 @@ compatibility_date = "2024-09-23"
 [[d1_databases]]
 binding = "DB"
 database_name = "souvenirs"
-database_id = "à-renseigner-au-deploiement"
+database_id = "dae6dac2-d5e9-4d5b-9eb8-43ad1d232bbb"
 
 [[r2_buckets]]
 binding = "MEDIAS"

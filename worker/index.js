@@ -47,19 +47,46 @@ function erreur(message, statut, cors) {
 }
 
 /** Transforme une ligne de la base en objet public, sans le jeton. */
-function versPublic(ligne) {
+function versPublic(ligne, medias = []) {
+  const liste = medias.map((m) => ({
+    id: m.id, cle: m.cle, genre: m.genre, octets: m.octets,
+  }));
+
+  // Repli pour une contribution d'avant la table `medias` dont la reprise du
+  // schéma n'aurait pas encore été jouée : son fichier est toujours dans ses
+  // propres colonnes. Conditionné à une liste vide, donc jamais en doublon
+  // avec la reprise une fois celle-ci appliquée.
+  if (!liste.length && ligne.media_cle) {
+    liste.push({
+      id: ligne.id, cle: ligne.media_cle,
+      genre: ligne.media_genre, octets: ligne.media_octets,
+    });
+  }
+
   return {
     id: ligne.id,
     jour: ligne.jour,
     auteur: ligne.auteur,
     type: ligne.type,
     texte: ligne.texte,
-    media: ligne.media_cle
-      ? { cle: ligne.media_cle, genre: ligne.media_genre, octets: ligne.media_octets }
-      : null,
+    medias: liste,
+    // `media` au singulier reste renseigné avec le premier fichier : une page
+    // encore ouverte sur l'ancienne version du site continue d'afficher
+    // quelque chose au lieu de rien, jusqu'à son prochain rechargement.
+    media: liste[0] || null,
     creeLe: ligne.cree_le,
     modifieLe: ligne.modifie_le,
   };
+}
+
+/** Regroupe des lignes de `medias` par contribution, dans l'ordre d'affichage. */
+function grouperMedias(lignes) {
+  const par = new Map();
+  for (const m of lignes) {
+    if (!par.has(m.contribution_id)) par.set(m.contribution_id, []);
+    par.get(m.contribution_id).push(m);
+  }
+  return par;
 }
 
 async function listerEtape(jour, env, cors) {
@@ -67,7 +94,40 @@ async function listerEtape(jour, env, cors) {
     .prepare('SELECT * FROM contributions WHERE jour = ? ORDER BY id ASC')
     .bind(jour)
     .all();
-  return repondre({ contributions: results.map(versPublic) }, { cors });
+
+  // Jointure côté base plutôt qu'un `IN (...)` construit depuis les
+  // identifiants : D1 plafonne le nombre de paramètres liés, et une étape
+  // chargée en souvenirs le dépasserait sans prévenir.
+  const { results: medias } = await env.DB.prepare(
+    `SELECT m.* FROM medias m
+       JOIN contributions c ON c.id = m.contribution_id
+      WHERE c.jour = ?
+      ORDER BY m.contribution_id ASC, m.rang ASC, m.id ASC`,
+  ).bind(jour).all();
+  const parContribution = grouperMedias(medias);
+
+  return repondre({
+    contributions: results.map((l) => versPublic(l, parContribution.get(l.id) || [])),
+  }, { cors });
+}
+
+/** Prochain rang libre pour une contribution : les fichiers gardent l'ordre
+    dans lequel ils ont été choisis. */
+async function prochainRang(contributionId, env) {
+  const ligne = await env.DB
+    .prepare('SELECT COALESCE(MAX(rang), -1) + 1 AS suivant FROM medias WHERE contribution_id = ?')
+    .bind(contributionId)
+    .first();
+  return ligne?.suivant ?? 0;
+}
+
+/** Médias d'une contribution, dans l'ordre. */
+async function mediasDe(contributionId, env) {
+  const { results } = await env.DB
+    .prepare('SELECT * FROM medias WHERE contribution_id = ? ORDER BY rang ASC, id ASC')
+    .bind(contributionId)
+    .all();
+  return results;
 }
 
 /** Vrai si la requête porte le mot de passe de groupe.
@@ -148,7 +208,12 @@ async function creerNote(jour, requete, env, cors) {
   const auteur = assainir(corps.auteur, AUTEUR_MAX);
   const texte = assainir(corps.texte, TEXTE_MAX);
   if (!auteur) return erreur('Un prénom est nécessaire', 400, cors);
-  if (!texte) return erreur('La note est vide', 400, cors);
+  // Un souvenir peut n'être qu'une série de photos, sans un mot : le client
+  // annonce alors `avecMedias`, et les fichiers suivent en autant de requêtes
+  // séparées. Sans cette annonce, une contribution sans texte reste un refus —
+  // c'est le cas d'un formulaire envoyé vide par mégarde.
+  const avecMedias = corps.avecMedias === true;
+  if (!texte && !avecMedias) return erreur('La note est vide', 400, cors);
 
   // I3 : le client fournit en général déjà son jeton (généré à la mise en
   // file) ; à défaut — client plus ancien, ou entrée mise en file avant ce
@@ -159,7 +224,7 @@ async function creerNote(jour, requete, env, cors) {
     id: creerId(),
     jour,
     auteur,
-    type: 'note',
+    type: avecMedias ? 'media' : 'note',
     texte,
     media_cle: null,
     media_genre: null,
@@ -174,12 +239,101 @@ async function creerNote(jour, requete, env, cors) {
   // sien le connaît déjà, donc peu importe ; un client qui dépendait de la
   // génération côté service, lui, le perdrait sans recours — exactement ce
   // que ce correctif élimine pour les clients à jour.
+  // Sur un rejeu, des fichiers ont pu être attachés entre-temps : on les relit
+  // plutôt que de répondre une contribution qui paraîtrait vide.
+  const medias = deja ? await mediasDe(ligne.id, env) : [];
   return repondre(
-    { contribution: versPublic(ligne), jeton: (deja || jetonFourni) ? null : jeton },
+    { contribution: versPublic(ligne, medias), jeton: (deja || jetonFourni) ? null : jeton },
     { statut: deja ? 200 : 201, cors },
   );
 }
 
+/** Valide un fichier reçu et le dépose dans R2. Renvoie soit `{ media }`,
+    soit `{ refus }` — une réponse d'erreur déjà formée. */
+async function deposerFichier(fichier, jour, env, cors) {
+  if (!fichier || typeof fichier.arrayBuffer !== 'function') {
+    return { refus: erreur('Aucun fichier reçu', 400, cors) };
+  }
+
+  const genre = fichier.type.startsWith('video/') ? 'video' : 'image';
+  const plafond = genre === 'video' ? VIDEO_OCTETS_MAX : IMAGE_OCTETS_MAX;
+  if (fichier.size > plafond) {
+    const mo = Math.round(plafond / (1024 * 1024));
+    return {
+      refus: erreur(
+        genre === 'video'
+          ? `Vidéo trop lourde (maximum ${mo} Mo). Raccourcissez le clip ou baissez la qualité.`
+          : `Image trop lourde (maximum ${mo} Mo).`,
+        413, cors,
+      ),
+    };
+  }
+
+  const extension = EXTENSIONS[fichier.type] || (genre === 'video' ? 'mp4' : 'jpg');
+  const id = creerId();
+  const cle = `medias/${jour}/${id}.${extension}`;
+
+  // Le type MIME annoncé par le client n'est pas fiable : le mot de passe de
+  // groupe circule de vive voix entre plusieurs personnes, et un type inventé
+  // (HTML, SVG…) stocké tel quel serait ensuite resservi à l'identique par
+  // `servirMedia`, exécutable par le navigateur sur le domaine du service. On
+  // ne garde donc que les types qu'on connaît (clés de `EXTENSIONS`) ; tout le
+  // reste — y compris un `application/octet-stream` légitime d'un iPhone pour
+  // un HEIC — est stocké tel quel sous ce type neutre, jamais exécutable.
+  const typeNormalise = EXTENSIONS[fichier.type] ? fichier.type : 'application/octet-stream';
+
+  await env.MEDIAS.put(cle, fichier.stream(), {
+    httpMetadata: { contentType: typeNormalise },
+  });
+
+  return { media: { id, cle, genre, octets: fichier.size } };
+}
+
+/** Insère une ligne de `medias` ; renvoie l'existante si la clé a déjà servi.
+
+    Même raisonnement que `enregistrer` pour les contributions : un renvoi
+    après une réponse perdue en route ne doit pas attacher deux fois la même
+    photo. Chaque fichier porte sa propre clé d'idempotence, générée par le
+    client à la mise en file, si bien qu'une reprise à mi-parcours reprend
+    exactement là où elle s'était arrêtée. */
+async function enregistrerMedia(media, contributionId, env) {
+  const rang = await prochainRang(contributionId, env);
+  try {
+    await env.DB.prepare(
+      `INSERT INTO medias
+         (id, contribution_id, cle, genre, octets, rang, cree_le, cle_idempotence)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).bind(
+      media.id, contributionId, media.cle, media.genre, media.octets,
+      rang, new Date().toISOString(), media.cle_idempotence,
+    ).run();
+    return { deja: false };
+  } catch (souci) {
+    if (!String(souci).includes('cle_idempotence')) throw souci;
+    const existante = await env.DB
+      .prepare('SELECT * FROM medias WHERE cle_idempotence = ?')
+      .bind(media.cle_idempotence)
+      .first();
+    if (!existante) throw souci;
+    // Le fichier qu'on vient d'écrire est un orphelin : le rejeu porte déjà le
+    // sien. Le nettoyage ne doit jamais faire échouer la réponse — un rejeu
+    // idempotent reste un succès même si R2 refuse la suppression, sinon le
+    // client croit à un échec alors que tout est en place et renvoie la vidéo.
+    if (existante.cle !== media.cle) {
+      await env.MEDIAS.delete(media.cle).catch((souci2) => {
+        console.error('Nettoyage du média orphelin impossible :', souci2);
+      });
+    }
+    return { deja: true };
+  }
+}
+
+/** Route héritée : contribution et fichier unique en une seule requête.
+
+    Le site n'y passe plus — il crée la contribution puis attache les fichiers
+    un par un, ce qui permet d'en envoyer plusieurs et de reprendre un envoi
+    interrompu au bon endroit. Elle reste servie pour une page encore ouverte
+    sur l'ancienne version, et écrit dans `medias` comme le reste. */
 async function creerMedia(jour, requete, env, cors) {
   if (!await groupeAutorise(requete, env)) return erreur('Mot de passe incorrect', 401, cors);
 
@@ -200,76 +354,120 @@ async function creerMedia(jour, requete, env, cors) {
 
   const auteur = assainir(formulaire.get('auteur'), AUTEUR_MAX);
   const texte = assainir(formulaire.get('texte'), TEXTE_MAX);
-  const fichier = formulaire.get('fichier');
   if (!auteur) return erreur('Un prénom est nécessaire', 400, cors);
-  if (!fichier || typeof fichier.arrayBuffer !== 'function') {
-    return erreur('Aucun fichier reçu', 400, cors);
-  }
 
-  const genre = fichier.type.startsWith('video/') ? 'video' : 'image';
-  const plafond = genre === 'video' ? VIDEO_OCTETS_MAX : IMAGE_OCTETS_MAX;
-  if (fichier.size > plafond) {
-    const mo = Math.round(plafond / (1024 * 1024));
-    return erreur(
-      genre === 'video'
-        ? `Vidéo trop lourde (maximum ${mo} Mo). Raccourcissez le clip ou baissez la qualité.`
-        : `Image trop lourde (maximum ${mo} Mo).`,
-      413, cors,
-    );
-  }
+  const { media, refus } = await deposerFichier(formulaire.get('fichier'), jour, env, cors);
+  if (refus) return refus;
 
-  const extension = EXTENSIONS[fichier.type] || (genre === 'video' ? 'mp4' : 'jpg');
-  const id = creerId();
-  const cle = `medias/${jour}/${id}.${extension}`;
-
-  // Le type MIME annoncé par le client n'est pas fiable : le mot de passe de
-  // groupe circule de vive voix entre plusieurs personnes, et un type inventé
-  // (HTML, SVG…) stocké tel quel serait ensuite resservi à l'identique par
-  // `servirMedia`, exécutable par le navigateur sur le domaine du service. On
-  // ne garde donc que les types qu'on connaît (clés de `EXTENSIONS`) ; tout le
-  // reste — y compris un `application/octet-stream` légitime d'un iPhone pour
-  // un HEIC — est stocké tel quel sous ce type neutre, jamais exécutable.
-  const typeNormalise = EXTENSIONS[fichier.type] ? fichier.type : 'application/octet-stream';
-
-  await env.MEDIAS.put(cle, fichier.stream(), {
-    httpMetadata: { contentType: typeNormalise },
-  });
-
-  // I3 : voir le commentaire de `jetonFourniParClient` — même raisonnement
-  // que pour une note.
   const jetonFourni = jetonFourniParClient(requete);
   const jeton = jetonFourni || creerJeton();
   const { ligne, deja } = await enregistrer({
-    id,
+    id: creerId(),
     jour,
     auteur,
     type: 'media',
     texte,
-    media_cle: cle,
-    media_genre: genre,
-    media_octets: fichier.size,
+    media_cle: null,
+    media_genre: null,
+    media_octets: null,
     cree_le: new Date().toISOString(),
     jeton_hache: await hacherJeton(jeton),
     cle_idempotence: idempotence,
   }, env);
 
-  // Renvoi d'un média déjà enregistré : le fichier qu'on vient d'écrire est un
-  // orphelin, on le retire pour ne pas encombrer le stockage. Ce nettoyage ne
-  // doit jamais faire échouer la réponse : un rejeu idempotent doit répondre
-  // 200 même si R2 refuse la suppression (erreur transitoire par ex.), sinon
-  // le client croit à un échec alors que sa contribution est bien enregistrée
-  // et retente sur un réseau capricieux.
-  if (deja && ligne.media_cle !== cle) {
-    await env.MEDIAS.delete(cle).catch((souci) => {
+  if (deja) {
+    // Rejeu : la contribution existe, son fichier aussi. On retire l'orphelin
+    // qu'on vient d'écrire, sans jamais faire échouer la réponse.
+    await env.MEDIAS.delete(media.cle).catch((souci) => {
       console.error('Nettoyage du média orphelin impossible :', souci);
     });
+  } else {
+    await enregistrerMedia({ ...media, cle_idempotence: `${idempotence}:0` }, ligne.id, env);
   }
 
   return repondre(
-    { contribution: versPublic(ligne), jeton: (deja || jetonFourni) ? null : jeton },
+    {
+      contribution: versPublic(ligne, await mediasDe(ligne.id, env)),
+      jeton: (deja || jetonFourni) ? null : jeton,
+    },
     { statut: deja ? 200 : 201, cors },
   );
 }
+
+/** Attache un fichier à une contribution existante.
+
+    C'est le chemin normal depuis le site : une requête par fichier, ce qui
+    permet d'en envoyer plusieurs et, sur un réseau qui lâche, de ne
+    recommencer que celui qui a échoué plutôt que les 200 Mo précédents. C'est
+    aussi ce qui permet d'ajouter une photo à un souvenir publié la veille.
+
+    L'autorisation est celle de la modification, pas celle de la publication :
+    le jeton d'auteur, que seul l'auteur possède, ou le mot de passe
+    d'administration. Le mot de passe de groupe n'est donc pas redemandé pour
+    compléter son propre souvenir. */
+async function ajouterMedia(id, requete, env, cors) {
+  const ligne = await env.DB
+    .prepare('SELECT * FROM contributions WHERE id = ?').bind(id).first();
+  if (!ligne) return erreur('Contribution introuvable', 404, cors);
+
+  const permis = await auteurAutorise(requete, ligne) || await adminAutorise(requete, env);
+  if (!permis) return erreur("Seul l'auteur peut compléter ce souvenir", 403, cors);
+
+  const idempotence = assainir(requete.headers.get('X-Idempotence'), 80);
+  if (!idempotence) return erreur('En-tête X-Idempotence manquant', 400, cors);
+
+  // Voir `creerMedia` : un multipart tronqué par le réseau est un incident de
+  // transport, à renvoyer plus tard, pas un refus définitif.
+  const formulaire = await requete.formData().catch(() => null);
+  if (!formulaire) return erreur('Envoi illisible, réessayez', 503, cors);
+
+  const { media, refus } = await deposerFichier(formulaire.get('fichier'), ligne.jour, env, cors);
+  if (refus) return refus;
+
+  await enregistrerMedia({ ...media, cle_idempotence: idempotence }, ligne.id, env);
+
+  // Une contribution qui reçoit son premier fichier cesse d'être une simple
+  // note : `type` sert encore à `modifier`, qui refuse de vider le texte d'une
+  // note mais l'accepte pour la légende d'un média.
+  if (ligne.type !== 'media') {
+    await env.DB.prepare('UPDATE contributions SET type = ? WHERE id = ?')
+      .bind('media', ligne.id).run();
+  }
+
+  return repondre(
+    { contribution: versPublic({ ...ligne, type: 'media' }, await mediasDe(ligne.id, env)) },
+    { cors },
+  );
+}
+
+/** Retire un fichier d'un souvenir, sans toucher au reste.
+
+    Sans ça, une photo ajoutée par erreur obligerait à supprimer le souvenir
+    entier — texte et autres photos comprises — pour la faire disparaître. */
+async function supprimerMedia(idMedia, requete, env, cors) {
+  const media = await env.DB
+    .prepare('SELECT * FROM medias WHERE id = ?').bind(idMedia).first();
+  if (!media) return erreur('Fichier introuvable', 404, cors);
+
+  const ligne = await env.DB
+    .prepare('SELECT * FROM contributions WHERE id = ?').bind(media.contribution_id).first();
+  if (!ligne) return erreur('Contribution introuvable', 404, cors);
+
+  const permis = await adminAutorise(requete, env) || await auteurAutorise(requete, ligne);
+  if (!permis) return erreur('Suppression non autorisée', 403, cors);
+
+  // Même ordre que `supprimer` : la base fait foi, R2 est nettoyé ensuite.
+  await env.DB.prepare('DELETE FROM medias WHERE id = ?').bind(idMedia).run();
+  await env.MEDIAS.delete(media.cle).catch((souci) => {
+    console.error('Nettoyage du média après suppression impossible :', souci);
+  });
+
+  return repondre(
+    { contribution: versPublic(ligne, await mediasDe(ligne.id, env)) },
+    { cors },
+  );
+}
+
 
 async function servirMedia(cle, env, cors) {
   const objet = await env.MEDIAS.get(cle);
@@ -315,8 +513,11 @@ async function modifier(id, requete, env, cors) {
 
   const corps = await requete.json().catch(() => ({}));
   const texte = assainir(corps.texte, TEXTE_MAX);
-  // Une note vide n'a pas de sens ; la légende d'un média, si.
-  if (!texte && ligne.type === 'note') return erreur('La note est vide', 400, cors);
+  // Une note vide n'a pas de sens ; la légende d'un média, si. On regarde les
+  // fichiers réellement attachés plutôt que la seule colonne `type` : une
+  // contribution créée comme note a pu recevoir des photos depuis.
+  const porteDesFichiers = ligne.type === 'media' || (await mediasDe(id, env)).length > 0;
+  if (!texte && !porteDesFichiers) return erreur('La note est vide', 400, cors);
 
   const modifieLe = new Date().toISOString();
   await env.DB
@@ -325,7 +526,12 @@ async function modifier(id, requete, env, cors) {
     .run();
 
   return repondre(
-    { contribution: versPublic({ ...ligne, texte, modifie_le: modifieLe }) },
+    {
+      contribution: versPublic(
+        { ...ligne, texte, modifie_le: modifieLe },
+        await mediasDe(id, env),
+      ),
+    },
     { cors },
   );
 }
@@ -347,9 +553,16 @@ async function supprimer(id, requete, env, cors) {
   // fichier disparu — le pire état résiduel, celui que les participants
   // voient. Ici, le pire résiduel possible est un objet R2 orphelin,
   // invisible de tous.
+  // Les clés R2 sont relevées AVANT le DELETE : après, les lignes de `medias`
+  // n'existent plus et les fichiers deviendraient introuvables, donc
+  // impossibles à nettoyer.
+  const cles = (await mediasDe(id, env)).map((m) => m.cle);
+  if (ligne.media_cle) cles.push(ligne.media_cle); // contribution d'avant la table
+
   await env.DB.prepare('DELETE FROM contributions WHERE id = ?').bind(id).run();
-  if (ligne.media_cle) {
-    await env.MEDIAS.delete(ligne.media_cle).catch((souci) => {
+  await env.DB.prepare('DELETE FROM medias WHERE contribution_id = ?').bind(id).run();
+  for (const cle of cles) {
+    await env.MEDIAS.delete(cle).catch((souci) => {
       console.error('Nettoyage du média après suppression impossible :', souci);
     });
   }
@@ -361,7 +574,12 @@ async function listerTout(requete, env, cors) {
   if (!await adminAutorise(requete, env)) return erreur('Mot de passe incorrect', 401, cors);
   const { results } = await env.DB
     .prepare('SELECT * FROM contributions ORDER BY id DESC').all();
-  return repondre({ contributions: results.map(versPublic) }, { cors });
+  const { results: medias } = await env.DB
+    .prepare('SELECT * FROM medias ORDER BY contribution_id ASC, rang ASC, id ASC').all();
+  const parContribution = grouperMedias(medias);
+  return repondre({
+    contributions: results.map((l) => versPublic(l, parContribution.get(l.id) || [])),
+  }, { cors });
 }
 
 export default {
@@ -399,6 +617,16 @@ export default {
         const id = contribution[1];
         if (requete.method === 'PATCH') return await modifier(id, requete, env, cors);
         if (requete.method === 'DELETE') return await supprimer(id, requete, env, cors);
+      }
+
+      const ajout = chemin.match(/^\/api\/contribution\/([0-9a-z]+)\/media$/);
+      if (ajout && requete.method === 'POST') {
+        return await ajouterMedia(ajout[1], requete, env, cors);
+      }
+
+      const unMedia = chemin.match(/^\/api\/media\/([0-9a-z]+)$/);
+      if (unMedia && requete.method === 'DELETE') {
+        return await supprimerMedia(unMedia[1], requete, env, cors);
       }
 
       if (chemin === '/api/tout' && requete.method === 'GET') {

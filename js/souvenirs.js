@@ -115,7 +115,7 @@ export async function listerEtape(jour) {
   return donnees.contributions || [];
 }
 
-export async function envoyerNote({ jour, auteur, texte, motDePasse, idempotence, jeton }) {
+export async function envoyerNote({ jour, auteur, texte, motDePasse, idempotence, jeton, avecMedias = false }) {
   const entetes = {
     'Content-Type': 'application/json',
     'X-Mot-De-Passe': motDePasse,
@@ -128,8 +128,37 @@ export async function envoyerNote({ jour, auteur, texte, motDePasse, idempotence
   return appeler(`/api/etape/${jour}`, {
     method: 'POST',
     headers: entetes,
-    body: JSON.stringify({ auteur, texte }),
+    // `avecMedias` autorise le service à enregistrer un souvenir sans un mot :
+    // une série de photos se suffit à elle-même, et les fichiers arrivent
+    // ensuite, un par requête.
+    body: JSON.stringify({ auteur, texte, avecMedias }),
   });
+}
+
+/** Attache un fichier à une contribution déjà créée.
+
+    Une requête par fichier, et non un seul envoi groupé : sur un lien qui
+    lâche à mi-course — le régime de croisière attendu du voyage — seul le
+    fichier en cours est à recommencer, pas les 200 Mo déjà passés. C'est la
+    même route qui sert à compléter un souvenir publié la veille.
+
+    Le mot de passe de groupe n'est pas demandé : c'est le jeton d'auteur qui
+    autorise, comme pour modifier ou supprimer. */
+export async function envoyerFichier({ contributionId, fichier, idempotence, jeton }) {
+  const formulaire = new FormData();
+  formulaire.set('fichier', fichier, fichier.name || 'souvenir');
+  return appeler(`/api/contribution/${contributionId}/media`, {
+    method: 'POST',
+    headers: { 'X-Jeton': jeton, 'X-Idempotence': idempotence },
+    body: formulaire,
+  }, DELAI_MEDIA_MS);
+}
+
+export async function supprimerFichier({ idMedia, jeton, motDePasse }) {
+  const entetes = {};
+  if (jeton) entetes['X-Jeton'] = jeton;
+  if (motDePasse) entetes['X-Mot-De-Passe'] = motDePasse;
+  return appeler(`/api/media/${idMedia}`, { method: 'DELETE', headers: entetes });
 }
 
 export async function envoyerMedia({

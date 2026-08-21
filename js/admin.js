@@ -35,10 +35,22 @@ function demander(messageSouci) {
    position d'attribut ou d'URL — c'est cette page qui en a le plus besoin,
    puisqu'elle affiche justement ce que la modération n'a pas encore vu. */
 function gabarit(contribution) {
-  const media = contribution.media;
-  const apercu = !media ? '' : media.genre === 'video'
-    ? `<video class="souvenir__media" src="${echapper(urlMedia(media.cle))}" controls preload="metadata"></video>`
-    : `<img class="souvenir__media" src="${echapper(urlMedia(media.cle))}" alt="" loading="lazy">`;
+  // Tous les fichiers, pas seulement le premier : supprimer une contribution
+  // emporte tout ce qu'elle porte, et modérer à l'aveugle sur une photo
+  // représentative de cinq autres n'aurait aucun sens. `media` au singulier
+  // reste le repli pour un service pas encore redéployé.
+  const medias = contribution.medias?.length
+    ? contribution.medias
+    : (contribution.media ? [contribution.media] : []);
+  const apercu = !medias.length ? '' : `<div class="souvenir__galerie${medias.length > 1 ? ' est-multiple' : ''}">${
+    medias.map((m) => {
+      const source = echapper(urlMedia(m.cle));
+      const corps = m.genre === 'video'
+        ? `<video class="souvenir__media" src="${source}" controls preload="metadata"></video>`
+        : `<img class="souvenir__media" src="${source}" alt="" loading="lazy">`;
+      return `<figure class="souvenir__figure">${corps}</figure>`;
+    }).join('')
+  }</div>`;
   return `<article class="souvenir" data-id="${echapper(contribution.id)}">
     <p class="souvenir__entete">
       <b>${echapper(contribution.auteur)}</b>

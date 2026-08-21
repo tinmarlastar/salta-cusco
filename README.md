@@ -111,7 +111,21 @@ repart tout seul dès que ça capte. Rien ne se perd. Si un souvenir reste
 affiché « en attente » sans jamais repartir alors que le réseau fonctionne de
 nouveau, recharger la page suffit à relancer la file.
 
-**Chacun peut modifier ou supprimer ses propres souvenirs** : les boutons
+**Plusieurs photos et vidéos par souvenir**, sans limite de nombre. Le
+sélecteur s'ouvre autant de fois qu'on veut : les fichiers s'ajoutent à la
+liste au lieu de la remplacer, et chacun peut être retiré avant publication.
+Les plafonds restent par fichier — 12 Mo une photo (après recompression
+automatique), 60 Mo une vidéo. Le nombre de fichiers et leur poids total sont
+affichés avant l'envoi : c'est le garde-fou d'une sélection malheureuse dans
+la pellicule.
+
+Chaque fichier part dans sa propre requête. Sur un lien qui lâche à mi-course,
+seul le fichier en cours est à recommencer : la carte en attente indique
+« 6 fichiers · 2 envoyés », et la reprise repart au troisième. Aucun fichier
+n'est jamais attaché deux fois, chacun portant sa propre clé d'idempotence.
+
+**Chacun peut modifier ou supprimer ses propres souvenirs**, y compris leur
+ajouter une photo après coup ou en retirer une seule : les boutons
 n'apparaissent que sur le téléphone qui les a publiés. Changer d'appareil ou
 vider son navigateur fait perdre cette main — la modération, elle, reste
 valable sur tout.
@@ -267,6 +281,18 @@ Après une modification de `worker/index.js` ou de `worker/lib/` :
 ```bash
 cd worker && npx wrangler deploy
 ```
+
+**Si `schema.sql` a changé**, l'appliquer à la base distante *avant* de
+déployer, sinon le service déployé interroge des tables qui n'existent pas
+encore :
+
+```bash
+cd worker && npx wrangler d1 execute souvenirs --remote --file=schema.sql
+```
+
+Le script est écrit pour être rejoué sans dommage (`IF NOT EXISTS`,
+`INSERT OR IGNORE`) : l'appliquer deux fois ne crée pas de doublon et ne
+détruit rien.
 
 Les mots de passe restent ceux déjà posés ; il n'y a pas besoin de les
 reposer, sauf pour les changer :

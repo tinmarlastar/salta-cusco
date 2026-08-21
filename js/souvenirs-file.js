@@ -5,7 +5,7 @@
    binaires tels quels. */
 
 import {
-  envoyerNote, envoyerMedia, ErreurService, creerCleIdempotence,
+  envoyerNote, envoyerFichier, ErreurService, creerCleIdempotence,
 } from './souvenirs.js';
 
 const BASE = 'souvenirs-salta-cusco';
@@ -264,6 +264,13 @@ export async function mettreEnFile(entree) {
     // tâche 8 fournira bien la clé en pratique, mais le module qui porte la
     // garantie « rien n'est perdu » ne doit pas en dépendre.
     idempotence: entree.idempotence ?? creerCleIdempotence(),
+    // Une clé par fichier, figée ici : c'est ce qui permet de reprendre un
+    // envoi interrompu au bon fichier sans jamais en attacher un deux fois.
+    // Les générer au moment de l'envoi les changerait à chaque tentative, et
+    // chaque renvoi ajouterait une copie de la même photo.
+    idempotencesFichiers: (entree.fichiers || []).map(() => creerCleIdempotence()),
+    contributionId: entree.contributionId ?? null,
+    fichiersEnvoyes: 0,
     idLocal,
     tentatives: 0,
     prochaineTentative: 0,
@@ -319,55 +326,139 @@ export async function reprendreEntree(idLocal, motDePasse) {
     rattrapé à l'intérieur de cette fonction. C'est ce qui permet à
     `renvoyerMaintenant` de traiter chaque entrée indépendamment des autres
     (voir son commentaire). */
-async function traiterEntree(entree) {
+/** Ramène une entrée à la forme courante.
+
+    Un souvenir peut désormais porter plusieurs fichiers, envoyés un par un.
+    Les entrées mises en file par la version précédente en portaient au plus
+    un, sous `fichier`, et n'avaient ni progression ni identifiant de
+    contribution. Les convertir à la lecture — plutôt qu'écrire une migration
+    d'IndexedDB — évite qu'un envoi laissé en attente sur le téléphone de
+    quelqu'un pendant la mise à jour du site reste bloqué pour de bon. */
+function normaliser(entree) {
+  if (Array.isArray(entree.fichiers)) return entree;
+  const fichiers = entree.fichier ? [entree.fichier] : [];
+  return {
+    ...entree,
+    fichiers,
+    idempotencesFichiers: fichiers.map((_, i) => `${entree.idempotence}:${i}`),
+    contributionId: entree.contributionId ?? null,
+    fichiersEnvoyes: 0,
+  };
+}
+
+/** Écrit la progression d'un envoi en cours, sans ressusciter une entrée
+    abandonnée entretemps.
+
+    Renvoie faux si l'entrée n'existe plus : l'auteur a cliqué « Abandonner »
+    pendant l'envoi, et les fichiers restants ne doivent plus partir. */
+async function enregistrerProgres(idLocal, champs) {
+  let existe = false;
+  await transaction('readwrite', (magasin) => {
+    const requeteGet = magasin.get(idLocal);
+    requeteGet.onsuccess = () => {
+      const actuelle = requeteGet.result;
+      if (!actuelle) return;
+      existe = true;
+      magasin.put({ ...actuelle, ...champs });
+    };
+    return requeteGet;
+  });
+  return existe;
+}
+
+/** Envoie une entrée, ou consigne pourquoi ça n'a pas marché.
+
+    Ne lève jamais : tout incident (réseau, service, stockage local) est
+    rattrapé à l'intérieur de cette fonction. C'est ce qui permet à
+    `renvoyerMaintenant` de traiter chaque entrée indépendamment des autres
+    (voir son commentaire).
+
+    Un envoi se fait en plusieurs requêtes : la contribution d'abord, puis un
+    fichier par requête. La progression est écrite dans la base locale APRÈS
+    chaque étape réussie, si bien qu'une coupure au huitième fichier reprend
+    au huitième et non au premier — c'est tout l'intérêt de ne pas grouper les
+    envois. Chaque fichier porte sa propre clé d'idempotence, générée à la
+    mise en file : un fichier dont la réponse s'est perdue en route n'est
+    jamais attaché deux fois. */
+async function traiterEntree(entreeBrute) {
+  const entree = normaliser(entreeBrute);
   if (Date.now() < entree.prochaineTentative) return;
 
-  let envoiReussi = false;
+  let contributionId = entree.contributionId;
+  let envoyes = entree.fichiersEnvoyes || 0;
   let erreurEnvoi = null;
-  let resultatEnvoi = null;
+  let abandonnee = false;
+
   try {
-    resultatEnvoi = entree.type === 'media'
-      ? await envoyerMedia(entree)
-      : await envoyerNote(entree);
-    envoiReussi = true;
+    // 1. La contribution elle-même. Déjà faite si une tentative précédente
+    //    s'est arrêtée plus loin, et jamais nécessaire pour un ajout de
+    //    fichiers à un souvenir déjà publié.
+    if (!contributionId) {
+      const reponse = await envoyerNote({
+        jour: entree.jour,
+        auteur: entree.auteur,
+        texte: entree.texte,
+        motDePasse: entree.motDePasse,
+        idempotence: entree.idempotence,
+        jeton: entree.jeton,
+        avecMedias: entree.fichiers.length > 0,
+      });
+      contributionId = reponse?.contribution?.id;
+      if (!contributionId) {
+        // Réponse inexploitable : traitée comme un incident de transport,
+        // donc renvoyée plus tard, plutôt que comme un refus définitif.
+        throw new Error("Le service n'a pas renvoyé d'identifiant");
+      }
+
+      // Le jeton d'abord : sans lui, l'auteur perd ses boutons
+      // Modifier/Supprimer — et, depuis que les fichiers s'attachent avec, la
+      // possibilité même de compléter son souvenir. Filet propre : un rappel
+      // fourni par la vue ne doit pas pouvoir compromettre la suite.
+      try {
+        surJeton(contributionId, entree.jeton || reponse?.jeton);
+      } catch (souciJeton) {
+        console.error(
+          `Souvenir ${entree.idLocal} : le rappel de mémorisation du jeton a échoué.`,
+          souciJeton,
+        );
+      }
+
+      if (!await enregistrerProgres(entree.idLocal, { contributionId, fichiersEnvoyes: 0 })) {
+        abandonnee = true;
+      }
+      signaler();
+    }
+
+    // 2. Les fichiers, un par un.
+    while (!abandonnee && envoyes < entree.fichiers.length) {
+      await envoyerFichier({
+        contributionId,
+        fichier: entree.fichiers[envoyes],
+        idempotence: entree.idempotencesFichiers[envoyes],
+        jeton: entree.jeton,
+      });
+      envoyes += 1;
+      if (!await enregistrerProgres(entree.idLocal, { contributionId, fichiersEnvoyes: envoyes })) {
+        abandonnee = true;
+      }
+      signaler();
+    }
   } catch (souci) {
     erreurEnvoi = souci;
   }
 
-  if (envoiReussi) {
-    // Capter le jeton avant tout le reste. Protégé par son propre filet — le
-    // rappel vient de l'appelant (la vue) et n'a aucune raison de pouvoir
-    // compromettre la garantie structurelle de `renvoyerMaintenant` : une
-    // entrée déjà envoyée avec succès doit être retirée localement même si la
-    // mémorisation de son jeton échoue.
-    //
-    // I3 : `entree.jeton` — généré par la vue à la mise en file — prime sur
-    // celui, éventuel, de la réponse. Il est donc capté sur TOUT succès, pas
-    // seulement une création (`resultatEnvoi.contribution` suffit, `deja` ou
-    // non) : contrairement à l'ancien jeton généré côté service, celui-ci ne
-    // dépend d'aucune réponse fraîche pour être connu. Le repli sur
-    // `resultatEnvoi?.jeton` ne sert plus qu'aux entrées mises en file avant
-    // ce correctif, qui ne portent pas encore de `jeton`.
-    try {
-      if (entree.jeton && resultatEnvoi?.contribution) {
-        surJeton(resultatEnvoi.contribution.id, entree.jeton);
-      } else if (resultatEnvoi?.jeton && resultatEnvoi?.contribution) {
-        surJeton(resultatEnvoi.contribution.id, resultatEnvoi.jeton);
-      }
-    } catch (souciJeton) {
-      console.error(
-        `Souvenir ${entree.idLocal} : le rappel de mémorisation du jeton a échoué.`,
-        souciJeton,
-      );
-    }
+  if (!erreurEnvoi) {
+    // Abandonnée en cours de route : il n'y a plus rien à retirer, l'entrée
+    // n'existe plus.
+    if (abandonnee) return;
 
-    // Le serveur a confirmé l'enregistrement : l'entrée a rempli son rôle,
-    // il ne reste qu'un rangement local. Si CE rangement échoue (stockage
-    // saturé, transaction interrompue), ce n'est pas un échec d'envoi — rien
-    // n'a été perdu, un futur passage retentera le `delete` et l'idempotence
-    // empêche tout doublon côté serveur en attendant. On journalise donc à
-    // part, sans réécrire l'entrée avec un motif réseau qui mentirait sur ce
-    // qui s'est réellement passé.
+    // Le serveur a tout confirmé : l'entrée a rempli son rôle, il ne reste
+    // qu'un rangement local. Si CE rangement échoue (stockage saturé,
+    // transaction interrompue), ce n'est pas un échec d'envoi — rien n'a été
+    // perdu, un futur passage retentera le `delete`, et les clés
+    // d'idempotence empêchent tout doublon côté serveur en attendant. On
+    // journalise donc à part, sans réécrire l'entrée avec un motif réseau qui
+    // mentirait sur ce qui s'est réellement passé.
     try {
       await transaction('readwrite', (magasin) => magasin.delete(entree.idLocal));
       signaler();
@@ -385,7 +476,9 @@ async function traiterEntree(entree) {
   // Un 401 signifie précisément un mot de passe refusé (`groupeAutorise` dans
   // le service) : c'est le seul cas où la vue doit effacer le mot de passe
   // mémorisé, pour que le champ réapparaisse plutôt que de rester bloqué pour
-  // de bon derrière une faute de frappe (revue finale, C2).
+  // de bon derrière une faute de frappe (revue finale, C2). Seule la création
+  // de la contribution présente ce mot de passe ; l'envoi des fichiers, lui,
+  // s'autorise avec le jeton d'auteur.
   const refusMotDePasse = definitif && erreurEnvoi.statut === 401;
   const tentatives = entree.tentatives + 1;
   // Premier réessai après ATTENTE_MIN (2 s), puis doublement à chaque échec.
@@ -393,11 +486,11 @@ async function traiterEntree(entree) {
 
   try {
     // L'auteur a pu abandonner cet envoi entretemps (`viderEntree`, appelée
-    // par la tâche 8) pendant les jusqu'à 120 s que peut prendre un envoi
-    // média : réécrire aveuglément la copie mémoire avec `put` recréerait
-    // l'entrée qu'il croyait avoir supprimée. On relit donc l'état actuel —
-    // `undefined` si elle n'existe plus, grâce au contrat de retour net de
-    // `transaction()` — et on n'écrit que si l'entrée existe encore.
+    // par la vue) pendant les jusqu'à 120 s que peut prendre un fichier :
+    // réécrire aveuglément la copie mémoire avec `put` recréerait l'entrée
+    // qu'il croyait avoir supprimée. On relit donc l'état actuel — `undefined`
+    // s'il n'existe plus, grâce au contrat de retour net de `transaction()` —
+    // et on n'écrit que si l'entrée existe encore.
     //
     // La lecture et l'écriture se font dans la MÊME transaction `readwrite`
     // (le `put` est émis depuis le gestionnaire `onsuccess` du `get`, ce qui
@@ -405,6 +498,10 @@ async function traiterEntree(entree) {
     // ça, la garantie « pas de résurrection » ne tiendrait que par une
     // propriété d'ordonnancement (rien ne s'intercale entre les deux appels)
     // plutôt que par construction.
+    //
+    // `contributionId` et `fichiersEnvoyes` sont réécrits ici aussi : une
+    // étape peut avoir abouti avant celle qui a échoué, et la prochaine
+    // tentative doit repartir de là.
     let entreeEncorePresente = false;
     await transaction('readwrite', (magasin) => {
       const requeteGet = magasin.get(entree.idLocal);
@@ -414,6 +511,8 @@ async function traiterEntree(entree) {
         entreeEncorePresente = true;
         magasin.put({
           ...actuelle,
+          contributionId,
+          fichiersEnvoyes: envoyes,
           tentatives,
           prochaineTentative: definitif ? Number.MAX_SAFE_INTEGER : Date.now() + attente,
           dernierSouci: erreurEnvoi.message,
@@ -466,16 +565,17 @@ export async function renvoyerMaintenant() {
         console.error("Impossible de lire la file d'attente :", souciListe);
         return;
       }
-      // I2 (revue finale) : les notes d'abord, les médias ensuite. Une vidéo
-      // peut consommer jusqu'à 120 s par tentative sur un lien lent (le régime
-      // de croisière attendu du voyage) ; sans ce tri, elle retiendrait les
-      // notes en attente derrière elle dans la boucle strictement séquentielle
-      // ci-dessous. Rien d'autre dans la boucle ne change : sa garantie
-      // structurelle — aucune entrée ne peut en bloquer une autre — reste
-      // intacte.
+      // I2 (revue finale) : les souvenirs sans fichier d'abord. Une vidéo peut
+      // consommer jusqu'à 120 s par tentative sur un lien lent (le régime de
+      // croisière attendu du voyage) ; sans ce tri, elle retiendrait les notes
+      // en attente derrière elle dans la boucle strictement séquentielle
+      // ci-dessous. Le test porte sur les fichiers réellement attachés plutôt
+      // que sur `type`, qui ne distingue plus rien depuis qu'un souvenir peut
+      // en porter plusieurs.
+      const sansFichier = (e) => !(e.fichiers?.length || e.fichier);
       const ordre = [
-        ...toutes.filter((e) => e.type === 'note'),
-        ...toutes.filter((e) => e.type !== 'note'),
+        ...toutes.filter(sansFichier),
+        ...toutes.filter((e) => !sansFichier(e)),
       ];
       for (const entree of ordre) {
         // Garantie STRUCTURELLE, et non dépendante du type d'erreur observée :

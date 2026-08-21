@@ -4,7 +4,7 @@
    souvenirs.js et souvenirs-file.js. */
 
 import {
-  listerEtape, modifierContribution, supprimerContribution,
+  listerEtape, modifierContribution, supprimerContribution, supprimerFichier,
   compresserImage, verifierVideo, urlMedia, creerCleIdempotence, creerJetonAuteur, ErreurService,
 } from './souvenirs.js';
 import {
@@ -44,12 +44,36 @@ const dateCourte = (iso) => new Date(iso).toLocaleDateString('fr-FR', {
   day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
 });
 
+/** Un fichier d'un souvenir publié, avec sa croix de retrait pour son auteur. */
+function gabaritUnMedia(media, sien) {
+  const source = echapper(urlMedia(media.cle));
+  const corps = media.genre === 'video'
+    ? `<video class="souvenir__media" src="${source}" controls preload="metadata"></video>`
+    : `<img class="souvenir__media" src="${source}" alt="" loading="lazy">`;
+  // Sans ce retrait, une photo ajoutée par erreur obligerait à supprimer le
+  // souvenir entier — texte et autres photos comprises.
+  const retirer = sien
+    ? `<button type="button" class="souvenir__retirer" data-action="retirer-media"
+               data-media="${echapper(media.id)}" aria-label="Retirer ce fichier">×</button>`
+    : '';
+  return `<figure class="souvenir__figure">${corps}${retirer}</figure>`;
+}
+
 function gabaritContribution(contribution) {
   const sien = Boolean(jetons()[contribution.id]);
-  const media = contribution.media;
-  const corpsMedia = !media ? '' : media.genre === 'video'
-    ? `<video class="souvenir__media" src="${echapper(urlMedia(media.cle))}" controls preload="metadata"></video>`
-    : `<img class="souvenir__media" src="${echapper(urlMedia(media.cle))}" alt="" loading="lazy">`;
+  // `medias` depuis que plusieurs fichiers sont possibles ; `media` au
+  // singulier reste le repli pour une réponse servie par un service pas
+  // encore redéployé.
+  const medias = contribution.medias?.length
+    ? contribution.medias
+    : (contribution.media ? [contribution.media] : []);
+  // La galerie passe en grille au-delà d'un fichier : une photo seule garde
+  // toute la largeur, comme avant.
+  const corpsMedia = medias.length
+    ? `<div class="souvenir__galerie${medias.length > 1 ? ' est-multiple' : ''}">
+        ${medias.map((m) => gabaritUnMedia(m, sien)).join('')}
+      </div>`
+    : '';
 
   return `<article class="souvenir" data-id="${echapper(contribution.id)}">
     <p class="souvenir__entete">
@@ -60,6 +84,7 @@ function gabaritContribution(contribution) {
     ${corpsMedia}
     ${contribution.texte ? `<p class="souvenir__texte">${echapper(contribution.texte)}</p>` : ''}
     ${sien ? `<p class="souvenir__actions">
+      <button type="button" data-action="ajouter-media">Ajouter une photo</button>
       <button type="button" data-action="modifier">Modifier</button>
       <button type="button" data-action="supprimer">Supprimer</button>
     </p>` : ''}
@@ -88,9 +113,20 @@ function gabaritEnAttente(entree) {
   // besoin d'être resélectionné. Mais rien ne le montrait, et une carte qui
   // n'affiche que du texte donne à croire que la photo est perdue — d'où
   // l'envie bien naturelle de tout recommencer, ce qui crée un doublon.
-  const jointe = entree.fichier
-    ? `<p class="souvenir__jointe">${echapper(entree.fichier.name || 'Fichier joint')} · ${poidsLisible(entree.fichier.size)} · conservé</p>`
-    : '';
+  const fichiers = entree.fichiers || (entree.fichier ? [entree.fichier] : []);
+  const envoyes = entree.fichiersEnvoyes || 0;
+  let jointe = '';
+  if (fichiers.length === 1) {
+    jointe = `<p class="souvenir__jointe">${echapper(fichiers[0].name || 'Fichier joint')} · ${poidsLisible(fichiers[0].size)} · conservé</p>`;
+  } else if (fichiers.length > 1) {
+    const total = fichiers.reduce((somme, f) => somme + (f.size || 0), 0);
+    // La progression compte : sur une série de vidéos, savoir que 7 des 9
+    // sont passées évite de croire l'envoi bloqué et de tout recommencer.
+    const avancement = envoyes > 0 && envoyes < fichiers.length
+      ? ` · ${envoyes} envoyé${envoyes > 1 ? 's' : ''}`
+      : ' · conservés';
+    jointe = `<p class="souvenir__jointe">${fichiers.length} fichiers · ${poidsLisible(total)}${avancement}</p>`;
+  }
 
   // Reprise après mot de passe refusé, entièrement DANS la carte. Le
   // formulaire du bas est celui d'un NOUVEAU souvenir : y renvoyer l'auteur
@@ -171,9 +207,10 @@ function gabaritFormulaire() {
            placeholder="Mot de passe du groupe" ${connue ? 'hidden' : ''}>
     <textarea class="souvenir-form__champ" name="texte" rows="4" maxlength="5000"
               placeholder="Une note, un souvenir…"></textarea>
+    <ul class="souvenir-form__fichiers" hidden></ul>
     <p class="souvenir-form__pied">
       <label class="souvenir-form__fichier">
-        Photo ou vidéo<input type="file" name="fichier" accept="image/*,video/*" hidden>
+        Photos ou vidéos<input type="file" name="fichier" accept="image/*,video/*" multiple hidden>
       </label>
       <span class="souvenir-form__choisi"></span>
       <button type="submit">Publier</button>
@@ -192,6 +229,18 @@ export function monterSouvenirs(conteneur, jour) {
   const souci = conteneur.querySelector('.souvenir-form__souci');
   const champFichier = formulaire.querySelector('[name="fichier"]');
   const nomChoisi = conteneur.querySelector('.souvenir-form__choisi');
+  const listeFichiers = conteneur.querySelector('.souvenir-form__fichiers');
+
+  // Champ distinct de celui du formulaire : compléter un souvenir déjà publié
+  // ne doit pas toucher à la sélection en cours d'un nouveau souvenir, qu'on
+  // est peut-être en train de composer juste en dessous.
+  const champAjout = document.createElement('input');
+  champAjout.type = 'file';
+  champAjout.accept = 'image/*,video/*';
+  champAjout.multiple = true;
+  champAjout.hidden = true;
+  conteneur.appendChild(champAjout);
+  let contributionAComplete = null;
 
   // Amélioration B (re-revue) : plusieurs `rafraichir()` concurrents (celui
   // du gestionnaire de soumission et celui déclenché par `signaler()` quand
@@ -338,9 +387,100 @@ export function monterSouvenirs(conteneur, jour) {
     if (champMotDePasse) champMotDePasse.hidden = false;
   });
 
+  // Les fichiers choisis vivent ici, et non dans `champFichier.files` : un
+  // `<input type="file">` REMPLACE sa sélection à chaque ouverture du sélecteur.
+  // Sans cette liste, choisir trois photos dans la pellicule puis revenir
+  // ajouter une vidéo effacerait les trois premières sans un mot.
+  let fichiersChoisis = [];
+
+  function rendreFichiersChoisis() {
+    if (!fichiersChoisis.length) {
+      listeFichiers.hidden = true;
+      listeFichiers.innerHTML = '';
+      nomChoisi.textContent = '';
+      return;
+    }
+    const total = fichiersChoisis.reduce((somme, f) => somme + (f.size || 0), 0);
+    listeFichiers.hidden = false;
+    listeFichiers.innerHTML = fichiersChoisis.map((f, i) => `
+      <li class="souvenir-form__fichier-ligne">
+        <span class="souvenir-form__fichier-nom">${echapper(f.name || 'fichier')}</span>
+        <span class="souvenir-form__fichier-poids">${poidsLisible(f.size)}</span>
+        <button type="button" class="souvenir-form__retirer" data-retirer="${i}"
+                aria-label="Retirer ${echapper(f.name || 'ce fichier')}">×</button>
+      </li>`).join('');
+    // Le total est le garde-fou qui remplace un plafond en nombre : une
+    // sélection malheureuse dans la pellicule se voit tout de suite, avant
+    // d'occuper la connexion de la soirée.
+    nomChoisi.textContent = `${fichiersChoisis.length} fichier${fichiersChoisis.length > 1 ? 's' : ''} · ${poidsLisible(total)}`;
+  }
+
   champFichier.addEventListener('change', () => {
-    const fichier = champFichier.files[0];
-    nomChoisi.textContent = fichier ? fichier.name : '';
+    for (const fichier of champFichier.files) {
+      // Même nom, même taille : l'a déjà choisi. Évite le doublon d'un
+      // deuxième passage dans la pellicule.
+      const deja = fichiersChoisis.some((f) => f.name === fichier.name && f.size === fichier.size);
+      if (!deja) fichiersChoisis.push(fichier);
+    }
+    champFichier.value = ''; // libère le champ pour une prochaine sélection
+    rendreFichiersChoisis();
+  });
+
+  listeFichiers.addEventListener('click', (evenement) => {
+    const bouton = evenement.target.closest('[data-retirer]');
+    if (!bouton) return;
+    fichiersChoisis.splice(Number(bouton.dataset.retirer), 1);
+    rendreFichiersChoisis();
+  });
+
+  // Ajout de fichiers à un souvenir déjà publié. Les mêmes règles que la
+  // publication — vidéos vérifiées avant toute compression, photos
+  // recompressées — puis la file d'attente s'en charge, avec la même reprise
+  // fichier par fichier. Le mot de passe de groupe n'est pas redemandé : c'est
+  // le jeton d'auteur qui autorise.
+  champAjout.addEventListener('change', async () => {
+    const cible = contributionAComplete;
+    const choisis = [...champAjout.files];
+    contributionAComplete = null;
+    champAjout.value = '';
+    if (!cible || !choisis.length) return;
+
+    for (const f of choisis) {
+      if (!f.type.startsWith('video/')) continue;
+      const refus = verifierVideo(f);
+      if (refus) { alert(`${f.name || 'Une vidéo'} : ${refus}`); return; }
+    }
+
+    const fichiers = [];
+    for (const f of choisis) {
+      if (!f.type.startsWith('image/')) { fichiers.push(f); continue; }
+      try {
+        fichiers.push(await compresserImage(f));
+      } catch {
+        fichiers.push(f);
+      }
+    }
+
+    try {
+      await mettreEnFile({
+        type: 'ajout',
+        jour,
+        auteur: localStorage.getItem(CLE_AUTEUR) || '',
+        texte: '',
+        fichiers,
+        // Renseigné dès la mise en file : la file saute alors la création
+        // d'une contribution et n'envoie que les fichiers.
+        contributionId: cible.id,
+        jeton: cible.jeton,
+        idempotence: creerCleIdempotence(),
+      });
+    } catch (probleme) {
+      alert(`Enregistrement impossible pour le moment (${probleme?.message || 'erreur inconnue'}).`);
+      return;
+    }
+
+    renvoyerMaintenant();
+    await rafraichir();
   });
 
   formulaire.addEventListener('submit', async (evenement) => {
@@ -351,7 +491,7 @@ export function monterSouvenirs(conteneur, jour) {
     const auteur = (donnees.get('auteur') || localStorage.getItem(CLE_AUTEUR) || '').trim();
     const motDePasse = donnees.get('motDePasse') || localStorage.getItem(CLE_MOT_DE_PASSE) || '';
     const texte = (donnees.get('texte') || '').trim();
-    let fichier = champFichier.files[0] || null;
+    const choisis = [...fichiersChoisis];
 
     if (!auteur || !motDePasse) {
       souci.textContent = 'Indiquez votre prénom et le mot de passe du groupe.';
@@ -369,21 +509,33 @@ export function monterSouvenirs(conteneur, jour) {
       }
       return;
     }
-    if (!texte && !fichier) {
+    if (!texte && !choisis.length) {
       souci.textContent = 'Écrivez une note ou choisissez une photo.';
       souci.hidden = false;
       return;
     }
 
-    if (fichier && fichier.type.startsWith('video/')) {
-      const refus = verifierVideo(fichier);
-      if (refus) { souci.textContent = refus; souci.hidden = false; return; }
+    // Toutes les vidéos sont vérifiées AVANT d'en compresser une seule : rien
+    // n'est plus décourageant que d'attendre la compression de huit photos
+    // pour se voir refuser la neuvième. Le refus nomme le fichier fautif, sans
+    // quoi il faudrait deviner lequel des neuf est trop lourd.
+    for (const f of choisis) {
+      if (!f.type.startsWith('video/')) continue;
+      const refus = verifierVideo(f);
+      if (refus) {
+        souci.textContent = `${f.name || 'Une vidéo'} : ${refus}`;
+        souci.hidden = false;
+        return;
+      }
     }
-    if (fichier && fichier.type.startsWith('image/')) {
+
+    const fichiers = [];
+    for (const f of choisis) {
+      if (!f.type.startsWith('image/')) { fichiers.push(f); continue; }
       try {
-        fichier = await compresserImage(fichier);
+        fichiers.push(await compresserImage(f));
       } catch {
-        // La compression a échoué : on envoie l'original plutôt que rien.
+        fichiers.push(f); // la compression a échoué : l'original plutôt que rien
       }
     }
 
@@ -398,8 +550,8 @@ export function monterSouvenirs(conteneur, jour) {
     if (champAuteurMemoire) champAuteurMemoire.defaultValue = auteur;
 
     const entree = {
-      type: fichier ? 'media' : 'note',
-      jour, auteur, texte, fichier, motDePasse,
+      type: fichiers.length ? 'media' : 'note',
+      jour, auteur, texte, fichiers, motDePasse,
       idempotence: creerCleIdempotence(),
       // I3 (revue finale) : généré ici, au même endroit que la clé
       // d'idempotence — avant tout envoi — pour que le rejeu d'une réponse
@@ -426,7 +578,8 @@ export function monterSouvenirs(conteneur, jour) {
     // passe d'ajustement peut les replier.
     identiteDepliee = false;
     formulaire.reset();
-    nomChoisi.textContent = '';
+    fichiersChoisis = [];
+    rendreFichiersChoisis();
 
     // C1 (revue finale) : sans cet appel, rien ne tente l'envoi avant le
     // prochain déclencheur (retour réseau, onglet revisible, minuterie de
@@ -505,6 +658,27 @@ export function monterSouvenirs(conteneur, jour) {
     const id = carte.dataset.id;
     const jeton = jetons()[id];
     if (!jeton) return;
+
+    if (action === 'ajouter-media') {
+      // Le sélecteur de fichiers ne peut s'ouvrir que depuis un geste de
+      // l'utilisateur : on mémorise la cible, puis on clique le champ caché
+      // dans la foulée du clic en cours.
+      contributionAComplete = { id, jeton };
+      champAjout.value = '';
+      champAjout.click();
+      return;
+    }
+
+    if (action === 'retirer-media') {
+      if (!confirm('Retirer ce fichier du souvenir ?')) return;
+      try {
+        await supprimerFichier({ idMedia: bouton.dataset.media, jeton });
+      } catch (probleme) {
+        alert(probleme instanceof ErreurService ? probleme.message : 'Retrait impossible pour le moment.');
+      }
+      await rafraichir();
+      return;
+    }
 
     if (action === 'supprimer') {
       if (!confirm('Supprimer ce souvenir ?')) return;

@@ -673,6 +673,50 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 
 .souvenir-form { margin: 1rem 0 0; }
 
+/* Ligne de statut : lecture seule, ou droit de publier et sous quel nom. */
+.souvenir-form__statut {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: .375rem;
+  margin: 0 0 .5rem;
+  font-size: .75rem;
+  color: var(--poussiere);
+}
+
+.souvenir-form__badge {
+  padding: .125rem .375rem;
+  border: 1px solid var(--nuit-3);
+  color: var(--poussiere);
+  font-family: var(--mono);
+  font-size: .5625rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+/* Compagnon : la couleur d'accent du site, pour que le passage d'un état à
+   l'autre se voie du coin de l'œil, sans avoir à lire. */
+.souvenir-form__badge.est-compagnon {
+  border-color: var(--soufre);
+  color: var(--soufre);
+}
+
+.souvenir-form__statut-detail { flex: 1 1 8rem; }
+.souvenir-form__statut-detail b { color: var(--sel); font-weight: 600; }
+
+.souvenir-form__changer {
+  padding: .125rem .375rem;
+  border: 1px solid var(--nuit-3);
+  background: none;
+  color: var(--poussiere);
+  font-family: var(--mono);
+  font-size: .5625rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: border-color var(--transition), color var(--transition);
+}
+.souvenir-form__changer:hover { border-color: var(--soufre); color: var(--soufre); }
+
 .souvenir-form__champ {
   display: block;
   width: 100%;

@@ -132,11 +132,39 @@ function gabaritEnAttente(entree) {
 // reste ainsi l'unique source de vérité pour ce champ ; le prénom, lui, n'a
 // pas ce risque (jamais vidé sur refus), garder son `value` est sans danger
 // et évite de le redemander inutilement.
+/** Ligne de statut : lire ou publier, et sous quel nom.
+
+    Deux états, nommés d'après le vocabulaire du site (« Souvenirs des
+    compagnons ») :
+      - Visiteur   : aucun mot de passe en mémoire, on peut tout lire, publier
+                     le demandera.
+      - Compagnon  : un mot de passe est en mémoire, on publie sans rien
+                     retaper — et on voit enfin sous quel prénom.
+
+    « Compagnon » veut dire « un mot de passe est mémorisé », ce qui vaut
+    « correct » en pratique : un refus du service l'efface aussitôt (voir la
+    branche de refus dans `rafraichir`), et le statut retombe de lui-même à
+    Visiteur. Le seul écart tient aux quelques secondes entre l'envoi et la
+    réponse du service, où un mot de passe encore inconnu est déjà affiché
+    comme bon. */
+function gabaritStatut() {
+  const auteur = localStorage.getItem(CLE_AUTEUR) || '';
+  const compagnon = Boolean(auteur && localStorage.getItem(CLE_MOT_DE_PASSE));
+  if (!compagnon) {
+    return `<span class="souvenir-form__badge">Visiteur</span>
+      <span class="souvenir-form__statut-detail">lecture seule — le mot de passe du groupe vous sera demandé pour publier</span>`;
+  }
+  return `<span class="souvenir-form__badge est-compagnon">Compagnon</span>
+    <span class="souvenir-form__statut-detail">vous publiez en tant que <b>${echapper(auteur)}</b></span>
+    <button type="button" class="souvenir-form__changer" data-action="changer-identite">Changer</button>`;
+}
+
 function gabaritFormulaire() {
   const auteur = localStorage.getItem(CLE_AUTEUR) || '';
   const motDePasse = localStorage.getItem(CLE_MOT_DE_PASSE) || '';
   const connue = Boolean(auteur && motDePasse);
   return `<form class="souvenir-form">
+    <p class="souvenir-form__statut">${gabaritStatut()}</p>
     <input class="souvenir-form__champ" name="auteur" placeholder="Votre prénom"
            value="${echapper(auteur)}" maxlength="40" ${connue ? 'hidden' : ''}>
     <input class="souvenir-form__champ" name="motDePasse" type="password"
@@ -174,6 +202,11 @@ export function monterSouvenirs(conteneur, jour) {
   // file. Un compteur de génération simple : chaque appel se numérote à
   // l'entrée, et n'écrit plus s'il s'est fait doubler entretemps.
   let generation = 0;
+
+  // Vrai quand « Changer » a ouvert les champs d'identité à la demande, pour
+  // corriger un prénom ou changer de mot de passe alors que tout était déjà
+  // mémorisé. Remis à faux dès qu'une publication aboutit.
+  let identiteDepliee = false;
 
   async function rafraichir() {
     const mienne = ++generation;
@@ -257,12 +290,23 @@ export function monterSouvenirs(conteneur, jour) {
     if (!champAuteur || !champMotDePasse) return;
     const auteurConnu = Boolean(localStorage.getItem(CLE_AUTEUR));
     const motDePasseConnu = Boolean(localStorage.getItem(CLE_MOT_DE_PASSE));
-    const replier = auteurConnu && (motDePasseConnu || repriseEnCours);
+    // `identiteDepliee` : le bouton « Changer » de la ligne de statut a ouvert
+    // les champs à la demande. Sans ce drapeau, le premier rafraîchissement
+    // venu — et il en passe un à chaque changement de file — les refermerait
+    // au milieu de la saisie.
+    const replier = auteurConnu && (motDePasseConnu || repriseEnCours) && !identiteDepliee;
     champAuteur.hidden = replier;
     champMotDePasse.hidden = replier;
     // Un champ replié ne doit rien garder : rouvert plus tard, il présenterait
     // sinon la faute de frappe qu'on vient d'effacer.
     if (replier) champMotDePasse.value = '';
+    majStatut();
+  }
+
+  /** Réécrit la ligne « Visiteur / Compagnon ». */
+  function majStatut() {
+    const ligne = formulaire.querySelector('.souvenir-form__statut');
+    if (ligne) ligne.innerHTML = gabaritStatut();
   }
 
   /** Amène le curseur au champ de reprise de la carte bloquée. */
@@ -275,6 +319,24 @@ export function monterSouvenirs(conteneur, jour) {
     champ.focus({ preventScroll: true });
     champ.scrollIntoView({ block: 'center' });
   }
+
+  // « Changer » : rouvre prénom et mot de passe alors que tout est mémorisé.
+  // Le mot de passe reste volontairement vide — le gestionnaire de soumission
+  // retombe sur celui en mémoire quand le champ l'est —, si bien qu'on peut
+  // corriger un prénom mal orthographié sans avoir à retaper le reste.
+  formulaire.addEventListener('click', (evenement) => {
+    if (!evenement.target.closest('[data-action="changer-identite"]')) return;
+    identiteDepliee = true;
+    const champAuteur = formulaire.querySelector('[name="auteur"]');
+    const champMotDePasse = formulaire.querySelector('[name="motDePasse"]');
+    if (champAuteur) {
+      champAuteur.hidden = false;
+      champAuteur.value = localStorage.getItem(CLE_AUTEUR) || '';
+      champAuteur.focus({ preventScroll: true });
+      champAuteur.select();
+    }
+    if (champMotDePasse) champMotDePasse.hidden = false;
+  });
 
   champFichier.addEventListener('change', () => {
     const fichier = champFichier.files[0];
@@ -327,6 +389,13 @@ export function monterSouvenirs(conteneur, jour) {
 
     localStorage.setItem(CLE_AUTEUR, auteur);
     localStorage.setItem(CLE_MOT_DE_PASSE, motDePasse);
+    // `formulaire.reset()`, plus bas, ramène chaque champ à son `defaultValue`
+    // — la valeur cuite dans l'attribut au montage du formulaire. Sans cette
+    // synchronisation, un prénom corrigé via « Changer » repartirait bien
+    // cette fois-ci, puis serait silencieusement remplacé par l'ancien à la
+    // publication suivante, le champ masqué ayant retrouvé sa valeur d'origine.
+    const champAuteurMemoire = formulaire.querySelector('[name="auteur"]');
+    if (champAuteurMemoire) champAuteurMemoire.defaultValue = auteur;
 
     const entree = {
       type: fichier ? 'media' : 'note',
@@ -353,6 +422,9 @@ export function monterSouvenirs(conteneur, jour) {
       return;
     }
 
+    // Les champs rouverts par « Changer » ont fait leur office : la prochaine
+    // passe d'ajustement peut les replier.
+    identiteDepliee = false;
     formulaire.reset();
     nomChoisi.textContent = '';
 

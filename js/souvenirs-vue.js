@@ -168,8 +168,8 @@ export function monterSouvenirs(conteneur, jour) {
     // déclenche plus que si le mot de passe actuellement mémorisé est
     // ENCORE celui qui a été refusé — jamais un mot de passe différent saisi
     // depuis.
-    const entreeRefusee = attente.find((e) => e.refusMotDePasse);
-    if (entreeRefusee && localStorage.getItem(CLE_MOT_DE_PASSE) === entreeRefusee.motDePasse) {
+    const motDePasseMemorise = localStorage.getItem(CLE_MOT_DE_PASSE);
+    if (motDePasseMemorise && attente.some((e) => e.refusMotDePasse && e.motDePasse === motDePasseMemorise)) {
       localStorage.removeItem(CLE_MOT_DE_PASSE);
       const champAuteur = formulaire.querySelector('[name="auteur"]');
       const champMotDePasse = formulaire.querySelector('[name="motDePasse"]');

@@ -111,6 +111,11 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
   flex-direction: column;
   flex-shrink: 0;
   gap: .3125rem;
+  /* Sans cette ligne, l'alignement par défaut (`stretch`) étire chaque enfant
+     à la largeur du plus large : le pas-à-pas prenait celle de « Tout le
+     parcours » et traînait une zone bordée vide à droite de sa flèche. Chacun
+     garde désormais sa largeur propre. */
+  align-items: flex-start;
 }
 
 .pas-a-pas {

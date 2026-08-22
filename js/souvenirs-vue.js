@@ -349,11 +349,26 @@ function deplacer(pas) {
   rendreVisionneuse();
 }
 
+/* Ces touches appartiennent à la visionneuse tant qu'elle est ouverte.
+
+   `app.js` écoute les mêmes sur `document` pour changer d'étape et refermer la
+   fiche. En phase remontante, son gestionnaire passait AVANT celui-ci — la
+   journée changeait derrière la photo qu'on regardait, et `Échap` refermait la
+   fiche en même temps que la visionneuse. `preventDefault` n'y pouvait rien :
+   il annule l'action par défaut du navigateur, pas les autres écouteurs.
+
+   D'où la phase de capture (`true` à l'inscription), qui passe en premier, et
+   `stopPropagation` : l'événement n'atteint jamais `document` tant que la
+   visionneuse est à l'écran. Une série d'une seule photo consomme les flèches
+   elle aussi — ne rien faire est la bonne réponse ; changer de journée à sa
+   place serait la pire. */
 function surToucheVisionneuse(evenement) {
   if (visionneuse?.hidden !== false) return;
+  if (!['Escape', 'ArrowLeft', 'ArrowRight'].includes(evenement.key)) return;
+  evenement.preventDefault();
+  evenement.stopPropagation();
   if (evenement.key === 'Escape') { fermerVisionneuse(); return; }
-  if (evenement.key === 'ArrowLeft') { evenement.preventDefault(); deplacer(-1); return; }
-  if (evenement.key === 'ArrowRight') { evenement.preventDefault(); deplacer(1); }
+  deplacer(evenement.key === 'ArrowLeft' ? -1 : 1);
 }
 
 function ouvrirVisionneuse(fichiers, depart) {
@@ -363,7 +378,7 @@ function ouvrirVisionneuse(fichiers, depart) {
   position = Math.max(0, Math.min(depart, fichiers.length - 1));
   elementRendu = document.activeElement;
   visionneuse.hidden = false;
-  addEventListener('keydown', surToucheVisionneuse);
+  addEventListener('keydown', surToucheVisionneuse, true);
   rendreVisionneuse();
   visionneuse.querySelector('[data-vis="fermer"]').focus({ preventScroll: true });
 }
@@ -374,7 +389,7 @@ function fermerVisionneuse() {
   // laisserait tourner dans un élément masqué, son compris.
   visionneuse.querySelector('[data-vis="scene"]').innerHTML = '';
   visionneuse.hidden = true;
-  removeEventListener('keydown', surToucheVisionneuse);
+  removeEventListener('keydown', surToucheVisionneuse, true);
   serie = [];
   elementRendu?.focus?.({ preventScroll: true });
   elementRendu = null;

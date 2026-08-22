@@ -48,24 +48,28 @@ const dateCourte = (iso) => new Date(iso).toLocaleDateString('fr-FR', {
 /** Un fichier d'un souvenir publié, avec sa croix de retrait pour son auteur. */
 function gabaritUnMedia(media, sien) {
   const source = echapper(urlMedia(media.cle));
+  // Dans la galerie, une vidéo est une vignette et rien d'autre : pas de
+  // commandes de lecture. Elles obligeaient à réserver le clic à un petit
+  // bouton d'agrandissement, alors qu'une photo s'ouvrait sur toute sa
+  // surface — deux gestes différents pour la même intention. Sans commandes,
+  // tout s'ouvre pareil, et la vidéo se joue en grand, ce qui vaut de toute
+  // façon mieux qu'un lecteur dans une case de grille.
+  //
+  // `#t=0.1` force l'affichage d'une image au lieu d'un rectangle noir sur
+  // Safari iOS — soit exactement les téléphones du voyage. La vraie adresse
+  // est gardée à part, pour que la visionneuse ne reparte pas de ce fragment.
   const corps = media.genre === 'video'
-    ? `<video class="souvenir__media" src="${source}" controls preload="metadata"></video>`
-    : `<img class="souvenir__media" src="${source}" alt="" loading="lazy">`;
+    ? `<video class="souvenir__media" src="${source}#t=0.1" data-source="${source}"
+              preload="metadata" muted playsinline tabindex="0"></video>
+       <span class="souvenir__lecture" aria-hidden="true">▶</span>`
+    : `<img class="souvenir__media" src="${source}" alt="" loading="lazy" tabindex="0">`;
   // Sans ce retrait, une photo ajoutée par erreur obligerait à supprimer le
   // souvenir entier — texte et autres photos comprises.
   const retirer = sien
     ? `<button type="button" class="souvenir__retirer" data-action="retirer-media"
                data-media="${echapper(media.id)}" aria-label="Retirer ce fichier">×</button>`
     : '';
-  // Une photo s'ouvre au clic. Une vidéo, non : le clic doit rester à ses
-  // propres commandes, sinon on ne peut plus la mettre en pause. D'où ce
-  // bouton, seule porte d'entrée d'un souvenir qui ne contiendrait que des
-  // vidéos.
-  const agrandir = media.genre === 'video'
-    ? `<button type="button" class="souvenir__agrandir" data-action="agrandir"
-               aria-label="Voir en grand">⤢</button>`
-    : '';
-  return `<figure class="souvenir__figure">${corps}${retirer}${agrandir}</figure>`;
+  return `<figure class="souvenir__figure">${corps}${retirer}</figure>`;
 }
 
 function gabaritContribution(contribution) {
@@ -769,20 +773,33 @@ export function monterSouvenirs(conteneur, jour) {
       vite autre chose. */
   function serieDeLEtape() {
     return [...liste.querySelectorAll('.souvenir__media')].map((element) => ({
-      source: element.getAttribute('src') || '',
+      // `data-source` pour une vidéo : son `src` de vignette porte le
+      // fragment `#t=0.1` qui n'a rien à faire en plein écran.
+      source: element.dataset.source || element.getAttribute('src') || '',
       genre: element.tagName === 'VIDEO' ? 'video' : 'image',
       element,
     }));
   }
 
-  liste.addEventListener('click', (evenement) => {
-    const image = evenement.target.closest('img.souvenir__media');
-    const boutonAgrandir = evenement.target.closest('[data-action="agrandir"]');
-    if (!image && !boutonAgrandir) return;
-    const vise = image || boutonAgrandir.closest('.souvenir__figure')?.querySelector('.souvenir__media');
+  function ouvrirDepuis(vise) {
+    if (!vise) return;
     const fichiers = serieDeLEtape();
     const depart = fichiers.findIndex((f) => f.element === vise);
     if (depart >= 0) ouvrirVisionneuse(fichiers, depart);
+  }
+
+  liste.addEventListener('click', (evenement) => {
+    ouvrirDepuis(evenement.target.closest('.souvenir__media'));
+  });
+
+  // Au clavier : une vignette est atteignable par tabulation, elle doit donc
+  // s'ouvrir à l'Entrée comme un bouton.
+  liste.addEventListener('keydown', (evenement) => {
+    if (evenement.key !== 'Enter' && evenement.key !== ' ') return;
+    const vise = evenement.target.closest?.('.souvenir__media');
+    if (!vise) return;
+    evenement.preventDefault();
+    ouvrirDepuis(vise);
   });
 
   liste.addEventListener('click', async (evenement) => {

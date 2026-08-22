@@ -125,8 +125,9 @@ réseau fonctionne de nouveau, recharger la page suffit à relancer la file.
 du clavier, les boutons à l'écran ou un glissé du pouce passent d'un fichier au
 suivant, **à travers tous les souvenirs de l'étape affichée** — jamais au-delà,
 la carte et la frise continueraient sinon de désigner un jour qu'on ne regarde
-plus. `Échap` referme. Les vidéos gardent leur clic pour leurs propres
-commandes : elles s'ouvrent par le bouton ⤢.
+plus. `Échap` referme. Photos et vidéos s'ouvrent du même geste : dans la grille,
+une vidéo est une vignette marquée d'un rond de lecture, sans commandes — elle
+se joue en grand, dans la visionneuse.
 
 **Plusieurs photos et vidéos par souvenir**, sans limite de nombre. Le
 sélecteur s'ouvre autant de fois qu'on veut : les fichiers s'ajoutent à la

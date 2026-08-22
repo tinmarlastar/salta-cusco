@@ -944,24 +944,31 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
   .visionneuse__compteur { bottom: .5rem; }
 }
 
-/* Une photo s'ouvre au clic : autant que le curseur le dise. */
-img.souvenir__media { cursor: zoom-in; }
+/* Photo comme vidéo s'ouvrent du même geste : le curseur le dit pour les
+   deux, sans quoi la galerie proposerait deux façons de faire la même chose. */
+.souvenir__media { cursor: zoom-in; }
+.souvenir__media:focus-visible { outline: 2px solid var(--soufre); outline-offset: 2px; }
 
-.souvenir__agrandir {
+/* Pastille de lecture : le seul signe qui distingue une vignette de vidéo
+   d'une photo, maintenant que les commandes ont disparu de la grille.
+   `pointer-events: none` pour qu'elle ne vole pas le clic de la vignette. */
+.souvenir__lecture {
   position: absolute;
-  top: .25rem;
-  left: .25rem;
-  width: 1.375rem;
-  height: 1.375rem;
-  border: none;
+  top: 50%;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  margin: -1.375rem 0 0 -1.375rem;
   border-radius: 50%;
-  background: rgba(16, 27, 49, .78);
+  background: rgba(16, 27, 49, .7);
   color: var(--sel);
-  font-size: .75rem;
-  line-height: 1;
-  cursor: pointer;
+  font-size: 1rem;
+  padding-left: .1875rem; /* le triangle paraît décentré sans ce décalage */
+  pointer-events: none;
 }
-.souvenir__agrandir:hover { background: var(--soufre); color: var(--nuit); }
 
 /* ---------------------------------------------------------- modération */
 

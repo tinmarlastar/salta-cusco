@@ -139,11 +139,14 @@ test('demarrerRenvoi : un seul armement malgré plusieurs appels, mais une tenta
   const jour = 21;
   globalThis.document = { visibilityState: 'visible' };
 
-  let compteAddEventListener = 0;
   let compteSetInterval = 0;
+  const evenementsArmes = [];
   const origAddEventListener = globalThis.addEventListener;
   const origSetInterval = globalThis.setInterval;
-  globalThis.addEventListener = () => { compteAddEventListener += 1; };
+  // On retient les NOMS et non un simple compteur : ajouter un écouteur au
+  // module doit obliger à mettre ce test à jour en connaissance de cause, pas
+  // seulement à incrémenter un nombre.
+  globalThis.addEventListener = (nom) => { evenementsArmes.push(nom); };
   // On neutralise le vrai setInterval : sinon une minuterie de 2 min réelle
   // resterait armée et empêcherait `node --test` de terminer proprement.
   globalThis.setInterval = () => { compteSetInterval += 1; return 0; };
@@ -172,7 +175,11 @@ test('demarrerRenvoi : un seul armement malgré plusieurs appels, mais une tenta
     }
 
     assert.equal(compteSetInterval, 1, 'une seule minuterie malgré 3 appels à demarrerRenvoi');
-    assert.equal(compteAddEventListener, 2, 'un seul armement des écouteurs (online + visibilitychange)');
+    assert.deepEqual(
+      [...evenementsArmes].sort(),
+      ['offline', 'online', 'visibilitychange'],
+      'un seul armement de chaque écouteur malgré 3 appels à demarrerRenvoi',
+    );
   } finally {
     globalThis.addEventListener = origAddEventListener;
     globalThis.setInterval = origSetInterval;

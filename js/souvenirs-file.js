@@ -45,6 +45,33 @@ let signaler = () => {};
 // jeton.
 let surJeton = () => {};
 let enCours = false;
+
+// Quelle entrée est en train de partir, et où elle en est. Sans cette
+// information, la vue ne pouvait qu'écrire « En attente de réseau » sur tout
+// ce qui n'était pas bloqué — y compris sur un envoi en plein vol, ce qui est
+// le contraire de la vérité et donne envie de tout recommencer.
+//
+// Volontairement en mémoire, jamais dans IndexedDB : c'est un état de vol, qui
+// n'a aucun sens après un rechargement de page. Le persister ferait afficher
+// « envoi en cours » à un envoi que plus rien ne pousse.
+let progression = null;
+
+/** État d'envoi de l'entrée en cours, ou `null` si rien ne part. */
+export function progressionEnvoi() {
+  return progression;
+}
+
+function majProgression(valeur) {
+  progression = valeur;
+  // La vue ne se redessine que sur signal : sans lui, le libellé resterait
+  // figé sur l'état d'avant tout le temps de l'envoi — précisément le
+  // problème qu'on corrige.
+  try {
+    signaler();
+  } catch (souci) {
+    console.error("Signal de progression impossible :", souci);
+  }
+}
 // Amélioration A (re-revue) : un appel arrivé PENDANT une passe (ex. le
 // `renvoyerMaintenant()` de C1, juste après la mise en file d'une note,
 // pendant qu'une passe déclenchée par ailleurs traite déjà un média de
@@ -394,6 +421,10 @@ async function traiterEntree(entreeBrute) {
     //    s'est arrêtée plus loin, et jamais nécessaire pour un ajout de
     //    fichiers à un souvenir déjà publié.
     if (!contributionId) {
+      majProgression({
+        idLocal: entree.idLocal, phase: 'contribution',
+        envoyes, total: entree.fichiers.length,
+      });
       const reponse = await envoyerNote({
         jour: entree.jour,
         auteur: entree.auteur,
@@ -431,6 +462,10 @@ async function traiterEntree(entreeBrute) {
 
     // 2. Les fichiers, un par un.
     while (!abandonnee && envoyes < entree.fichiers.length) {
+      majProgression({
+        idLocal: entree.idLocal, phase: 'fichier',
+        envoyes, total: entree.fichiers.length,
+      });
       await envoyerFichier({
         contributionId,
         fichier: entree.fichiers[envoyes],
@@ -445,6 +480,11 @@ async function traiterEntree(entreeBrute) {
     }
   } catch (souci) {
     erreurEnvoi = souci;
+  } finally {
+    // Quel que soit le sort de l'entrée — envoyée, échouée, abandonnée — plus
+    // rien ne part la concernant. Un témoin laissé allumé afficherait un
+    // « envoi en cours » perpétuel sur une entrée que rien ne pousse plus.
+    if (progression?.idLocal === entree.idLocal) majProgression(null);
   }
 
   if (!erreurEnvoi) {
@@ -631,6 +671,17 @@ export function demarrerRenvoi({ surChangement, memoriserJeton } = {}) {
   if (!demarre) {
     demarre = true;
     addEventListener('online', renvoyerMaintenant);
+    // Perdre le réseau ne change rien à la file, mais change ce qu'il faut en
+    // dire : « En attente d'envoi » devient « Hors réseau ». Armé ici, dans le
+    // bloc qui ne s'exécute qu'une fois par onglet, pour ne pas empiler un
+    // écouteur par fiche d'étape consultée.
+    addEventListener('offline', () => {
+      try {
+        signaler();
+      } catch (souci) {
+        console.error('Signal de passage hors réseau impossible :', souci);
+      }
+    });
     addEventListener('visibilitychange', surVisibiliteChangee);
     setInterval(renvoyerMaintenant, PERIODE);
   }

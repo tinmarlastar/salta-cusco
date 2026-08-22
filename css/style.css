@@ -667,6 +667,17 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 /* Une entrée qui attend le réseau se fait discrète ; une entrée qui attend un
    geste de l'auteur, non. */
 .souvenir.est-en-attente.est-refusee { opacity: 1; }
+/* Un envoi en cours non plus : c'est celui qu'on regarde avancer. La bordure
+   bat lentement, seul signe qu'il se passe quelque chose quand une vidéo met
+   plusieurs minutes à monter. */
+.souvenir.est-en-attente.est-en-vol { opacity: 1; animation: souvenir-pouls 1.8s ease-in-out infinite; }
+@keyframes souvenir-pouls {
+  0%, 100% { border-left-color: var(--soufre); }
+  50%      { border-left-color: var(--nuit-3); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .souvenir.est-en-attente.est-en-vol { animation: none; }
+}
 
 /* Consigne d'une entrée refusée : la ligne qui dit quoi faire. */
 .souvenir__consigne {
@@ -838,6 +849,119 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
   color: var(--colorada);
 }
 .souvenir-form__souci[hidden] { display: none; }
+
+/* ------------------------------------------------------------ visionneuse */
+
+.visionneuse {
+  position: fixed;
+  inset: 0;
+  /* Un glissé du pouce pour changer de photo ne doit pas se propager au
+     panneau derrière. (Le corps du site est déjà figé en `overflow: hidden` :
+     le verrouiller de nouveau ici ne servirait à rien.) */
+  overscroll-behavior: contain;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1rem;
+  background: rgba(8, 13, 24, .94);
+}
+.visionneuse[hidden] { display: none; }
+
+.visionneuse__scene {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 100%;
+  max-height: 100%;
+}
+/* Contenu à l'échelle de l'écran, jamais rogné : une photo verticale de
+   téléphone doit tenir en entier. */
+.visionneuse__media {
+  display: block;
+  max-width: 100%;
+  max-height: calc(100vh - 6rem);
+  object-fit: contain;
+}
+
+.visionneuse__fermer,
+.visionneuse__fleche {
+  position: absolute;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--nuit-3);
+  background: rgba(16, 27, 49, .8);
+  color: var(--sel);
+  cursor: pointer;
+  transition: border-color var(--transition), color var(--transition);
+}
+.visionneuse__fermer:hover,
+.visionneuse__fleche:hover { border-color: var(--soufre); color: var(--soufre); }
+.visionneuse__fleche[hidden] { display: none; }
+
+.visionneuse__fermer {
+  top: .75rem;
+  right: .75rem;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.visionneuse__fleche {
+  top: 50%;
+  width: 2.75rem;
+  height: 3.5rem;
+  margin-top: -1.75rem;
+  font-size: 2rem;
+  line-height: 1;
+}
+.visionneuse__fleche.est-avant { left: .5rem; }
+.visionneuse__fleche.est-apres { right: .5rem; }
+
+.visionneuse__compteur {
+  position: absolute;
+  bottom: 1rem;
+  left: 0;
+  right: 0;
+  margin: 0;
+  text-align: center;
+  font-family: var(--mono);
+  font-size: .6875rem;
+  letter-spacing: .08em;
+  color: var(--poussiere);
+}
+
+/* Sur téléphone, les flèches passent en bas, à portée du pouce, plutôt que
+   sur les bords où elles recouvrent la photo. */
+@media (max-width: 40rem) {
+  .visionneuse__fleche { top: auto; bottom: 2.75rem; margin-top: 0; height: 2.75rem; }
+  .visionneuse__fleche.est-avant { left: 1.5rem; }
+  .visionneuse__fleche.est-apres { right: 1.5rem; }
+  .visionneuse__compteur { bottom: .5rem; }
+}
+
+/* Une photo s'ouvre au clic : autant que le curseur le dise. */
+img.souvenir__media { cursor: zoom-in; }
+
+.souvenir__agrandir {
+  position: absolute;
+  top: .25rem;
+  left: .25rem;
+  width: 1.375rem;
+  height: 1.375rem;
+  border: none;
+  border-radius: 50%;
+  background: rgba(16, 27, 49, .78);
+  color: var(--sel);
+  font-size: .75rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.souvenir__agrandir:hover { background: var(--soufre); color: var(--nuit); }
 
 /* ---------------------------------------------------------- modération */
 

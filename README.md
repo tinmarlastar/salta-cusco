@@ -106,10 +106,27 @@ vidéos. Le site reste statique : ce bloc parle à un petit service Cloudflare
 départ. Il n'est demandé qu'une fois par téléphone.
 
 **Si le réseau manque** (et il manquera, dans le Sud Lipez comme sur le salar),
-l'envoi est gardé sur le téléphone avec la mention « en attente de réseau », et
-repart tout seul dès que ça capte. Rien ne se perd. Si un souvenir reste
-affiché « en attente » sans jamais repartir alors que le réseau fonctionne de
-nouveau, recharger la page suffit à relancer la file.
+l'envoi est gardé sur le téléphone et repart tout seul dès que ça capte. Rien
+ne se perd. La carte dit ce qu'elle fait vraiment, ce qui évite de tout
+recommencer par doute :
+
+| Ce qui est écrit | Ce qui se passe |
+| --- | --- |
+| `Envoi en cours · 3 sur 6` | ça monte en ce moment, la bordure bat lentement |
+| `En attente d'envoi` | en file, sur le point de partir |
+| `Hors réseau, repart tout seul` | le téléphone n'a pas de réseau |
+| `Envoi interrompu, nouvel essai automatique` | une tentative a échoué, la suivante est programmée |
+| `Bloqué : …` | refus définitif du service, un geste est attendu |
+
+Si un souvenir reste affiché en attente sans jamais repartir alors que le
+réseau fonctionne de nouveau, recharger la page suffit à relancer la file.
+
+**Regarder les photos** : un clic sur une photo l'ouvre en grand. Les flèches
+du clavier, les boutons à l'écran ou un glissé du pouce passent d'un fichier au
+suivant, **à travers tous les souvenirs de l'étape affichée** — jamais au-delà,
+la carte et la frise continueraient sinon de désigner un jour qu'on ne regarde
+plus. `Échap` referme. Les vidéos gardent leur clic pour leurs propres
+commandes : elles s'ouvrent par le bouton ⤢.
 
 **Plusieurs photos et vidéos par souvenir**, sans limite de nombre. Le
 sélecteur s'ouvre autant de fois qu'on veut : les fichiers s'ajoutent à la

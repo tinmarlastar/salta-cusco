@@ -9,6 +9,7 @@ import {
 } from './souvenirs.js';
 import {
   mettreEnFile, listerFile, viderEntree, demarrerRenvoi, renvoyerMaintenant, reprendreEntree,
+  progressionEnvoi,
 } from './souvenirs-file.js';
 
 const CLE_AUTEUR = 'souvenirs.auteur';
@@ -56,7 +57,15 @@ function gabaritUnMedia(media, sien) {
     ? `<button type="button" class="souvenir__retirer" data-action="retirer-media"
                data-media="${echapper(media.id)}" aria-label="Retirer ce fichier">×</button>`
     : '';
-  return `<figure class="souvenir__figure">${corps}${retirer}</figure>`;
+  // Une photo s'ouvre au clic. Une vidéo, non : le clic doit rester à ses
+  // propres commandes, sinon on ne peut plus la mettre en pause. D'où ce
+  // bouton, seule porte d'entrée d'un souvenir qui ne contiendrait que des
+  // vidéos.
+  const agrandir = media.genre === 'video'
+    ? `<button type="button" class="souvenir__agrandir" data-action="agrandir"
+               aria-label="Voir en grand">⤢</button>`
+    : '';
+  return `<figure class="souvenir__figure">${corps}${retirer}${agrandir}</figure>`;
 }
 
 function gabaritContribution(contribution) {
@@ -99,10 +108,37 @@ function poidsLisible(octets) {
     : `${Math.max(1, Math.round(octets / 1024))} Ko`;
 }
 
-function gabaritEnAttente(entree) {
-  const motif = entree.bloque
-    ? `Bloqué : ${echapper(entree.dernierSouci)}`
-    : 'En attente de réseau';
+/** Ce que fait réellement une entrée en attente, en toutes lettres.
+
+    « En attente de réseau » était écrit sur tout ce qui n'était pas bloqué :
+    aussi bien sur un envoi en plein vol que sur une entrée qui patiente entre
+    deux tentatives, réseau parfaitement disponible. Les deux cas les plus
+    inquiétants — une vidéo qui met quatre minutes à monter, un envoi qui
+    vient d'être coupé — étaient précisément ceux que le libellé décrivait le
+    plus mal, au point de donner envie de tout recommencer et de créer un
+    doublon. */
+function motifEnAttente(entree, progression) {
+  if (entree.bloque) return `Bloqué : ${echapper(entree.dernierSouci)}`;
+
+  const enVol = progression && progression.idLocal === entree.idLocal;
+  if (enVol) {
+    // Le décompte n'a de sens qu'à partir de deux fichiers, et seulement une
+    // fois la contribution créée : pendant sa création, rien ne monte encore.
+    return progression.phase === 'fichier' && progression.total > 1
+      ? `Envoi en cours · ${progression.envoyes + 1} sur ${progression.total}`
+      : 'Envoi en cours…';
+  }
+
+  // `navigator.onLine` ne prouve pas qu'Internet répond — seulement qu'une
+  // interface est active — mais son « faux » est fiable : à false, on est
+  // certainement hors réseau.
+  if (!navigator.onLine) return 'Hors réseau, repart tout seul';
+  if (entree.tentatives > 0) return 'Envoi interrompu, nouvel essai automatique';
+  return "En attente d'envoi";
+}
+
+function gabaritEnAttente(entree, progression) {
+  const motif = motifEnAttente(entree, progression);
   // Bouton « Réessayer » (C2, revue finale) : sur toute entrée bloquée, pas
   // seulement un mot de passe refusé — c'est un rattrapage général une fois
   // la cause corrigée (mot de passe, vidéo trop lourde raccourcie, etc.).
@@ -143,7 +179,11 @@ function gabaritEnAttente(entree) {
   // `est-en-attente` dit « ça part tout seul, laissez faire », exactement le
   // contraire du message ici, et elle délaverait le champ dans lequel on
   // demande de taper.
-  const classes = `souvenir est-en-attente${entree.refusMotDePasse ? ' est-refusee' : ''}`;
+  // `est-en-vol` : une entrée qui monte en ce moment ne doit pas être grisée
+  // comme celles qui patientent — c'est justement celle dont on veut suivre
+  // l'avancement des yeux.
+  const enVol = Boolean(progression && progression.idLocal === entree.idLocal);
+  const classes = `souvenir est-en-attente${entree.refusMotDePasse ? ' est-refusee' : ''}${enVol ? ' est-en-vol' : ''}`;
   return `<article class="${classes}" data-local="${echapper(entree.idLocal)}">
     <p class="souvenir__entete"><b>${echapper(entree.auteur)}</b> <time>${motif}</time></p>
     ${entree.texte ? `<p class="souvenir__texte">${echapper(entree.texte)}</p>` : ''}
@@ -217,6 +257,123 @@ function gabaritFormulaire() {
     </p>
     <p class="souvenir-form__souci" hidden></p>
   </form>`;
+}
+
+/* ------------------------------------------------------------ visionneuse
+
+   Plein écran au clic sur un fichier, avec passage de l'un à l'autre.
+
+   La série parcourue est celle de l'ÉTAPE affichée, tous souvenirs confondus :
+   on feuillette la journée entière sans se soucier de qui a posté quoi, mais
+   on ne déborde jamais sur une autre étape — la carte, le titre et la frise
+   continueraient de désigner un jour qu'on ne regarde plus.
+
+   Un seul élément pour toute la page, créé au premier usage : quinze étapes
+   consultées dans la soirée ne doivent pas laisser quinze visionneuses dans le
+   document. */
+
+let visionneuse = null;
+let serie = [];
+let position = 0;
+let elementRendu = null; // ce qui avait le focus avant l'ouverture
+
+function construireVisionneuse() {
+  if (visionneuse) return visionneuse;
+  visionneuse = document.createElement('div');
+  visionneuse.className = 'visionneuse';
+  visionneuse.hidden = true;
+  visionneuse.setAttribute('role', 'dialog');
+  visionneuse.setAttribute('aria-modal', 'true');
+  visionneuse.setAttribute('aria-label', 'Souvenir en grand');
+  visionneuse.innerHTML = `
+    <button type="button" class="visionneuse__fermer" data-vis="fermer" aria-label="Fermer">×</button>
+    <button type="button" class="visionneuse__fleche est-avant" data-vis="avant" aria-label="Précédent">‹</button>
+    <div class="visionneuse__scene" data-vis="scene"></div>
+    <button type="button" class="visionneuse__fleche est-apres" data-vis="apres" aria-label="Suivant">›</button>
+    <p class="visionneuse__compteur" data-vis="compteur" aria-live="polite"></p>`;
+  document.body.appendChild(visionneuse);
+
+  visionneuse.addEventListener('click', (evenement) => {
+    const bouton = evenement.target.closest('[data-vis]');
+    const role = bouton?.dataset.vis;
+    if (role === 'avant') { deplacer(-1); return; }
+    if (role === 'apres') { deplacer(1); return; }
+    // Un clic dans le vide ferme ; un clic sur le média lui-même, non — sans
+    // quoi mettre une vidéo en pause fermerait la visionneuse.
+    if (role === 'fermer' || evenement.target === visionneuse) fermerVisionneuse();
+  });
+
+  // Le glissé du pouce, seul geste commode sur un téléphone. Seuil à 40 px
+  // pour ne pas confondre avec un simple appui, et l'axe vertical est laissé
+  // au défilement.
+  let departX = null;
+  let departY = null;
+  visionneuse.addEventListener('touchstart', (e) => {
+    departX = e.changedTouches[0].clientX;
+    departY = e.changedTouches[0].clientY;
+  }, { passive: true });
+  visionneuse.addEventListener('touchend', (e) => {
+    if (departX === null) return;
+    const dx = e.changedTouches[0].clientX - departX;
+    const dy = e.changedTouches[0].clientY - departY;
+    departX = null;
+    if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) deplacer(dx < 0 ? 1 : -1);
+  }, { passive: true });
+
+  return visionneuse;
+}
+
+function rendreVisionneuse() {
+  const scene = visionneuse.querySelector('[data-vis="scene"]');
+  const actuel = serie[position];
+  if (!actuel) return;
+  scene.innerHTML = actuel.genre === 'video'
+    ? `<video class="visionneuse__media" src="${echapper(actuel.source)}" controls autoplay playsinline></video>`
+    : `<img class="visionneuse__media" src="${echapper(actuel.source)}" alt="">`;
+  const compteur = visionneuse.querySelector('[data-vis="compteur"]');
+  compteur.textContent = serie.length > 1 ? `${position + 1} / ${serie.length}` : '';
+  // Une série d'un seul fichier n'a rien à feuilleter.
+  visionneuse.querySelectorAll('.visionneuse__fleche')
+    .forEach((f) => { f.hidden = serie.length < 2; });
+}
+
+function deplacer(pas) {
+  if (serie.length < 2) return;
+  // Circulaire : arrivé au bout de la journée, on repart au premier. Buter
+  // sur un bouton mort ferait croire à une panne.
+  position = (position + pas + serie.length) % serie.length;
+  rendreVisionneuse();
+}
+
+function surToucheVisionneuse(evenement) {
+  if (visionneuse?.hidden !== false) return;
+  if (evenement.key === 'Escape') { fermerVisionneuse(); return; }
+  if (evenement.key === 'ArrowLeft') { evenement.preventDefault(); deplacer(-1); return; }
+  if (evenement.key === 'ArrowRight') { evenement.preventDefault(); deplacer(1); }
+}
+
+function ouvrirVisionneuse(fichiers, depart) {
+  if (!fichiers.length) return;
+  construireVisionneuse();
+  serie = fichiers;
+  position = Math.max(0, Math.min(depart, fichiers.length - 1));
+  elementRendu = document.activeElement;
+  visionneuse.hidden = false;
+  addEventListener('keydown', surToucheVisionneuse);
+  rendreVisionneuse();
+  visionneuse.querySelector('[data-vis="fermer"]').focus({ preventScroll: true });
+}
+
+function fermerVisionneuse() {
+  if (!visionneuse || visionneuse.hidden) return;
+  // Vider la scène arrête net une vidéo qui jouait : la laisser en place la
+  // laisserait tourner dans un élément masqué, son compris.
+  visionneuse.querySelector('[data-vis="scene"]').innerHTML = '';
+  visionneuse.hidden = true;
+  removeEventListener('keydown', surToucheVisionneuse);
+  serie = [];
+  elementRendu?.focus?.({ preventScroll: true });
+  elementRendu = null;
 }
 
 export function monterSouvenirs(conteneur, jour) {
@@ -313,13 +470,14 @@ export function monterSouvenirs(conteneur, jour) {
     } catch {
       if (mienne !== generation) return; // un appel plus récent a pris le dessus
       liste.innerHTML = attente.length
-        ? attente.map(gabaritEnAttente).join('')
+        ? attente.map((e) => gabaritEnAttente(e, progressionEnvoi())).join('')
         : '<p class="souvenirs__vide">Les souvenirs ne se chargent pas pour le moment.</p>';
       return;
     }
     if (mienne !== generation) return; // un appel plus récent a pris le dessus
     liste.innerHTML = publiees.length || attente.length
-      ? publiees.map(gabaritContribution).join('') + attente.map(gabaritEnAttente).join('')
+      ? publiees.map(gabaritContribution).join('')
+        + attente.map((e) => gabaritEnAttente(e, progressionEnvoi())).join('')
       : '<p class="souvenirs__vide">Aucun souvenir pour cette étape. Soyez le premier.</p>';
     // Le champ de reprise n'existe qu'une fois la liste rendue : c'est donc
     // ici, et pas dans la branche de refus plus haut, qu'on peut y amener le
@@ -603,6 +761,28 @@ export function monterSouvenirs(conteneur, jour) {
     evenement.preventDefault();
     evenement.target.closest('[data-local]')
       ?.querySelector('button[data-action="reessayer"]')?.click();
+  });
+
+  /** Tous les fichiers de l'étape affichée, dans l'ordre où ils sont à
+      l'écran. Relevé au moment du clic plutôt que tenu à jour : la liste est
+      reconstruite à chaque rafraîchissement, un index mémorisé y désignerait
+      vite autre chose. */
+  function serieDeLEtape() {
+    return [...liste.querySelectorAll('.souvenir__media')].map((element) => ({
+      source: element.getAttribute('src') || '',
+      genre: element.tagName === 'VIDEO' ? 'video' : 'image',
+      element,
+    }));
+  }
+
+  liste.addEventListener('click', (evenement) => {
+    const image = evenement.target.closest('img.souvenir__media');
+    const boutonAgrandir = evenement.target.closest('[data-action="agrandir"]');
+    if (!image && !boutonAgrandir) return;
+    const vise = image || boutonAgrandir.closest('.souvenir__figure')?.querySelector('.souvenir__media');
+    const fichiers = serieDeLEtape();
+    const depart = fichiers.findIndex((f) => f.element === vise);
+    if (depart >= 0) ouvrirVisionneuse(fichiers, depart);
   });
 
   liste.addEventListener('click', async (evenement) => {

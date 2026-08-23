@@ -150,7 +150,11 @@ valable sur tout.
 
 **Modération** : la page `admin.html` (séparée du site, marquée `noindex` pour
 ne pas apparaître dans les moteurs de recherche), protégée par le mot de passe
-d'administration. Elle permet de supprimer n'importe quelle contribution.
+d'administration. Elle permet de supprimer n'importe quelle contribution, et
+porte un menu pour n'afficher qu'une journée à la fois. Le menu liste les
+quinze journées du voyage avec le nombre de contributions de chacune, y
+compris celles restées vides : en modération, savoir qu'un jour n'a rien reçu
+est une information.
 
 ### Développer en local
 

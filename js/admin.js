@@ -14,6 +14,60 @@ const echapper = (texte) => String(texte ?? '').replace(/[&<>"]/g, (c) =>
 const racine = document.getElementById('admin');
 let motDePasse = sessionStorage.getItem('souvenirs.admin') || '';
 
+// Journée choisie dans le menu ; `null` signifie « toutes ». Gardée hors de
+// `afficher()`, qui redessine tout après chaque suppression : sans cela, on
+// serait renvoyé à la liste complète juste après avoir supprimé, et il
+// faudrait retrouver sa journée à chaque fois.
+let jourChoisi = null;
+
+/** Titres des étapes, pour nommer les journées du menu.
+
+    « J7 » seul n'aide pas à retrouver de quel jour on parle ; « J7 · Uyuni →
+    Tahua », si. Le repli est volontairement discret : si le fichier ne se
+    charge pas, le menu reste utilisable avec les seuls numéros. */
+let titresEtapes = new Map();
+
+async function chargerTitres() {
+  try {
+    const donnees = await fetch('data/etapes.json').then((r) => r.json());
+    for (const etape of donnees.etapes || []) titresEtapes.set(etape.jour, etape.titre);
+  } catch {
+    titresEtapes = new Map();
+  }
+}
+
+/** Menu des journées, avec le nombre de contributions de chacune.
+
+    Toutes les journées du voyage y figurent, y compris celles restées vides :
+    en modération, savoir qu'un jour n'a rien reçu est une information, pas un
+    trou à masquer. Le décompte est recalculé à chaque affichage, donc juste
+    après une suppression. */
+function gabaritMenu(contributions) {
+  const parJour = new Map();
+  for (const c of contributions) parJour.set(c.jour, (parJour.get(c.jour) || 0) + 1);
+
+  // Les journées connues du parcours, plus toute journée qui porterait des
+  // contributions sans figurer dans `etapes.json` — sinon elles deviendraient
+  // invisibles, donc impossibles à modérer.
+  const jours = [...new Set([...titresEtapes.keys(), ...parJour.keys()])].sort((a, b) => a - b);
+
+  const options = jours.map((jour) => {
+    const nombre = parJour.get(jour) || 0;
+    const titre = titresEtapes.get(jour);
+    const libelle = titre ? `J${jour} · ${titre}` : `J${jour}`;
+    const choisie = jourChoisi === jour ? ' selected' : '';
+    return `<option value="${jour}"${choisie}>${echapper(libelle)} — ${nombre}</option>`;
+  }).join('');
+
+  return `<p class="admin-filtre">
+    <label for="filtre-jour">Journée</label>
+    <select id="filtre-jour" class="admin-filtre__menu">
+      <option value=""${jourChoisi === null ? ' selected' : ''}>Toutes les journées — ${contributions.length}</option>
+      ${options}
+    </select>
+  </p>`;
+}
+
 function demander(messageSouci) {
   racine.innerHTML = `<form class="souvenir-form" style="max-width:22rem">
     <input class="souvenir-form__champ" type="password" name="motDePasse"
@@ -78,9 +132,23 @@ async function afficher() {
     return;
   }
 
-  racine.innerHTML = contributions.length
-    ? `<p class="sous-titre">${contributions.length} contribution(s)</p>${contributions.map(gabarit).join('')}`
-    : '<p class="souvenirs__vide">Aucune contribution pour le moment.</p>';
+  // Le menu est bâti sur la liste ENTIÈRE, la liste affichée sur le filtre :
+  // les décomptes des autres journées doivent rester visibles même quand on
+  // n'en regarde qu'une.
+  const menu = gabaritMenu(contributions);
+  const visibles = jourChoisi === null
+    ? contributions
+    : contributions.filter((c) => c.jour === jourChoisi);
+
+  const corps = visibles.length
+    ? `<p class="sous-titre">${visibles.length} contribution(s)</p>${visibles.map(gabarit).join('')}`
+    : `<p class="souvenirs__vide">${
+        jourChoisi === null
+          ? 'Aucune contribution pour le moment.'
+          : `Aucune contribution pour la journée ${jourChoisi}.`
+      }</p>`;
+
+  racine.innerHTML = menu + corps;
 }
 
 // Écouteur posé une seule fois, en dehors de `afficher()`, sur `racine` — un
@@ -90,6 +158,15 @@ async function afficher() {
 // `{ once: true }`, qui consommerait le tout premier clic dans la zone (sur
 // une photo, un texte, n'importe où) et laisserait ensuite tous les boutons
 // « Supprimer » muets.
+// Délégué comme le clic, et pour la même raison : `afficher()` remplace tout
+// le contenu de `racine`, donc le menu lui-même, à chaque rendu.
+racine.addEventListener('change', (evenement) => {
+  if (!evenement.target.matches('#filtre-jour')) return;
+  const valeur = evenement.target.value;
+  jourChoisi = valeur === '' ? null : Number(valeur);
+  afficher();
+});
+
 racine.addEventListener('click', async (evenement) => {
   const bouton = evenement.target.closest('button[data-action="supprimer"]');
   if (!bouton) return;
@@ -105,4 +182,5 @@ racine.addEventListener('click', async (evenement) => {
 });
 
 await chargerConfig();
+await chargerTitres();
 if (motDePasse) afficher(); else demander();

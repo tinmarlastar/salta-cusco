@@ -980,6 +980,33 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 .page-admin { display: block; overflow: auto; }
 .admin { max-width: 42rem; margin: 0 auto; padding: 1.5rem 1.25rem 3rem; }
 
+/* Choix de la journée à modérer. */
+.admin-filtre {
+  display: flex;
+  align-items: center;
+  gap: .625rem;
+  margin: 0 0 1.25rem;
+}
+.admin-filtre label {
+  flex: 0 0 auto;
+  font-family: var(--mono);
+  font-size: .625rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--poussiere);
+}
+.admin-filtre__menu {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: .4375rem .5rem;
+  border: 1px solid var(--nuit-3);
+  background: var(--nuit-2);
+  color: var(--sel);
+  font-family: var(--display);
+  font-size: .875rem;
+}
+.admin-filtre__menu:focus { border-color: var(--soufre); outline: none; }
+
 /* --------------------------------------------------------------- mobile */
 
 @media (max-width: 60rem) {

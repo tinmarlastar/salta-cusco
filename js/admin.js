@@ -5,8 +5,9 @@
    et jamais écrit dans le dépôt. */
 
 import {
-  chargerConfig, listerTout, supprimerContribution, urlMedia, ErreurService,
+  chargerConfig, listerTout, supprimerContribution, ErreurService,
 } from './souvenirs.js';
+import { gabaritGalerie, brancherVisionneuse } from './souvenirs-vue.js';
 
 const echapper = (texte) => String(texte ?? '').replace(/[&<>"]/g, (c) =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -96,15 +97,12 @@ function gabarit(contribution) {
   const medias = contribution.medias?.length
     ? contribution.medias
     : (contribution.media ? [contribution.media] : []);
-  const apercu = !medias.length ? '' : `<div class="souvenir__galerie${medias.length > 1 ? ' est-multiple' : ''}">${
-    medias.map((m) => {
-      const source = echapper(urlMedia(m.cle));
-      const corps = m.genre === 'video'
-        ? `<video class="souvenir__media" src="${source}" controls preload="metadata"></video>`
-        : `<img class="souvenir__media" src="${source}" alt="" loading="lazy">`;
-      return `<figure class="souvenir__figure">${corps}</figure>`;
-    }).join('')
-  }</div>`;
+  // Exactement la galerie du site, y compris ses vignettes vidéo : la page
+  // avait sa propre version, avec des commandes de lecture que le site
+  // n'affiche plus, et la règle de curseur commune aux deux y promettait un
+  // agrandissement que rien ne servait. Pas de croix de retrait ici : la
+  // modération supprime un souvenir entier, elle ne fait pas le tri dedans.
+  const apercu = gabaritGalerie(medias);
   return `<article class="souvenir" data-id="${echapper(contribution.id)}">
     <p class="souvenir__entete">
       <b>${echapper(contribution.auteur)}</b>
@@ -166,6 +164,12 @@ racine.addEventListener('change', (evenement) => {
   jourChoisi = valeur === '' ? null : Number(valeur);
   afficher();
 });
+
+// Un fichier s'ouvre en grand ici comme sur le site : voir une photo en entier
+// avant de décider de la supprimer est le geste même de la modération. La
+// série parcourue est celle de la liste affichée — donc de la journée filtrée,
+// le cas échéant.
+brancherVisionneuse(racine);
 
 racine.addEventListener('click', async (evenement) => {
   const bouton = evenement.target.closest('button[data-action="supprimer"]');

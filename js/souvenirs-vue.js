@@ -72,6 +72,63 @@ function gabaritUnMedia(media, sien) {
   return `<figure class="souvenir__figure">${corps}${retirer}</figure>`;
 }
 
+/** Galerie d'un souvenir, telle qu'elle s'affiche sur le site.
+
+    Exportée pour la page de modération : elle montrait ses vidéos avec leurs
+    commandes de lecture alors que le site les présente en vignettes, et la
+    règle de curseur — commune aux deux pages — y promettait un agrandissement
+    que rien ne servait. Deux gabarits pour la même chose finissaient
+    fatalement par diverger. */
+export function gabaritGalerie(medias, { avecRetraits = false } = {}) {
+  if (!medias.length) return '';
+  return `<div class="souvenir__galerie${medias.length > 1 ? ' est-multiple' : ''}">
+      ${medias.map((m) => gabaritUnMedia(m, avecRetraits)).join('')}
+    </div>`;
+}
+
+/** Fichiers présents dans un conteneur, dans l'ordre où ils sont à l'écran.
+
+    Relevé au moment du clic plutôt que tenu à jour : la liste est reconstruite
+    à chaque rafraîchissement, un index mémorisé y désignerait vite autre
+    chose. */
+function serieDe(conteneur) {
+  return [...conteneur.querySelectorAll('.souvenir__media')].map((element) => ({
+    // `data-source` pour une vidéo : son `src` de vignette porte le fragment
+    // `#t=0.1` qui n'a rien à faire en plein écran.
+    source: element.dataset.source || element.getAttribute('src') || '',
+    genre: element.tagName === 'VIDEO' ? 'video' : 'image',
+    element,
+  }));
+}
+
+/** Rend cliquables les fichiers d'un conteneur : clic ou Entrée les ouvrent
+    en grand, et les flèches circulent dans tout ce que le conteneur affiche.
+
+    Les écouteurs sont délégués au conteneur, un élément stable dont seul le
+    contenu change : rien à reposer après un rendu. */
+export function brancherVisionneuse(conteneur) {
+  function ouvrirDepuis(vise) {
+    if (!vise) return;
+    const fichiers = serieDe(conteneur);
+    const depart = fichiers.findIndex((f) => f.element === vise);
+    if (depart >= 0) ouvrirVisionneuse(fichiers, depart);
+  }
+
+  conteneur.addEventListener('click', (evenement) => {
+    ouvrirDepuis(evenement.target.closest('.souvenir__media'));
+  });
+
+  // Au clavier : une vignette est atteignable par tabulation, elle doit donc
+  // s'ouvrir à l'Entrée comme un bouton.
+  conteneur.addEventListener('keydown', (evenement) => {
+    if (evenement.key !== 'Enter' && evenement.key !== ' ') return;
+    const vise = evenement.target.closest?.('.souvenir__media');
+    if (!vise) return;
+    evenement.preventDefault();
+    ouvrirDepuis(vise);
+  });
+}
+
 function gabaritContribution(contribution) {
   const sien = Boolean(jetons()[contribution.id]);
   // `medias` depuis que plusieurs fichiers sont possibles ; `media` au
@@ -80,13 +137,7 @@ function gabaritContribution(contribution) {
   const medias = contribution.medias?.length
     ? contribution.medias
     : (contribution.media ? [contribution.media] : []);
-  // La galerie passe en grille au-delà d'un fichier : une photo seule garde
-  // toute la largeur, comme avant.
-  const corpsMedia = medias.length
-    ? `<div class="souvenir__galerie${medias.length > 1 ? ' est-multiple' : ''}">
-        ${medias.map((m) => gabaritUnMedia(m, sien)).join('')}
-      </div>`
-    : '';
+  const corpsMedia = gabaritGalerie(medias, { avecRetraits: sien });
 
   return `<article class="souvenir" data-id="${echapper(contribution.id)}">
     <p class="souvenir__entete">
@@ -782,40 +833,9 @@ export function monterSouvenirs(conteneur, jour) {
       ?.querySelector('button[data-action="reessayer"]')?.click();
   });
 
-  /** Tous les fichiers de l'étape affichée, dans l'ordre où ils sont à
-      l'écran. Relevé au moment du clic plutôt que tenu à jour : la liste est
-      reconstruite à chaque rafraîchissement, un index mémorisé y désignerait
-      vite autre chose. */
-  function serieDeLEtape() {
-    return [...liste.querySelectorAll('.souvenir__media')].map((element) => ({
-      // `data-source` pour une vidéo : son `src` de vignette porte le
-      // fragment `#t=0.1` qui n'a rien à faire en plein écran.
-      source: element.dataset.source || element.getAttribute('src') || '',
-      genre: element.tagName === 'VIDEO' ? 'video' : 'image',
-      element,
-    }));
-  }
-
-  function ouvrirDepuis(vise) {
-    if (!vise) return;
-    const fichiers = serieDeLEtape();
-    const depart = fichiers.findIndex((f) => f.element === vise);
-    if (depart >= 0) ouvrirVisionneuse(fichiers, depart);
-  }
-
-  liste.addEventListener('click', (evenement) => {
-    ouvrirDepuis(evenement.target.closest('.souvenir__media'));
-  });
-
-  // Au clavier : une vignette est atteignable par tabulation, elle doit donc
-  // s'ouvrir à l'Entrée comme un bouton.
-  liste.addEventListener('keydown', (evenement) => {
-    if (evenement.key !== 'Enter' && evenement.key !== ' ') return;
-    const vise = evenement.target.closest?.('.souvenir__media');
-    if (!vise) return;
-    evenement.preventDefault();
-    ouvrirDepuis(vise);
-  });
+  // La série parcourue est celle de la liste affichée, donc celle de l'étape
+  // ouverte : on feuillette la journée entière, jamais au-delà.
+  brancherVisionneuse(liste);
 
   liste.addEventListener('click', async (evenement) => {
     const bouton = evenement.target.closest('button[data-action]');

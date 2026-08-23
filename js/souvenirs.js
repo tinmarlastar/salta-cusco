@@ -115,6 +115,16 @@ export async function listerEtape(jour) {
   return donnees.contributions || [];
 }
 
+/** Nombre de souvenirs par journée : `{ 3: 7, 9: 2 }`.
+
+    Rend un objet vide plutôt que de lever si le service ne répond pas : les
+    pastilles sont un agrément, leur absence ne doit pas empêcher le site de
+    s'afficher. */
+export async function listerDecomptes() {
+  const donnees = await appeler('/api/decomptes');
+  return donnees.decomptes || {};
+}
+
 export async function envoyerNote({ jour, auteur, texte, motDePasse, idempotence, jeton, avecMedias = false }) {
   const entetes = {
     'Content-Type': 'application/json',

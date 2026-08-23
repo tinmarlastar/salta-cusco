@@ -34,7 +34,10 @@ html, body {
 
 body {
   display: grid;
-  grid-template-rows: auto 1fr auto;
+  /* Bandeau, journées, scène, frise. La scène est la seule à s'étirer ; sans
+     cette quatrième rangée déclarée, le bandeau des journées héritait du `1fr`
+     et écrasait la carte. */
+  grid-template-rows: auto auto 1fr auto;
   background: var(--nuit);
   color: var(--sel);
   font-family: var(--display);
@@ -220,6 +223,59 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 
 /* ------------------------------------------------------------------ scène */
 
+/* -------------------------------------------------- bandeau des journées */
+
+.journees {
+  display: flex;
+  gap: .25rem;
+  padding: .5rem .75rem;
+  background: var(--nuit-2);
+  border-bottom: 1px solid var(--nuit-3);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+.journees::-webkit-scrollbar { display: none; }
+
+.journees__jour {
+  position: relative;
+  flex: 0 0 auto;
+  padding: .3125rem .5rem;
+  border: 1px solid var(--nuit-3);
+  border-radius: 2px;
+  background: none;
+  color: var(--poussiere);
+  font-family: var(--mono);
+  font-size: .6875rem;
+  letter-spacing: .06em;
+  cursor: pointer;
+  transition: border-color var(--transition), color var(--transition);
+}
+.journees__jour:hover { border-color: var(--soufre); color: var(--soufre); }
+.journees__jour.est-actif {
+  background: var(--soufre);
+  border-color: var(--soufre);
+  color: var(--nuit);
+}
+
+/* La pastille déborde volontairement du bouton : dans une file de quinze
+   éléments serrés, un compteur posé à l'intérieur se confondrait avec le
+   numéro du jour. */
+.journees__pastille {
+  position: absolute;
+  top: -.25rem;
+  right: -.25rem;
+  min-width: .9375rem;
+  padding: 0 .1875rem;
+  border-radius: .5rem;
+  background: var(--colorada);
+  color: #fff;
+  font-size: .5625rem;
+  line-height: .9375rem;
+  text-align: center;
+}
+.journees__pastille[hidden] { display: none; }
+
 .scene {
   position: relative;
   display: flex;
@@ -246,6 +302,73 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 .panneau__poignee { display: none; }
 
 .fiche { padding: 1.5rem 1.375rem 2.5rem; }
+
+/* ------------------------------------------------------ onglets du panneau */
+
+.onglets {
+  display: flex;
+  gap: .25rem;
+  margin: 1rem 0 1.125rem;
+  border-bottom: 1px solid var(--nuit-3);
+}
+/* Les chiffres tombent désormais sous la mosaïque : ils gardent leur place,
+   mais après la réponse à « qu'est-ce qu'on a vu ce jour-là ? ». */
+.volet .mesures { margin-top: 0; }
+
+.onglets__bouton {
+  display: flex;
+  align-items: center;
+  gap: .375rem;
+  padding: .5rem .625rem;
+  margin-bottom: -1px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--poussiere);
+  font-family: var(--mono);
+  font-size: .6875rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color var(--transition), border-color var(--transition);
+}
+.onglets__bouton:hover { color: var(--sel); }
+.onglets__bouton.est-actif { color: var(--soufre); border-bottom-color: var(--soufre); }
+
+.onglets__compte {
+  min-width: 1.125rem;
+  padding: 0 .25rem;
+  border-radius: .5625rem;
+  background: var(--nuit-3);
+  color: var(--sel);
+  font-family: var(--mono);
+  font-size: .625rem;
+  line-height: 1.125rem;
+  text-align: center;
+}
+.onglets__bouton.est-actif .onglets__compte { background: var(--soufre); color: var(--nuit); }
+.onglets__compte[hidden] { display: none; }
+
+.volet[hidden] { display: none; }
+
+/* Mosaïque du jour : la réponse à « qu'a-t-on vu ce jour-là ? », posée avant
+   le récit. Vide, elle ne laisse pas de trou — le récit remonte. */
+.mosaique { display: grid; grid-template-columns: repeat(3, 1fr); gap: .25rem; }
+.mosaique .souvenir__figure { position: relative; }
+.mosaique .souvenir__media { aspect-ratio: 1; object-fit: cover; }
+.mosaique-jour:not(:empty) { margin-bottom: 1.25rem; }
+
+.mosaique__reste {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgba(16, 27, 49, .74);
+  color: var(--sel);
+  font-family: var(--mono);
+  font-size: .875rem;
+  cursor: pointer;
+}
+.mosaique__reste:hover { background: rgba(16, 27, 49, .55); color: var(--soufre); }
 
 .fiche__jour {
   display: flex;
@@ -1035,21 +1158,31 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
   .scene { display: block; overflow: hidden; }
   .carte { position: absolute; inset: 0; }
 
+  /* Trois hauteurs. On anime `height` plutôt que d'empiler des translations :
+     la feuille reste ancrée en bas, et son contenu ne glisse pas sous le bord
+     de l'écran pendant le mouvement. */
   .panneau {
     position: absolute;
     left: 0;
     right: 0;
     bottom: 0;
     z-index: 1000;
-    max-height: 78%;
+    height: 62%;
     border-left: 0;
     border-top: 1px solid var(--nuit-3);
     background: var(--nuit-voile);
     backdrop-filter: blur(12px);
     transform: translateY(100%);
-    transition: transform var(--transition);
+    transition: transform var(--transition), height var(--transition);
   }
-  .panneau.est-ouvert { transform: translateY(0); }
+  /* Hauteur intermédiaire : les chiffres et la mosaïque du jour sont lisibles
+     sans que la carte disparaisse. C'est la position par défaut à l'ouverture. */
+  /* 62 % et non la moitié : c'est la hauteur qu'il faut pour que la première
+     rangée de la mosaïque passe au-dessus du bord, sous les chiffres. En
+     dessous, la feuille s'arrête pile avant les photos — et ne tient donc pas
+     sa promesse. */
+  .panneau.est-mi { transform: translateY(0); height: 62%; }
+  .panneau.est-ouvert { transform: translateY(0); height: 88%; }
 
   .panneau__poignee {
     position: absolute;
@@ -1078,7 +1211,25 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
     height: 2px;
     background: var(--poussiere);
   }
-  .panneau__poignee[aria-expanded="true"] { bottom: calc(78% + .75rem); }
+  .panneau__poignee[data-hauteur="mi"] { bottom: calc(62% + .75rem); }
+  .panneau__poignee[data-hauteur="pleine"] { bottom: calc(88% + .75rem); }
+
+  /* Le bandeau des journées se resserre : quinze boutons doivent tenir sous le
+     pouce sans obliger à viser. */
+  .journees { padding: .375rem .5rem; gap: .1875rem; }
+  .journees__jour { padding: .375rem .4375rem; }
+
+  /* Les onglets restent visibles quand on fait défiler la fiche : ils sont le
+     seul moyen d'atteindre les souvenirs, les enterrer les rendrait aussi
+     difficiles à trouver qu'avant. */
+  .onglets {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    margin-top: 1rem;
+    background: var(--nuit-voile);
+    backdrop-filter: blur(12px);
+  }
 }
 
 @media (max-width: 30rem) {

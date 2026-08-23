@@ -96,6 +96,27 @@ leurs points de passage, mais ne sont pas des traces GPS : ne pas s'en servir
 pour naviguer. Si Vintage Rides fournit les GPX des douze jours, ils
 remplaceront avantageusement le calcul.
 
+## Naviguer dans le voyage
+
+**Le bandeau des journées**, sous l'entête, tient les quinze jours à portée de
+clic. Chaque journée porte le nombre de souvenirs qu'elle a reçus : c'est la
+réponse à « où y a-t-il quelque chose à voir ? » sans en ouvrir une seule. Les
+décomptes viennent d'un unique appel au service (`GET /api/decomptes`), et se
+corrigent d'eux-mêmes dès qu'un souvenir est publié ou supprimé.
+
+**Le panneau a deux onglets**, *Étape* et *Souvenirs*. L'onglet choisi suit
+d'une journée à l'autre : quelqu'un qui remonte le voyage par ses souvenirs
+n'est pas renvoyé au récit à chaque changement de jour. En tête de l'onglet
+*Étape*, la mosaïque des photos du jour répond à « qu'a-t-on vu ce jour-là ? »
+avant le récit ; au-delà de six fichiers, un « +N » renvoie à l'onglet des
+souvenirs.
+
+**Sur téléphone**, la fiche est une feuille à trois hauteurs, que la poignée
+fait défiler : repliée, à mi-hauteur, pleine. La position intermédiaire est
+réglée pour laisser voir le titre, les onglets et la première rangée de photos
+sans masquer la carte — c'est elle qui remplace les deux gestes qu'il fallait
+faire avant pour atteindre les souvenirs.
+
 ## Souvenirs des compagnons
 
 Chaque étape porte un bloc où les participants laissent des notes, photos et

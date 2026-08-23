@@ -452,7 +452,42 @@ function fermerVisionneuse() {
   elementRendu = null;
 }
 
-export function monterSouvenirs(conteneur, jour) {
+/** Mosaïque des photos de la journée, tous souvenirs confondus.
+
+    Elle vit dans l'onglet « Étape », juste sous les chiffres : c'est la réponse
+    à « qu'est-ce qu'on a vu ce jour-là ? », et elle doit tomber sous les yeux
+    avant le récit. Au-delà de six vignettes, la dernière devient un « +N » qui
+    renvoie à l'onglet des souvenirs plutôt que d'étirer la colonne. */
+const MOSAIQUE_MAX = 6;
+
+function gabaritMosaique(publiees) {
+  const fichiers = publiees.flatMap((c) => (c.medias?.length
+    ? c.medias
+    : (c.media ? [c.media] : [])));
+  if (!fichiers.length) return '';
+
+  const visibles = fichiers.slice(0, MOSAIQUE_MAX);
+  const reste = fichiers.length - visibles.length;
+
+  return `<div class="mosaique">
+    ${visibles.map((m, i) => {
+      const source = echapper(urlMedia(m.cle));
+      const corps = m.genre === 'video'
+        ? `<video class="souvenir__media" src="${source}#t=0.1" data-source="${source}"
+                  preload="metadata" muted playsinline tabindex="0"></video>
+           <span class="souvenir__lecture" aria-hidden="true">▶</span>`
+        : `<img class="souvenir__media" src="${source}" alt="" loading="lazy" tabindex="0">`;
+      // Le « +N » se pose sur la dernière vignette visible : il montre encore
+      // une photo au lieu d'occuper une case pour un simple chiffre.
+      const surplus = (reste > 0 && i === visibles.length - 1)
+        ? `<button type="button" class="mosaique__reste" data-action="tout-voir">+${reste}</button>`
+        : '';
+      return `<figure class="souvenir__figure">${corps}${surplus}</figure>`;
+    }).join('')}
+  </div>`;
+}
+
+export function monterSouvenirs(conteneur, jour, { mosaique = null, surDecompte = null } = {}) {
   conteneur.innerHTML = `<p class="sous-titre">Souvenirs des compagnons</p>
     <div class="souvenirs__liste">Chargement…</div>
     ${gabaritFormulaire()}`;
@@ -548,6 +583,9 @@ export function monterSouvenirs(conteneur, jour) {
       liste.innerHTML = attente.length
         ? attente.map((e) => gabaritEnAttente(e, progressionEnvoi())).join('')
         : '<p class="souvenirs__vide">Les souvenirs ne se chargent pas pour le moment.</p>';
+      // Service injoignable : on vide la mosaïque plutôt que d'y laisser les
+      // photos de l'étape précédente, qui passeraient pour celles de celle-ci.
+      if (mosaique) mosaique.innerHTML = '';
       return;
     }
     if (mienne !== generation) return; // un appel plus récent a pris le dessus
@@ -555,6 +593,19 @@ export function monterSouvenirs(conteneur, jour) {
       ? publiees.map(gabaritContribution).join('')
         + attente.map((e) => gabaritEnAttente(e, progressionEnvoi())).join('')
       : '<p class="souvenirs__vide">Aucun souvenir pour cette étape. Soyez le premier.</p>';
+
+    // La mosaïque et le décompte sortent du MÊME chargement que la liste : les
+    // recalculer ailleurs demanderait une seconde requête pour les mêmes
+    // données, et les deux affichages pourraient se contredire le temps qu'elle
+    // revienne.
+    if (mosaique) mosaique.innerHTML = gabaritMosaique(publiees);
+    if (surDecompte) {
+      try {
+        surDecompte(publiees.length);
+      } catch (souci) {
+        console.error('Le rappel de décompte a échoué :', souci);
+      }
+    }
     // Le champ de reprise n'existe qu'une fois la liste rendue : c'est donc
     // ici, et pas dans la branche de refus plus haut, qu'on peut y amener le
     // curseur. Jamais si la personne écrit déjà quelque part — lui voler le
@@ -841,6 +892,19 @@ export function monterSouvenirs(conteneur, jour) {
 
   // Les flèches restent dans le souvenir cliqué : c'est lui qu'on regarde.
   brancherVisionneuse(liste);
+
+  if (mosaique) {
+    // Dans la mosaïque il n'y a pas de carte de souvenir : la série est donc
+    // la mosaïque elle-même — on feuillette les photos de la journée, ce qui
+    // est exactement ce qu'on attend d'un aperçu.
+    brancherVisionneuse(mosaique);
+    mosaique.addEventListener('click', (evenement) => {
+      if (!evenement.target.closest('[data-action="tout-voir"]')) return;
+      // Ce clic ne doit pas ouvrir la photo qui se trouve dessous.
+      evenement.stopPropagation();
+      conteneur.dispatchEvent(new CustomEvent('souvenirs:tout-voir', { bubbles: true }));
+    });
+  }
 
   liste.addEventListener('click', async (evenement) => {
     const bouton = evenement.target.closest('button[data-action]');

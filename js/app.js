@@ -7,12 +7,21 @@
 import { creerCarte } from './carte.js';
 import { assemblerVoyage, dessinerFrise, dessinerProfilEtape } from './profil.js';
 import { monterSouvenirs } from './souvenirs-vue.js';
+import { listerDecomptes } from './souvenirs.js';
 
 const nombre = (valeur) => valeur.toLocaleString('fr-FR');
 const echapper = (texte) => String(texte).replace(/[&<>"]/g, (c) =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
-const etat = { etapes: [], traces: null, voyage: null, jour: null, carte: null };
+const etat = {
+  etapes: [], traces: null, voyage: null, jour: null, carte: null,
+  // Nombre de souvenirs par journée, pour les pastilles du bandeau.
+  decomptes: {},
+  // Onglet du panneau. Gardé ici, et non dans la fiche : changer de journée ne
+  // doit pas ramener sur « Étape » quelqu'un qui suit les souvenirs jour après
+  // jour.
+  onglet: 'etape',
+};
 
 const elements = {
   eyebrow: document.getElementById('eyebrow-voyage'),
@@ -26,6 +35,7 @@ const elements = {
   etapePrecedente: document.getElementById('etape-precedente'),
   etapeSuivante: document.getElementById('etape-suivante'),
   etapePosition: document.getElementById('etape-position'),
+  journees: document.getElementById('journees'),
 };
 
 // ------------------------------------------------------------------ données
@@ -65,9 +75,17 @@ async function demarrer() {
     surChoixEtape: (jour) => choisir(jour),
   });
 
+  construireJournees();
   brancherInterface();
+  reglerFeuille('fermee');
   choisir(jourDepuisAdresse(), { recentrer: false });
   redessinerFrise();
+
+  // Les pastilles arrivent après coup : le bandeau est utilisable sans elles,
+  // et un service injoignable ne doit pas retarder l'affichage du parcours.
+  listerDecomptes()
+    .then((decomptes) => { etat.decomptes = decomptes; majJournees(); })
+    .catch(() => {});
 
   // La grille de la page n'est mesurable qu'après le premier rendu : c'est là
   // seulement que la carte peut se cadrer sur la bonne étape.
@@ -113,9 +131,58 @@ function choisir(jour, { recentrer = true, majAdresse = true } = {}) {
     const cible = etape ? `#j${etape.jour}` : ' ';
     if (location.hash !== cible) history.replaceState(null, '', etape ? cible : location.pathname);
   }
-  elements.poigneeTexte.textContent = etape ? `Jour ${etape.jour}` : 'Le voyage';
   elements.boutonAccueil.hidden = !etape;
   majPasAPas(etape);
+  majJournees();
+}
+
+// ------------------------------------------------------- bandeau des journées
+
+/** Construit les quinze boutons, une seule fois : seuls l'état actif et les
+    pastilles changent ensuite. Les reconstruire à chaque sélection perdrait la
+    position de défilement, et donc la journée qu'on venait d'amener sous le
+    pouce. */
+function construireJournees() {
+  elements.journees.innerHTML = etat.etapes.map((etape) => `
+    <button type="button" class="journees__jour" data-jour="${etape.jour}"
+            title="${echapper(etape.titre)}">
+      <span class="journees__numero">J${etape.jour}</span>
+      <span class="journees__pastille" hidden></span>
+    </button>`).join('');
+
+  elements.journees.addEventListener('click', (evenement) => {
+    const bouton = evenement.target.closest('[data-jour]');
+    if (bouton) choisir(Number(bouton.dataset.jour));
+  });
+}
+
+function majJournees() {
+  for (const bouton of elements.journees.querySelectorAll('[data-jour]')) {
+    const jour = Number(bouton.dataset.jour);
+    const actif = jour === etat.jour;
+    bouton.classList.toggle('est-actif', actif);
+    bouton.setAttribute('aria-current', actif ? 'true' : 'false');
+
+    const nombre = etat.decomptes[jour] || 0;
+    const pastille = bouton.querySelector('.journees__pastille');
+    pastille.hidden = nombre === 0;
+    pastille.textContent = nombre;
+    // Le nombre doit être dit, pas seulement montré : sans ça un lecteur
+    // d'écran annonce « J7 7 », qu'on lit comme une seconde journée.
+    bouton.setAttribute('aria-label', nombre
+      ? `Jour ${jour}, ${nombre} souvenir${nombre > 1 ? 's' : ''}`
+      : `Jour ${jour}`);
+  }
+  amenerJourneeEnVue();
+}
+
+/** Sur un écran étroit le bandeau déborde : on y amène la journée choisie. */
+function amenerJourneeEnVue() {
+  const actif = elements.journees.querySelector('.est-actif');
+  if (!actif) return;
+  if (elements.journees.scrollWidth <= elements.journees.clientWidth) return;
+  const cible = actif.offsetLeft + actif.offsetWidth / 2 - elements.journees.clientWidth / 2;
+  elements.journees.scrollTo({ left: cible, behavior: 'smooth' });
 }
 
 /** Le pas-à-pas reste visible partout : depuis l'accueil, « suivant » ouvre J1. */
@@ -184,7 +251,23 @@ function afficherPanneau(etape) {
       });
     }
     const blocSouvenirs = elements.panneau.querySelector('#souvenirs-etape');
-    if (blocSouvenirs) monterSouvenirs(blocSouvenirs, etape.jour);
+    if (blocSouvenirs) {
+      monterSouvenirs(blocSouvenirs, etape.jour, {
+        mosaique: elements.panneau.querySelector('#mosaique-jour'),
+        // Le décompte vient de la vue des souvenirs, seule à connaître le
+        // nombre réellement publié pour cette journée : il corrige la pastille
+        // du bandeau, chargée une fois au démarrage, dès qu'un souvenir est
+        // publié ou supprimé sans recharger la page.
+        surDecompte: (nombre) => {
+          etat.decomptes[etape.jour] = nombre;
+          majOngletCompte(nombre);
+          majJournees();
+        },
+      });
+      // « +N » sous la mosaïque : bascule sur l'onglet qui montre tout.
+      blocSouvenirs.addEventListener('souvenirs:tout-voir', () => activerOnglet('souvenirs'));
+    }
+    brancherOnglets();
   }
 
   for (const bouton of elements.panneau.querySelectorAll('[data-jour]')) {
@@ -195,6 +278,34 @@ function afficherPanneau(etape) {
       etat.carte.carte.setView([Number(bouton.dataset.lat), Number(bouton.dataset.lon)], 13);
     });
   }
+}
+
+// -------------------------------------------------------- onglets du panneau
+
+function brancherOnglets() {
+  for (const bouton of elements.panneau.querySelectorAll('[data-onglet]')) {
+    bouton.addEventListener('click', () => activerOnglet(bouton.dataset.onglet));
+  }
+  activerOnglet(etat.onglet);
+}
+
+function activerOnglet(nom) {
+  etat.onglet = nom;
+  for (const bouton of elements.panneau.querySelectorAll('[data-onglet]')) {
+    const actif = bouton.dataset.onglet === nom;
+    bouton.classList.toggle('est-actif', actif);
+    bouton.setAttribute('aria-selected', String(actif));
+  }
+  for (const volet of elements.panneau.querySelectorAll('[data-volet]')) {
+    volet.hidden = volet.dataset.volet !== nom;
+  }
+}
+
+function majOngletCompte(nombre) {
+  const compte = elements.panneau.querySelector('.onglets__compte');
+  if (!compte) return;
+  compte.hidden = nombre === 0;
+  compte.textContent = nombre;
 }
 
 function gabaritAccueil(voyage) {
@@ -267,17 +378,31 @@ function gabaritFiche(etape) {
     <h2 class="fiche__titre">${echapper(etape.titre)}</h2>
     ${etape.ride ? '' : '<p class="fiche__repos">Journée sans moto</p>'}
 
-    <dl class="mesures">${mesures}</dl>
-    ${profil}
+    <div class="onglets" role="tablist" aria-label="Contenu de l'étape">
+      <button type="button" class="onglets__bouton" role="tab" data-onglet="etape"
+              id="onglet-etape" aria-controls="volet-etape">Étape</button>
+      <button type="button" class="onglets__bouton" role="tab" data-onglet="souvenirs"
+              id="onglet-souvenirs" aria-controls="volet-souvenirs">Souvenirs<span
+              class="onglets__compte" hidden></span></button>
+    </div>
 
-    <p class="recit">${echapper(etape.recit)}</p>
+    <div class="volet" data-volet="etape" id="volet-etape" role="tabpanel" aria-labelledby="onglet-etape">
+      <div class="mosaique-jour" id="mosaique-jour"></div>
 
-    ${etape.photos.length ? `<div class="galerie">${etape.photos
-      .map((photo) => `<img src="${photo}" alt="" loading="lazy">`).join('')}</div>` : ''}
+      <dl class="mesures">${mesures}</dl>
+      ${profil}
 
-    ${points}
+      <p class="recit">${echapper(etape.recit)}</p>
 
-    <div class="souvenirs" id="souvenirs-etape"></div>
+      ${etape.photos.length ? `<div class="galerie">${etape.photos
+        .map((photo) => `<img src="${photo}" alt="" loading="lazy">`).join('')}</div>` : ''}
+
+      ${points}
+    </div>
+
+    <div class="volet" data-volet="souvenirs" id="volet-souvenirs" role="tabpanel" aria-labelledby="onglet-souvenirs">
+      <div class="souvenirs" id="souvenirs-etape"></div>
+    </div>
 
     <div class="navigation">
       <button type="button" ${precedente ? `data-jour="${precedente.jour}"` : 'disabled'}>
@@ -286,6 +411,23 @@ function gabaritFiche(etape) {
         <span>Suivant</span>${suivante ? `J${suivante.jour} ${echapper(suivante.arrivee.nom)}` : '—'}</button>
     </div>
   </div>`;
+}
+
+// ------------------------------------------------------- feuille (téléphone)
+
+const LIBELLES_FEUILLE = { fermee: 'Voir le détail', mi: 'Tout voir', pleine: 'Replier' };
+
+function reglerFeuille(hauteur) {
+  etat.feuille = hauteur;
+  elements.panneau.classList.toggle('est-mi', hauteur === 'mi');
+  elements.panneau.classList.toggle('est-ouvert', hauteur === 'pleine');
+  elements.poignee.dataset.hauteur = hauteur;
+  elements.poignee.setAttribute('aria-expanded', String(hauteur !== 'fermee'));
+  // Le bouton annonce ce qu'il fera, pas l'état où l'on est : « Replier » sur
+  // une feuille déjà pleine se comprend, « Plein écran » sur la même feuille
+  // laisserait croire qu'il ne s'est rien passé au clic précédent.
+  elements.poigneeTexte.textContent = LIBELLES_FEUILLE[hauteur];
+  if (hauteur !== 'fermee') elements.panneau.focus();
 }
 
 // ------------------------------------------------------------- interactions
@@ -304,11 +446,13 @@ function brancherInterface() {
     });
   }
 
-  elements.poignee.addEventListener('click', () => {
-    const ouvert = elements.panneau.classList.toggle('est-ouvert');
-    elements.poignee.setAttribute('aria-expanded', String(ouvert));
-    if (ouvert) elements.panneau.focus();
-  });
+  // Trois hauteurs plutôt que deux. La position intermédiaire est la plus
+  // utile : elle laisse voir les chiffres et la mosaïque du jour sans masquer
+  // la carte, ce qui était impossible avec un simple ouvert/fermé où tout
+  // consultait plein écran.
+  elements.poignee.addEventListener('click', () => reglerFeuille(
+    { fermee: 'mi', mi: 'pleine', pleine: 'fermee' }[etat.feuille || 'fermee'],
+  ));
 
   document.addEventListener('keydown', (evenement) => {
     // La cible peut être le document lui-même, qui n'a pas de méthode matches.

@@ -166,9 +166,9 @@ racine.addEventListener('change', (evenement) => {
 });
 
 // Un fichier s'ouvre en grand ici comme sur le site : voir une photo en entier
-// avant de décider de la supprimer est le geste même de la modération. La
-// série parcourue est celle de la liste affichée — donc de la journée filtrée,
-// le cas échéant.
+// avant de décider de la supprimer est le geste même de la modération. Les
+// flèches restent dans la contribution examinée, celle qu'on s'apprête à
+// garder ou à supprimer.
 brancherVisionneuse(racine);
 
 racine.addEventListener('click', async (evenement) => {

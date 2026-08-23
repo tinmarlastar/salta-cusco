@@ -123,9 +123,9 @@ réseau fonctionne de nouveau, recharger la page suffit à relancer la file.
 
 **Regarder les photos** : un clic sur une photo l'ouvre en grand. Les flèches
 du clavier, les boutons à l'écran ou un glissé du pouce passent d'un fichier au
-suivant, **à travers tous les souvenirs de l'étape affichée** — jamais au-delà,
-la carte et la frise continueraient sinon de désigner un jour qu'on ne regarde
-plus. `Échap` referme. Photos et vidéos s'ouvrent du même geste : dans la grille,
+suivant **à l'intérieur d'un même souvenir**, et bouclent sur sa dernière
+photo. Enchaîner sur le souvenir suivant ferait changer d'auteur et de moment
+sans que rien ne le signale. `Échap` referme. Photos et vidéos s'ouvrent du même geste : dans la grille,
 une vidéo est une vignette marquée d'un rond de lecture, sans commandes — elle
 se joue en grand, dans la visionneuse.
 

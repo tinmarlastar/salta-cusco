@@ -86,7 +86,7 @@ export function gabaritGalerie(medias, { avecRetraits = false } = {}) {
     </div>`;
 }
 
-/** Fichiers présents dans un conteneur, dans l'ordre où ils sont à l'écran.
+/** Fichiers d'une publication, dans l'ordre où ils sont à l'écran.
 
     Relevé au moment du clic plutôt que tenu à jour : la liste est reconstruite
     à chaque rafraîchissement, un index mémorisé y désignerait vite autre
@@ -102,14 +102,19 @@ function serieDe(conteneur) {
 }
 
 /** Rend cliquables les fichiers d'un conteneur : clic ou Entrée les ouvrent
-    en grand, et les flèches circulent dans tout ce que le conteneur affiche.
+    en grand, et les flèches circulent dans les fichiers de LA PUBLICATION
+    cliquée — pas au-delà.
 
-    Les écouteurs sont délégués au conteneur, un élément stable dont seul le
-    contenu change : rien à reposer après un rendu. */
+    Le conteneur ne sert qu'à la délégation : c'est un élément stable dont seul
+    le contenu change, si bien que rien n'est à reposer après un rendu. */
 export function brancherVisionneuse(conteneur) {
   function ouvrirDepuis(vise) {
     if (!vise) return;
-    const fichiers = serieDe(conteneur);
+    // Repli sur le conteneur pour un fichier qui ne serait pas dans une carte
+    // de souvenir : la visionneuse continue de fonctionner plutôt que de
+    // rester muette.
+    const publication = vise.closest('.souvenir') || conteneur;
+    const fichiers = serieDe(publication);
     const depart = fichiers.findIndex((f) => f.element === vise);
     if (depart >= 0) ouvrirVisionneuse(fichiers, depart);
   }
@@ -318,10 +323,11 @@ function gabaritFormulaire() {
 
    Plein écran au clic sur un fichier, avec passage de l'un à l'autre.
 
-   La série parcourue est celle de l'ÉTAPE affichée, tous souvenirs confondus :
-   on feuillette la journée entière sans se soucier de qui a posté quoi, mais
-   on ne déborde jamais sur une autre étape — la carte, le titre et la frise
-   continueraient de désigner un jour qu'on ne regarde plus.
+   La série parcourue est celle d'UNE publication : on feuillette les photos
+   d'un même souvenir, et l'on s'arrête à sa dernière. Enchaîner sur le
+   souvenir suivant ferait passer d'un auteur et d'un moment à un autre sans
+   que rien ne le signale, alors que le compteur laisse croire qu'on est
+   toujours dans la même série.
 
    Un seul élément pour toute la page, créé au premier usage : quinze étapes
    consultées dans la soirée ne doivent pas laisser quinze visionneuses dans le
@@ -833,8 +839,7 @@ export function monterSouvenirs(conteneur, jour) {
       ?.querySelector('button[data-action="reessayer"]')?.click();
   });
 
-  // La série parcourue est celle de la liste affichée, donc celle de l'étape
-  // ouverte : on feuillette la journée entière, jamais au-delà.
+  // Les flèches restent dans le souvenir cliqué : c'est lui qu'on regarde.
   brancherVisionneuse(liste);
 
   liste.addEventListener('click', async (evenement) => {

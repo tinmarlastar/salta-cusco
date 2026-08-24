@@ -333,7 +333,7 @@ function gabaritAccueil(voyage) {
   const mesures = [
     ['Distance', `${nombre(voyage.distanceKm)} <b>km</b>`],
     ['Point haut', `${nombre(voyage.altitudeMaxM)} <b>m</b>`],
-    ['Pays', `${voyage.pays.length}`],
+    ['Pays traversés', `${voyage.pays.length}`],
     // Le dénivelé vient du tracé, pas de la brochure : si les traces n'ont pas
     // pu être chargées, la case s'efface plutôt que d'afficher zéro.
     ...(denivele ? [['Dénivelé total', `${nombre(denivele)} <b>m</b>`]] : []),

@@ -511,18 +511,23 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
      faut. `minmax(0, …)` et non `1fr` : le `nowrap` des valeurs empêcherait
      sinon les colonnes de se répartir également. */
   grid-template-columns: repeat(auto-fit, minmax(min(7rem, 100%), 1fr));
-  gap: 1px;
+  /* Ni fond ni bordure : les mesures se posent sur la page comme le reste du
+     panneau. Le fond servait à peindre les filets par les interstices d'une
+     grille de 1 px — commode tant que la dernière rangée était pleine, mais
+     six valeurs sur cinq colonnes laissent quatre cases vides, et le fond s'y
+     étalait en pavé gris. L'écart seul sépare désormais les mesures ; ce qui
+     manque en cadre, les intitulés le rendent en alignement. */
+  gap: .875rem 1.5rem;
   margin: 0 0 1.25rem;
-  background: var(--nuit-3);
-  border: 1px solid var(--nuit-3);
 }
 
-.mesures div { padding: .625rem .75rem; background: var(--nuit); }
+.mesures div { padding: 0; }
 
-/* La note qui dit d'où sort le « ≈ » du temps de trajet. Elle se serre contre
-   le tableau qu'elle commente : sans cela, l'écart du bas la faisait flotter
-   entre les mesures et le profil, sans plus se rattacher à ni l'un ni l'autre. */
-.mesures:has(+ .mesures__note) { margin-bottom: .375rem; }
+/* La note qui dit d'où sort le « ≈ » du temps de trajet. Elle se tient près du
+   tableau qu'elle commente, mais pas plus près que les rangées ne le sont entre
+   elles : sans cadre pour marquer la fin des mesures, un écart plus court
+   l'aurait fait passer pour une rangée de plus. */
+.mesures:has(+ .mesures__note) { margin-bottom: 1rem; }
 
 .mesures__note {
   margin: 0 0 1.25rem;

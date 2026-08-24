@@ -102,7 +102,7 @@ function remplirBandeau(voyage) {
   // ferait déborder le bandeau sur un téléphone.
   elements.eyebrow.textContent = `${voyage.operateur} · ${voyage.duree}`;
   elements.titre.innerHTML =
-    `${echapper(voyage.titre)} <span>${echapper(voyage.sousTitre.replace('Horizons sud-américains, de ', ''))}</span>`;
+    `${echapper(voyage.titre)} <span>${echapper(voyage.sousTitre.replace('Horizons sud-américains, ', ''))}</span>`;
 
 }
 

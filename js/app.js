@@ -416,8 +416,7 @@ function gabaritFiche(etape) {
   const mesures = etape.ride
     ? `<div><dt>Départ à</dt><dd>${nombre(etape.depart.altitudeM)} <small>m</small></dd></div>
        <div><dt>Distance</dt><dd>${nombre(etape.km)} <small>km</small></dd></div>
-       <div class="${etape.kmPiste ? 'est-piste' : ''}"><dt>Dont piste</dt>
-         <dd>${nombre(etape.kmPiste)} <small>km</small></dd></div>
+       <div><dt>Dont piste</dt><dd>${nombre(etape.kmPiste)} <small>km</small></dd></div>
        <div><dt>Dont route</dt><dd>${nombre(kmRoute)} <small>km</small></dd></div>
        <div><dt>Arrivée à</dt><dd>${nombre(etape.arrivee.altitudeM)} <small>m</small></dd></div>
        ${gabaritDuree(etape, kmRoute)}`

@@ -723,6 +723,31 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 .frise__separation { stroke: var(--nuit-3); stroke-width: 1; }
 .frise__trace { fill: none; stroke: var(--soufre); stroke-width: 1.75; stroke-linejoin: round; }
 
+/* « Quatre nations » : le voyage se colore pays par pays, sur la frise comme
+   dans le bandeau de l'étape. C'est ce qui distingue cet habillage des autres —
+   la couleur y porte une information au lieu de décorer.
+
+   Quatre teintes choisies pour se distinguer entre elles sur fond clair, et
+   non pour reproduire les drapeaux : le Chili et le Pérou sont tous deux
+   rouges, deux rouges voisins sur une même frise ne se lisent pas. */
+[data-habillage="nations"] {
+  --pays-ar: #4a7fb5;   /* Argentine */
+  --pays-cl: #b8332a;   /* Chili */
+  --pays-bo: #2f7d4f;   /* Bolivie */
+  --pays-pe: #d2622a;   /* Pérou */
+}
+[data-habillage="nations"] .frise__trace[data-pays="AR"] { stroke: var(--pays-ar); }
+[data-habillage="nations"] .frise__trace[data-pays="CL"] { stroke: var(--pays-cl); }
+[data-habillage="nations"] .frise__trace[data-pays="BO"] { stroke: var(--pays-bo); }
+[data-habillage="nations"] .frise__trace[data-pays="PE"] { stroke: var(--pays-pe); }
+
+/* Le numéro du jour prend la couleur de son pays : c'est ce qui relie la frise
+   à la fiche, et fait de la couleur une clé de lecture plutôt qu'un ornement. */
+[data-habillage="nations"] .fiche__jour[data-pays="AR"] .fiche__numero { color: var(--pays-ar); }
+[data-habillage="nations"] .fiche__jour[data-pays="CL"] .fiche__numero { color: var(--pays-cl); }
+[data-habillage="nations"] .fiche__jour[data-pays="BO"] .fiche__numero { color: var(--pays-bo); }
+[data-habillage="nations"] .fiche__jour[data-pays="PE"] .fiche__numero { color: var(--pays-pe); }
+
 .frise__jour {
   fill: var(--poussiere);
   font-family: var(--mono);

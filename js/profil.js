@@ -91,7 +91,33 @@ export function dessinerFrise(svg, { voyage, etapes, jourActif, surChoixEtape, d
   const chemin = voyage.releves.map((r, i) => `${i ? 'L' : 'M'}${x(r.km).toFixed(1)} ${y(r.altitude).toFixed(1)}`).join('');
   const base = `L${x(voyage.totalKm).toFixed(1)} ${marge.haut + h} L${marge.gauche} ${marge.haut + h}Z`;
   svg.append(creer('path', { class: 'frise__relief', d: chemin + base }));
-  svg.append(creer('path', { class: 'frise__trace', d: chemin }));
+
+  // La crête est tracée par étape, chaque morceau portant le pays où la journée
+  // s'achève. Un habillage peut alors colorer le voyage pays par pays ; les
+  // autres gardent une seule teinte, et le découpage ne se voit pas.
+  //
+  // Le pays d'ARRIVÉE, et non celui de départ : c'est là que la journée mène,
+  // et c'est ce que dit déjà l'étiquette de la fiche. Les deux journées qui
+  // franchissent une frontière sont donc peintes de la couleur du pays où
+  // elles finissent — faute d'un point de passage dans les données, on ne peut
+  // pas couper le trait à la frontière elle-même.
+  let precedent = null;
+  for (const segment of voyage.segments) {
+    const points = voyage.releves.filter((r) => r.km >= segment.debutKm && r.km <= segment.finKm);
+    if (!points.length) continue;
+    // On repart du dernier point du morceau précédent : sans lui, un blanc
+    // d'un pixel apparaîtrait à chaque jointure.
+    const suite = precedent ? [precedent, ...points] : points;
+    precedent = points[points.length - 1];
+
+    const etape = etapes.find((e) => e.jour === segment.jour);
+    const pays = etape?.pays?.[etape.pays.length - 1] || '';
+    svg.append(creer('path', {
+      class: 'frise__trace',
+      'data-pays': pays,
+      d: suite.map((r, i) => `${i ? 'L' : 'M'}${x(r.km).toFixed(1)} ${y(r.altitude).toFixed(1)}`).join(''),
+    }));
+  }
 
   // Une zone cliquable par étape de ride, plus son voile de sélection.
   for (const segment of voyage.segments) {

@@ -609,6 +609,11 @@ export function monterSouvenirs(conteneur, jour, { surDecompte = null } = {}) {
   function majStatut() {
     const ligne = formulaire.querySelector('.souvenir-form__statut');
     if (ligne) ligne.innerHTML = gabaritStatut();
+    // Le bouton dit ce qu'il fera : « Changer » quand les champs sont repliés,
+    // « Annuler » quand ils sont ouverts. Sans cette bascule, rien ne permettait
+    // de refermer ce qu'on venait d'ouvrir par curiosité, sinon publier.
+    const bouton = formulaire.querySelector('[data-action="changer-identite"]');
+    if (bouton) bouton.textContent = identiteDepliee ? 'Annuler' : 'Changer';
   }
 
   /** Amène le curseur au champ de reprise de la carte bloquée. */
@@ -622,15 +627,33 @@ export function monterSouvenirs(conteneur, jour, { surDecompte = null } = {}) {
     champ.scrollIntoView({ block: 'center' });
   }
 
-  // « Changer » : rouvre prénom et mot de passe alors que tout est mémorisé.
-  // Le mot de passe reste volontairement vide — le gestionnaire de soumission
-  // retombe sur celui en mémoire quand le champ l'est —, si bien qu'on peut
-  // corriger un prénom mal orthographié sans avoir à retaper le reste.
+  // « Changer » rouvre prénom et mot de passe alors que tout est mémorisé ; le
+  // même bouton, devenu « Annuler », les referme sans rien conserver de ce
+  // qu'on y a tapé. Le mot de passe reste volontairement vide à l'ouverture —
+  // le gestionnaire de soumission retombe sur celui en mémoire quand le champ
+  // l'est —, si bien qu'on peut corriger un prénom sans retaper le reste.
   formulaire.addEventListener('click', (evenement) => {
     if (!evenement.target.closest('[data-action="changer-identite"]')) return;
-    identiteDepliee = true;
     const champAuteur = formulaire.querySelector('[name="auteur"]');
     const champMotDePasse = formulaire.querySelector('[name="motDePasse"]');
+
+    if (identiteDepliee) {
+      // Retour à l'état d'avant le clic : les champs se referment et
+      // retrouvent ce que la mémoire contient, non ce qu'on venait d'y taper.
+      identiteDepliee = false;
+      if (champAuteur) {
+        champAuteur.value = localStorage.getItem(CLE_AUTEUR) || '';
+        champAuteur.hidden = true;
+      }
+      if (champMotDePasse) {
+        champMotDePasse.value = '';
+        champMotDePasse.hidden = true;
+      }
+      majStatut();
+      return;
+    }
+
+    identiteDepliee = true;
     if (champAuteur) {
       champAuteur.hidden = false;
       champAuteur.value = localStorage.getItem(CLE_AUTEUR) || '';
@@ -638,6 +661,7 @@ export function monterSouvenirs(conteneur, jour, { surDecompte = null } = {}) {
       champAuteur.select();
     }
     if (champMotDePasse) champMotDePasse.hidden = false;
+    majStatut();
   });
 
   // Les fichiers choisis vivent ici, et non dans `champFichier.files` : un

@@ -23,6 +23,13 @@
 <a class="saut-contenu" href="#panneau">Aller au détail de l'étape</a>
 
 <header class="bandeau">
+  <div class="bandeau__identite">
+    <p class="eyebrow" id="eyebrow-voyage"></p>
+    <h1 class="bandeau__titre" id="titre-voyage"></h1>
+  </div>
+
+  <!-- La navigation passe à droite du titre : elle commande, elle ne nomme
+       pas. À gauche, elle précédait le nom du voyage à chaque écran. -->
   <div class="bandeau__navigation">
     <button type="button" class="bouton-accueil" id="bouton-accueil" hidden>
       <span aria-hidden="true">←</span> Tout le parcours
@@ -33,11 +40,6 @@
       <span class="pas-a-pas__position" id="etape-position" aria-live="polite">—</span>
       <button type="button" id="etape-suivante" aria-label="Étape suivante">→</button>
     </div>
-  </div>
-
-  <div class="bandeau__identite">
-    <p class="eyebrow" id="eyebrow-voyage"></p>
-    <h1 class="bandeau__titre" id="titre-voyage"></h1>
   </div>
 
 </header>

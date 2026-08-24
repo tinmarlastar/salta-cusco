@@ -73,7 +73,8 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 .bandeau {
   display: flex;
   align-items: center;
-  gap: 1.5rem;
+  flex-wrap: wrap;
+  gap: .5rem 1.5rem;
   min-height: var(--bandeau-h);
   padding: .625rem 1.25rem;
   border-bottom: 1px solid var(--nuit-3);
@@ -108,15 +109,14 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 /* Bloc de navigation : retour à la vue d'ensemble, et pas-à-pas entre étapes. */
 
 .bandeau__navigation {
+  /* En ligne et poussée à droite du titre. Empilée à gauche, elle passait
+     avant le nom du voyage et occupait deux rangées pour deux boutons. */
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   flex-shrink: 0;
-  gap: .3125rem;
-  /* Sans cette ligne, l'alignement par défaut (`stretch`) étire chaque enfant
-     à la largeur du plus large : le pas-à-pas prenait celle de « Tout le
-     parcours » et traînait une zone bordée vide à droite de sa flèche. Chacun
-     garde désormais sa largeur propre. */
-  align-items: flex-start;
+  align-items: center;
+  gap: .375rem;
+  margin-left: auto;
 }
 
 .pas-a-pas {
@@ -1151,7 +1151,9 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
   :root { --frise-h: 7.5rem; }
 
   .bandeau { flex-wrap: wrap; gap: .5rem 1rem; padding: .625rem 1rem; }
-  .bandeau__navigation { flex: 1 1 100%; flex-direction: row; align-items: stretch; }
+  /* Sur un écran étroit, la navigation reprend toute une ligne : côte à côte
+     avec le titre, « Tout le parcours » n'y tiendrait pas. */
+  .bandeau__navigation { flex: 1 1 100%; margin-left: 0; align-items: stretch; }
   .bouton-accueil { flex: 1; justify-content: center; }
   .pas-a-pas { flex-shrink: 0; }
   .bandeau__identite { flex: 1 1 100%; min-width: 0; }

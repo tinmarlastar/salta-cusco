@@ -384,12 +384,11 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 
 .mesures {
   display: grid;
-  /* Une colonne par valeur, réparties également : les jours sans moto n'en ont
-     que deux, et une troisième colonne vide se verrait. */
-  grid-auto-flow: column;
-  /* minmax(0, …) et non 1fr : le `nowrap` des valeurs empêcherait sinon les
-     colonnes de se répartir également. */
-  grid-auto-columns: minmax(0, 1fr);
+  /* Cinq ou six valeurs ne tiennent plus sur une seule ligne : les colonnes se
+     remplissent selon la place, et le tableau passe à deux rangées quand il le
+     faut. `minmax(0, …)` et non `1fr` : le `nowrap` des valeurs empêcherait
+     sinon les colonnes de se répartir également. */
+  grid-template-columns: repeat(auto-fit, minmax(min(7rem, 100%), 1fr));
   gap: 1px;
   margin: 0 0 1.25rem;
   background: var(--nuit-3);
@@ -1310,8 +1309,6 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 }
 
 @media (max-width: 30rem) {
-  .mesures { grid-auto-flow: row; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .mesures div:nth-child(3) { grid-column: 1 / -1; }
 
   /* Sur un écran étroit, les chiffres occupent déjà toute la ligne : les fonds
      de carte prennent la leur plutôt que de déborder. */

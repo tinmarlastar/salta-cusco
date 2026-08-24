@@ -336,6 +336,22 @@ function gabaritAccueil(voyage) {
   </div>`;
 }
 
+/** Temps de trajet, quand l'étape en porte un.
+
+    Le champ `dureeMinutes` n'existe pas encore dans `data/etapes.json` : la
+    case reste donc absente plutôt que d'afficher une estimation. Une durée
+    calculée depuis la distance serait fausse la moitié du temps sur ces
+    pistes, et un chiffre inventé sur une fiche de voyage est pire qu'un
+    chiffre manquant. Renseigner le champ suffit à faire apparaître la case. */
+function gabaritDuree(etape) {
+  const minutes = etape.dureeMinutes;
+  if (!minutes) return '';
+  const heures = Math.floor(minutes / 60);
+  const reste = minutes % 60;
+  const valeur = reste ? `${heures} <small>h</small> ${String(reste).padStart(2, '0')}` : `${heures} <small>h</small>`;
+  return `<div><dt>Temps de trajet</dt><dd>${valeur}</dd></div>`;
+}
+
 function gabaritFiche(etape) {
   const precedente = etat.etapes.find((e) => e.jour === etape.jour - 1);
   const suivante = etat.etapes.find((e) => e.jour === etape.jour + 1);
@@ -343,11 +359,19 @@ function gabaritFiche(etape) {
     .map((code) => etat.accueil.pays.find((p) => p.code === code))
     .filter(Boolean);
 
+  // La journée dans l'ordre où on la vit : d'où l'on part, ce qu'on avale, où
+  // l'on arrive. La distance sur route se déduit du reste plutôt que d'être
+  // saisie — deux chiffres à tenir d'accord au lieu d'un seul finiraient par
+  // diverger.
+  const kmRoute = Math.max(0, etape.km - etape.kmPiste);
   const mesures = etape.ride
-    ? `<div><dt>Distance</dt><dd>${nombre(etape.km)} <small>km</small></dd></div>
+    ? `<div><dt>Départ à</dt><dd>${nombre(etape.depart.altitudeM)} <small>m</small></dd></div>
+       <div><dt>Distance</dt><dd>${nombre(etape.km)} <small>km</small></dd></div>
        <div class="${etape.kmPiste ? 'est-piste' : ''}"><dt>Dont piste</dt>
          <dd>${nombre(etape.kmPiste)} <small>km</small></dd></div>
-       <div><dt>Arrivée à</dt><dd>${nombre(etape.arrivee.altitudeM)} <small>m</small></dd></div>`
+       <div><dt>Dont route</dt><dd>${nombre(kmRoute)} <small>km</small></dd></div>
+       <div><dt>Arrivée à</dt><dd>${nombre(etape.arrivee.altitudeM)} <small>m</small></dd></div>
+       ${gabaritDuree(etape)}`
     : `<div><dt>Étape</dt><dd>${echapper(etape.arrivee.nom)}</dd></div>
        <div><dt>Altitude</dt><dd>${nombre(etape.arrivee.altitudeM)} <small>m</small></dd></div>`;
 

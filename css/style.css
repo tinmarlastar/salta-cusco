@@ -109,13 +109,15 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 /* Bloc de navigation : retour à la vue d'ensemble, et pas-à-pas entre étapes. */
 
 .bandeau__navigation {
-  /* En ligne et poussée à droite du titre. Empilée à gauche, elle passait
-     avant le nom du voyage et occupait deux rangées pour deux boutons. */
+  /* Empilée, à droite du titre. En ligne, les trois boutons se disputaient la
+     largeur restante et le nom de la destination finissait rogné —
+     « J5 Laguna Colo… ». L'un sur l'autre, chaque rangée dispose de toute la
+     largeur du bloc. */
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   flex-shrink: 0;
-  align-items: center;
-  gap: .375rem;
+  align-items: flex-end;
+  gap: .3125rem;
   margin-left: auto;
 }
 
@@ -147,7 +149,7 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 /* Le nom de la destination, à côté du chevron. Borné et coupé : « San Pedro
    de Atacama » ne doit pas repousser le titre du voyage hors de l'entête. */
 .pas-a-pas__nom {
-  max-width: 7.5rem;
+  max-width: 10rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1200,10 +1202,10 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 
 /* --------------------------------------------------------------- mobile */
 
-/* Trois destinations nommées, le titre du voyage et « Tout le parcours » ne
-   tiennent pas ensemble sous 64 rem : les noms s'effacent, les chevrons
-   restent. Le nom de l'étape courante, lui, demeure — c'est le repère. */
-@media (max-width: 64rem) {
+/* Sous 52 rem, les deux destinations nommées ne tiennent plus à côté du titre :
+   les noms s'effacent, les chevrons restent. Le seuil est bien plus bas
+   qu'avant l'empilement, qui a libéré de la largeur. */
+@media (max-width: 52rem) {
   .pas-a-pas__nom { display: none; }
 }
 

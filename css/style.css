@@ -113,34 +113,19 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 
 /* Bloc de navigation : retour à la vue d'ensemble, et pas-à-pas entre étapes. */
 
+/* Une commande à trois volets, d'un seul tenant : étape précédente, retour au
+   parcours entier, étape suivante. Les filets de 1 px sont le fond qui
+   transparaît entre les boutons. */
 .bandeau__navigation {
-  /* Empilée, à droite du titre. En ligne, les trois boutons se disputaient la
-     largeur restante et le nom de la destination finissait rogné —
-     « J5 Laguna Colo… ». L'un sur l'autre, chaque rangée dispose de toute la
-     largeur du bloc. */
   display: flex;
-  flex-direction: column;
   flex-shrink: 0;
-  /* `stretch` : les deux rangées prennent la largeur de la plus large, donc
-     la même. Alignées à droite, chacune se réglait sur son propre contenu et
-     l'escalier se voyait. */
-  align-items: stretch;
-  gap: .3125rem;
-  margin-left: auto;
-}
-
-.pas-a-pas {
-  display: flex;
-  min-width: 0;
   gap: 1px;
+  margin-left: auto;
   background: var(--nuit-3);
   border: 1px solid var(--nuit-3);
 }
 
-.pas-a-pas button {
-  /* Les deux flèches se partagent la rangée : sans ça, la rangée étirée
-     laissait une zone bordée vide à droite quand les noms sont masqués. */
-  flex: 1 1 auto;
+.bandeau__navigation button {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -155,8 +140,9 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
   cursor: pointer;
   transition: color var(--transition), background var(--transition);
 }
-.pas-a-pas button:hover:not(:disabled) { background: var(--soufre); color: var(--nuit); }
-.pas-a-pas button:disabled { color: var(--nuit-3); cursor: default; }
+.bandeau__navigation button:hover:not(:disabled) { background: var(--soufre); color: var(--nuit); }
+.bandeau__navigation button:disabled { color: var(--nuit-3); cursor: default; }
+.bandeau__navigation button[hidden] { display: none; }
 
 /* Le nom de la destination, à côté du chevron. Borné et coupé : « San Pedro
    de Atacama » ne doit pas repousser le titre du voyage hors de l'entête. */
@@ -167,29 +153,13 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
   white-space: nowrap;
   color: var(--poussiere);
 }
-.pas-a-pas button:hover:not(:disabled) .pas-a-pas__nom { color: var(--sel); }
+.bandeau__navigation button:hover:not(:disabled) .pas-a-pas__nom { color: inherit; }
 
 /* Retour à la vue d'ensemble, visible uniquement quand une étape est ouverte. */
 
-.bouton-accueil {
-  display: flex;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;   /* étiré à la largeur de la rangée voisine */
-  gap: .375rem;
-  padding: .4375rem .75rem;
-  border: 1px solid var(--nuit-3);
-  background: var(--nuit-2);
-  color: var(--sel);
-  font-family: var(--mono);
-  font-size: .6875rem;
-  letter-spacing: .06em;
-  text-transform: uppercase;
-  white-space: nowrap;
-  cursor: pointer;
-  transition: border-color var(--transition), color var(--transition);
-}
-.bouton-accueil:hover { border-color: var(--soufre); color: var(--soufre); }
+/* Le retour au parcours entier partage l'habillage de ses voisins : c'est le
+   volet central de la même commande, pas un bouton séparé. */
+.bouton-accueil { letter-spacing: .06em; text-transform: uppercase; font-size: .6875rem; }
 .bouton-accueil[hidden] { display: none; }
 
 /* Les chiffres vivent désormais sur la fiche du voyage, dans le panneau : ils
@@ -1210,10 +1180,10 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 
 /* --------------------------------------------------------------- mobile */
 
-/* Sous 52 rem, les deux destinations nommées ne tiennent plus à côté du titre :
-   les noms s'effacent, les chevrons restent. Le seuil est bien plus bas
-   qu'avant l'empilement, qui a libéré de la largeur. */
-@media (max-width: 52rem) {
+/* Sous 60 rem, la commande à trois volets et le titre ne tiennent plus côte à
+   côte : les noms des destinations s'effacent, les chevrons et « Tout le
+   parcours » restent. */
+@media (max-width: 60rem) {
   .pas-a-pas__nom { display: none; }
 }
 
@@ -1229,9 +1199,9 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
   .bandeau { flex-wrap: wrap; gap: .5rem 1rem; padding: .625rem 1rem; }
   /* Sur un écran étroit, la navigation reprend toute une ligne : côte à côte
      avec le titre, « Tout le parcours » n'y tiendrait pas. */
-  .bandeau__navigation { flex: 1 1 100%; margin-left: 0; align-items: stretch; }
+  .bandeau__navigation { flex: 1 1 100%; margin-left: 0; }
+  .bandeau__navigation button { flex: 1 1 auto; }
   .bouton-accueil { flex: 1; justify-content: center; }
-  .pas-a-pas { flex-shrink: 0; }
   .bandeau__identite { flex: 1 1 100%; min-width: 0; }
   .bandeau__titre { font-size: 1.0625rem; font-stretch: 100%; }
   .bandeau__titre span { display: block; font-size: .9375rem; }

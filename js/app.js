@@ -150,19 +150,28 @@ function majPasAPas(etape) {
   nommerFleche(elements.etapePrecedente, '←', precedente, 'Étape précédente');
   nommerFleche(elements.etapeSuivante, '→', suivante, 'Étape suivante');
 
-  elements.etapePrecedente.disabled = index <= 0;
-  elements.etapeSuivante.disabled = index === jours.length - 1;
+  // `disabled` n'a plus grand-chose à désactiver puisque le volet est masqué
+  // quand il n'a pas de destination ; on le garde par sûreté, au cas où un
+  // rendu laisserait le bouton visible.
+  elements.etapePrecedente.disabled = !precedente;
+  elements.etapeSuivante.disabled = !suivante;
 }
 
 /** Écrit une flèche du pas-à-pas : le chevron, puis la destination. */
 function nommerFleche(bouton, chevron, cible, intitule) {
-  const nom = cible ? `J${cible.jour} ${cible.arrivee.nom}` : '';
+  // Sans destination — avant J1, après J15 — le volet disparaît au lieu de
+  // rester en place, éteint : un bloc gris collé à « Tout le parcours » se lit
+  // comme une commande en panne plutôt que comme une extrémité du voyage.
+  bouton.hidden = !cible;
+  if (!cible) return;
+
+  const nom = `J${cible.jour} ${cible.arrivee.nom}`;
   const marque = `<span aria-hidden="true">${chevron}</span>`;
-  const texte = nom ? `<span class="pas-a-pas__nom">${echapper(nom)}</span>` : '';
+  const texte = `<span class="pas-a-pas__nom">${echapper(nom)}</span>`;
   // Le chevron précède le nom à gauche, le suit à droite : chacun pointe vers
   // l'extérieur du bloc, donc vers le sens du déplacement.
   bouton.innerHTML = chevron === '←' ? marque + texte : texte + marque;
-  bouton.setAttribute('aria-label', nom ? `${intitule} : ${nom}` : intitule);
+  bouton.setAttribute('aria-label', `${intitule} : ${nom}`);
 }
 
 /** Déplace la sélection d'un cran ; depuis l'accueil, avance sur la première étape. */

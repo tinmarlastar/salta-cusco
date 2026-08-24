@@ -28,17 +28,14 @@
     <h1 class="bandeau__titre" id="titre-voyage"></h1>
   </div>
 
-  <!-- La navigation passe à droite du titre : elle commande, elle ne nomme
-       pas. À gauche, elle précédait le nom du voyage à chaque écran. -->
-  <div class="bandeau__navigation">
-    <button type="button" class="bouton-accueil" id="bouton-accueil" hidden>
-      <span aria-hidden="true">←</span> Tout le parcours
-    </button>
-
-    <div class="pas-a-pas" role="group" aria-label="Naviguer d'étape en étape">
-      <button type="button" id="etape-precedente" aria-label="Étape précédente">←</button>
-      <button type="button" id="etape-suivante" aria-label="Étape suivante">→</button>
-    </div>
+  <!-- La navigation est à droite du titre : elle commande, elle ne nomme pas.
+       Une seule commande à trois volets : d'où l'on vient, le parcours entier,
+       où l'on va. Le retour au tout est au centre parce qu'il est le point
+       d'où partent les deux autres. -->
+  <div class="bandeau__navigation" role="group" aria-label="Naviguer dans le voyage">
+    <button type="button" id="etape-precedente" aria-label="Étape précédente"></button>
+    <button type="button" class="bouton-accueil" id="bouton-accueil" hidden>Tout le parcours</button>
+    <button type="button" id="etape-suivante" aria-label="Étape suivante"></button>
   </div>
 
 </header>

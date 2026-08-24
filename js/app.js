@@ -328,11 +328,23 @@ function gabaritAccueil(voyage) {
   // Les chiffres du voyage vivaient dans l'entête, où ils occupaient une bande
   // sur toute la largeur à chaque écran. Ils décrivent le voyage entier : leur
   // place est sur sa fiche, c'est-à-dire ici.
+  // Les moyennes se rapportent aux étapes À MOTO, pas aux quinze jours : diviser
+  // par les journées de repos donnerait une moyenne que jamais aucune journée
+  // n'a approchée.
+  const etapesAMoto = etat.etapes.filter((e) => e.ride).length;
+  const denivele = etat.voyage?.denivelePositifM;
+
   const mesures = [
     ['Distance', `${nombre(voyage.distanceKm)} <b>km</b>`],
-    ['Dont piste', `${nombre(voyage.pisteKm)} <b>km</b>`],
+    ['Distance par étape', `${nombre(Math.round(voyage.distanceKm / etapesAMoto))} <b>km</b>`],
     ['Point haut', `${nombre(voyage.altitudeMaxM)} <b>m</b>`],
     ['Pays', `${voyage.pays.length}`],
+    // Le dénivelé vient du tracé, pas de la brochure : si les traces n'ont pas
+    // pu être chargées, ces deux cases s'effacent plutôt que d'afficher zéro.
+    ...(denivele ? [
+      ['Dénivelé par étape', `${nombre(Math.round(denivele / etapesAMoto))} <b>m</b>`],
+      ['Dénivelé total', `${nombre(denivele)} <b>m</b>`],
+    ] : []),
   ];
 
   return `<div class="accueil">

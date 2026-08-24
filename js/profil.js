@@ -24,6 +24,7 @@ export function assemblerVoyage(traces) {
   const releves = [];      // { km, altitude, lat, lon }
   const segments = [];     // { jour, debutKm, finKm }
   let cumul = 0;
+  let denivelePositifM = 0;
 
   for (const jour of jours) {
     const profil = parJour.get(jour).properties.profil;
@@ -31,10 +32,17 @@ export function assemblerVoyage(traces) {
     for (const [km, altitude, lat, lon] of profil) {
       releves.push({ km: debut + km, altitude, lat, lon });
     }
+    // Le dénivelé se somme À L'INTÉRIEUR d'une étape, jamais d'une étape à la
+    // suivante : le voyage comporte des transferts, et la marche entre l'arrivée
+    // d'un jour et le départ du lendemain n'a pas été montée à moto. Comptée,
+    // elle aurait ajouté des mètres que personne n'a gravis.
+    for (let i = 1; i < profil.length; i += 1) {
+      denivelePositifM += Math.max(0, profil[i][1] - profil[i - 1][1]);
+    }
     cumul = debut + profil[profil.length - 1][0];
     segments.push({ jour, debutKm: debut, finKm: cumul });
   }
-  return { releves, segments, totalKm: cumul };
+  return { releves, segments, totalKm: cumul, denivelePositifM: Math.round(denivelePositifM) };
 }
 
 /** Position d'un jour sans ride sur l'axe : là où le compteur s'est arrêté. */

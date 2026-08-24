@@ -240,9 +240,10 @@ export function dessinerProfilEtape(svg, trace, { surSurvol, surSortie }) {
 
   // Une gouttière à gauche pour les légendes d'altitude, une en bas pour les
   // distances : sans elles le texte se posait à même le relief, illisible dès
-  // que la courbe passait dessous. 46, la largeur de « 4 764 m » dans la
-  // police à chasse fixe des légendes, plus un peu d'air.
-  const marge = { haut: 10, bas: 16, gauche: 46, droite: 6 };
+  // que la courbe passait dessous. 52 : la largeur de « 4 764 m » dans la
+  // police à chasse fixe des légendes, plus de l'air pour que la courbe ne
+  // vienne pas non plus la longer de trop près quand un sommet se dresse tôt.
+  const marge = { haut: 10, bas: 16, gauche: 52, droite: 6 };
   const l = largeur - marge.gauche - marge.droite;
   const h = hauteur - marge.haut - marge.bas;
   const totalKm = profil[profil.length - 1][0];
@@ -261,6 +262,13 @@ export function dessinerProfilEtape(svg, trace, { surSurvol, surSortie }) {
   const base = `L${x(totalKm).toFixed(1)} ${hauteur - marge.bas} L${marge.gauche} ${hauteur - marge.bas}Z`;
   svg.append(creer('path', { class: 'frise__relief', d: chemin + base }));
   svg.append(creer('path', { class: 'frise__trace', d: chemin }));
+
+  // Un trait tous les 500 m, entre les deux bornes légendées ci-dessous : eux
+  // n'ont pas de texte, ils balisent seulement l'échelle entre les deux
+  // valeurs qui, elles, sont écrites.
+  for (let altitude = Math.ceil(bas / 500) * 500; altitude < haut; altitude += 500) {
+    svg.append(creer('line', { class: 'frise__graduation', x1: marge.gauche, x2: largeur - marge.droite, y1: y(altitude), y2: y(altitude) }));
+  }
 
   // Légendes de l'axe des ordonnées : les deux bornes du relief du jour, haut
   // et bas, posées dans la gouttière de gauche plutôt que par-dessus le relief.

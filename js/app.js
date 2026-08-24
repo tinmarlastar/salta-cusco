@@ -7,17 +7,26 @@
 import { creerCarte } from './carte.js';
 import { assemblerVoyage, dessinerFrise, dessinerProfilEtape } from './profil.js';
 import { monterSouvenirs } from './souvenirs-vue.js';
+import { listerDecomptes } from './souvenirs.js';
 
 const nombre = (valeur) => valeur.toLocaleString('fr-FR');
 const echapper = (texte) => String(texte).replace(/[&<>"]/g, (c) =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
-const etat = { etapes: [], traces: null, voyage: null, jour: null, carte: null };
+const etat = {
+  etapes: [], traces: null, voyage: null, jour: null, carte: null,
+  // Nombre de souvenirs par journée, pour les pastilles du bandeau.
+  decomptes: {},
+  // Onglet du panneau, et si l'on y est arrivé par un clic. Le défaut se
+  // recalcule à chaque journée — souvenirs quand il y en a, étape sinon —,
+  // mais un choix explicite tient jusqu'au changement de journée.
+  onglet: 'etape',
+  ongletChoisiALaMain: false,
+};
 
 const elements = {
   eyebrow: document.getElementById('eyebrow-voyage'),
   titre: document.getElementById('titre-voyage'),
-  chiffres: document.getElementById('chiffres-voyage'),
   panneau: document.getElementById('panneau'),
   frise: document.getElementById('frise'),
   poignee: document.getElementById('poignee'),
@@ -66,8 +75,22 @@ async function demarrer() {
   });
 
   brancherInterface();
+  reglerFeuille('fermee');
   choisir(jourDepuisAdresse(), { recentrer: false });
   redessinerFrise();
+
+  // Les pastilles arrivent après coup : le bandeau est utilisable sans elles,
+  // et un service injoignable ne doit pas retarder l'affichage du parcours.
+  listerDecomptes()
+    .then((decomptes) => {
+      etat.decomptes = decomptes;
+      redessinerFrise();
+      // Les décomptes arrivent après le premier affichage : c'est seulement
+      // maintenant qu'on sait si la journée ouverte a des souvenirs, donc quel
+      // onglet elle devait montrer.
+      appliquerOngletParDefaut();
+    })
+    .catch(() => {});
 
   // La grille de la page n'est mesurable qu'après le premier rendu : c'est là
   // seulement que la carte peut se cadrer sur la bonne étape.
@@ -81,15 +104,6 @@ function remplirBandeau(voyage) {
   elements.titre.innerHTML =
     `${echapper(voyage.titre)} <span>${echapper(voyage.sousTitre.replace('Horizons sud-américains, de ', ''))}</span>`;
 
-  const mesures = [
-    ['Distance', `${nombre(voyage.distanceKm)} <b>km</b>`],
-    ['Dont piste', `${nombre(voyage.pisteKm)} <b>km</b>`],
-    ['Point haut', `${nombre(voyage.altitudeMaxM)} <b>m</b>`],
-    ['Pays', `${voyage.pays.length}`],
-  ];
-  elements.chiffres.innerHTML = mesures
-    .map(([titre, valeur]) => `<div><dt>${titre}</dt><dd>${valeur}</dd></div>`)
-    .join('');
 }
 
 // ---------------------------------------------------------------- sélection
@@ -102,6 +116,7 @@ function jourDepuisAdresse() {
 }
 
 function choisir(jour, { recentrer = true, majAdresse = true } = {}) {
+  if (jour !== etat.jour) etat.ongletChoisiALaMain = false;
   etat.jour = jour;
   const etape = etat.etapes.find((e) => e.jour === jour) || null;
 
@@ -113,7 +128,6 @@ function choisir(jour, { recentrer = true, majAdresse = true } = {}) {
     const cible = etape ? `#j${etape.jour}` : ' ';
     if (location.hash !== cible) history.replaceState(null, '', etape ? cible : location.pathname);
   }
-  elements.poigneeTexte.textContent = etape ? `Jour ${etape.jour}` : 'Le voyage';
   elements.boutonAccueil.hidden = !etape;
   majPasAPas(etape);
 }
@@ -123,7 +137,13 @@ function majPasAPas(etape) {
   const jours = etat.etapes.map((e) => e.jour);
   const index = etape ? jours.indexOf(etape.jour) : -1;
 
-  elements.etapePosition.textContent = etape ? `J${etape.jour}` : '—';
+  // Le nom de l'arrivée, et non le titre complet : « J4 · San Pedro de
+  // Atacama » dit où l'on va, là où « Susques → San Pedro de Atacama »
+  // doublerait la largeur du bloc pour redire d'où l'on vient. C'est aussi la
+  // façon dont la barre précédent/suivant nomme les étapes.
+  elements.etapePosition.textContent = etape
+    ? `J${etape.jour} · ${etape.arrivee.nom}`
+    : '—';
   elements.etapePrecedente.disabled = index <= 0;
   elements.etapeSuivante.disabled = index === jours.length - 1;
 }
@@ -144,6 +164,7 @@ function redessinerFrise() {
     etapes: etat.etapes,
     jourActif: etat.jour,
     surChoixEtape: (jour) => choisir(jour),
+    decomptes: etat.decomptes,
   });
   amenerEtapeEnVue();
 }
@@ -184,7 +205,25 @@ function afficherPanneau(etape) {
       });
     }
     const blocSouvenirs = elements.panneau.querySelector('#souvenirs-etape');
-    if (blocSouvenirs) monterSouvenirs(blocSouvenirs, etape.jour);
+    if (blocSouvenirs) {
+      monterSouvenirs(blocSouvenirs, etape.jour, {
+        mosaique: elements.panneau.querySelector('#mosaique-jour'),
+        // Le décompte vient de la vue des souvenirs, seule à connaître le
+        // nombre réellement publié pour cette journée. Il corrige la pastille
+        // de la frise dès qu'un souvenir est publié ou supprimé, sans
+        // recharger la page — d'où le redessin, sans lequel la valeur était
+        // bien enregistrée mais n'apparaissait qu'au changement de journée
+        // suivant, celui-ci redessinant la frise pour d'autres raisons.
+        surDecompte: (nombre) => {
+          etat.decomptes[etape.jour] = nombre;
+          majOngletCompte(nombre);
+          redessinerFrise();
+        },
+      });
+      // « +N » sous la mosaïque : bascule sur l'onglet qui montre tout.
+      blocSouvenirs.addEventListener('souvenirs:tout-voir', () => activerOnglet('souvenirs'));
+    }
+    brancherOnglets();
   }
 
   for (const bouton of elements.panneau.querySelectorAll('[data-jour]')) {
@@ -197,13 +236,71 @@ function afficherPanneau(etape) {
   }
 }
 
+// -------------------------------------------------------- onglets du panneau
+
+function brancherOnglets() {
+  for (const bouton of elements.panneau.querySelectorAll('[data-onglet]')) {
+    bouton.addEventListener('click', () => {
+      etat.ongletChoisiALaMain = true;
+      activerOnglet(bouton.dataset.onglet);
+    });
+  }
+  appliquerOngletParDefaut();
+}
+
+/** Ouvre sur les souvenirs quand la journée en a, sur l'étape sinon.
+
+    C'est ce que l'on vient chercher : une journée qui a reçu des photos se
+    regarde d'abord, une journée vide se lit. Un clic sur un onglet coupe court
+    à cette règle jusqu'au changement de journée — sans quoi le décompte, qui
+    arrive après coup, ramènerait sur « Souvenirs » quelqu'un qui vient d'aller
+    voir le récit. */
+function appliquerOngletParDefaut() {
+  if (etat.ongletChoisiALaMain) return;
+  if (!elements.panneau.querySelector('[data-onglet]')) return;
+  activerOnglet(etat.decomptes[etat.jour] > 0 ? 'souvenirs' : 'etape');
+}
+
+function activerOnglet(nom) {
+  etat.onglet = nom;
+  for (const bouton of elements.panneau.querySelectorAll('[data-onglet]')) {
+    const actif = bouton.dataset.onglet === nom;
+    bouton.classList.toggle('est-actif', actif);
+    bouton.setAttribute('aria-selected', String(actif));
+  }
+  for (const volet of elements.panneau.querySelectorAll('[data-volet]')) {
+    volet.hidden = volet.dataset.volet !== nom;
+  }
+}
+
+function majOngletCompte(nombre) {
+  const compte = elements.panneau.querySelector('.onglets__compte');
+  if (!compte) return;
+  compte.hidden = nombre === 0;
+  compte.textContent = nombre;
+}
+
 function gabaritAccueil(voyage) {
   const joursParPays = new Map(voyage.pays.map((p) => [p.code, 0]));
   for (const etape of etat.etapes) {
     for (const code of etape.pays) joursParPays.set(code, (joursParPays.get(code) || 0) + 1);
   }
 
+  // Les chiffres du voyage vivaient dans l'entête, où ils occupaient une bande
+  // sur toute la largeur à chaque écran. Ils décrivent le voyage entier : leur
+  // place est sur sa fiche, c'est-à-dire ici.
+  const mesures = [
+    ['Distance', `${nombre(voyage.distanceKm)} <b>km</b>`],
+    ['Dont piste', `${nombre(voyage.pisteKm)} <b>km</b>`],
+    ['Point haut', `${nombre(voyage.altitudeMaxM)} <b>m</b>`],
+    ['Pays', `${voyage.pays.length}`],
+  ];
+
   return `<div class="accueil">
+    <dl class="chiffres">${mesures
+      .map(([titre, valeur]) => `<div><dt>${titre}</dt><dd>${valeur}</dd></div>`)
+      .join('')}</dl>
+
     <img class="accueil__photo" src="${voyage.photo}" alt="Le salar d'Uyuni vu du ciel, traversé de traces de roues." loading="lazy">
     <p class="accueil__texte">${echapper(voyage.presentation)}</p>
 
@@ -267,17 +364,31 @@ function gabaritFiche(etape) {
     <h2 class="fiche__titre">${echapper(etape.titre)}</h2>
     ${etape.ride ? '' : '<p class="fiche__repos">Journée sans moto</p>'}
 
-    <dl class="mesures">${mesures}</dl>
-    ${profil}
+    <div class="onglets" role="tablist" aria-label="Contenu de l'étape">
+      <button type="button" class="onglets__bouton" role="tab" data-onglet="etape"
+              id="onglet-etape" aria-controls="volet-etape">Étape</button>
+      <button type="button" class="onglets__bouton" role="tab" data-onglet="souvenirs"
+              id="onglet-souvenirs" aria-controls="volet-souvenirs">Souvenirs<span
+              class="onglets__compte" hidden></span></button>
+    </div>
 
-    <p class="recit">${echapper(etape.recit)}</p>
+    <div class="volet" data-volet="etape" id="volet-etape" role="tabpanel" aria-labelledby="onglet-etape">
+      <div class="mosaique-jour" id="mosaique-jour"></div>
 
-    ${etape.photos.length ? `<div class="galerie">${etape.photos
-      .map((photo) => `<img src="${photo}" alt="" loading="lazy">`).join('')}</div>` : ''}
+      <dl class="mesures">${mesures}</dl>
+      ${profil}
 
-    ${points}
+      <p class="recit">${echapper(etape.recit)}</p>
 
-    <div class="souvenirs" id="souvenirs-etape"></div>
+      ${etape.photos.length ? `<div class="galerie">${etape.photos
+        .map((photo) => `<img src="${photo}" alt="" loading="lazy">`).join('')}</div>` : ''}
+
+      ${points}
+    </div>
+
+    <div class="volet" data-volet="souvenirs" id="volet-souvenirs" role="tabpanel" aria-labelledby="onglet-souvenirs">
+      <div class="souvenirs" id="souvenirs-etape"></div>
+    </div>
 
     <div class="navigation">
       <button type="button" ${precedente ? `data-jour="${precedente.jour}"` : 'disabled'}>
@@ -286,6 +397,23 @@ function gabaritFiche(etape) {
         <span>Suivant</span>${suivante ? `J${suivante.jour} ${echapper(suivante.arrivee.nom)}` : '—'}</button>
     </div>
   </div>`;
+}
+
+// ------------------------------------------------------- feuille (téléphone)
+
+const LIBELLES_FEUILLE = { fermee: 'Voir le détail', mi: 'Tout voir', pleine: 'Replier' };
+
+function reglerFeuille(hauteur) {
+  etat.feuille = hauteur;
+  elements.panneau.classList.toggle('est-mi', hauteur === 'mi');
+  elements.panneau.classList.toggle('est-ouvert', hauteur === 'pleine');
+  elements.poignee.dataset.hauteur = hauteur;
+  elements.poignee.setAttribute('aria-expanded', String(hauteur !== 'fermee'));
+  // Le bouton annonce ce qu'il fera, pas l'état où l'on est : « Replier » sur
+  // une feuille déjà pleine se comprend, « Plein écran » sur la même feuille
+  // laisserait croire qu'il ne s'est rien passé au clic précédent.
+  elements.poigneeTexte.textContent = LIBELLES_FEUILLE[hauteur];
+  if (hauteur !== 'fermee') elements.panneau.focus();
 }
 
 // ------------------------------------------------------------- interactions
@@ -304,11 +432,13 @@ function brancherInterface() {
     });
   }
 
-  elements.poignee.addEventListener('click', () => {
-    const ouvert = elements.panneau.classList.toggle('est-ouvert');
-    elements.poignee.setAttribute('aria-expanded', String(ouvert));
-    if (ouvert) elements.panneau.focus();
-  });
+  // Trois hauteurs plutôt que deux. La position intermédiaire est la plus
+  // utile : elle laisse voir les chiffres et la mosaïque du jour sans masquer
+  // la carte, ce qui était impossible avec un simple ouvert/fermé où tout
+  // consultait plein écran.
+  elements.poignee.addEventListener('click', () => reglerFeuille(
+    { fermee: 'mi', mi: 'pleine', pleine: 'fermee' }[etat.feuille || 'fermee'],
+  ));
 
   document.addEventListener('keydown', (evenement) => {
     // La cible peut être le document lui-même, qui n'a pas de méthode matches.

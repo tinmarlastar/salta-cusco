@@ -569,6 +569,22 @@ async function supprimer(id, requete, env, cors) {
   return repondre({ supprime: id }, { cors });
 }
 
+/** Nombre de souvenirs par journée, en un seul appel.
+
+    Le site en a besoin au chargement pour pastiller les quinze journées de son
+    bandeau : sans cette route il faudrait quinze requêtes — une par étape —
+    juste pour savoir où il y a quelque chose à voir. Lecture libre, comme le
+    reste des lectures. */
+async function compter(env, cors) {
+  const { results } = await env.DB
+    .prepare('SELECT jour, COUNT(*) AS nombre FROM contributions GROUP BY jour')
+    .all();
+  // Objet plutôt que tableau : le client indexe par jour, jamais par position.
+  const decomptes = {};
+  for (const ligne of results) decomptes[ligne.jour] = ligne.nombre;
+  return repondre({ decomptes }, { cors });
+}
+
 /** Liste toutes les contributions, pour la page de modération. */
 async function listerTout(requete, env, cors) {
   if (!await adminAutorise(requete, env)) return erreur('Mot de passe incorrect', 401, cors);
@@ -627,6 +643,10 @@ export default {
       const unMedia = chemin.match(/^\/api\/media\/([0-9a-z]+)$/);
       if (unMedia && requete.method === 'DELETE') {
         return await supprimerMedia(unMedia[1], requete, env, cors);
+      }
+
+      if (chemin === '/api/decomptes' && requete.method === 'GET') {
+        return await compter(env, cors);
       }
 
       if (chemin === '/api/tout' && requete.method === 'GET') {

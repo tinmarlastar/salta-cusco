@@ -23,6 +23,13 @@
 <a class="saut-contenu" href="#panneau">Aller au détail de l'étape</a>
 
 <header class="bandeau">
+  <div class="bandeau__identite">
+    <p class="eyebrow" id="eyebrow-voyage"></p>
+    <h1 class="bandeau__titre" id="titre-voyage"></h1>
+  </div>
+
+  <!-- La navigation passe à droite du titre : elle commande, elle ne nomme
+       pas. À gauche, elle précédait le nom du voyage à chaque écran. -->
   <div class="bandeau__navigation">
     <button type="button" class="bouton-accueil" id="bouton-accueil" hidden>
       <span aria-hidden="true">←</span> Tout le parcours
@@ -35,22 +42,30 @@
     </div>
   </div>
 
-  <div class="bandeau__identite">
-    <p class="eyebrow" id="eyebrow-voyage"></p>
-    <h1 class="bandeau__titre" id="titre-voyage"></h1>
-  </div>
-
-  <dl class="chiffres" id="chiffres-voyage"></dl>
-
-  <div class="fonds" role="group" aria-label="Fond de carte">
-    <button type="button" class="fonds__bouton" data-fond="satellite" aria-pressed="true">Satellite</button>
-    <button type="button" class="fonds__bouton" data-fond="relief" aria-pressed="false">Relief</button>
-    <button type="button" class="fonds__bouton" data-fond="plan" aria-pressed="false">Plan</button>
-  </div>
 </header>
 
+<!-- La frise est la barre de navigation du site : le profil d'altitude, les
+     quinze journées et le nombre de souvenirs de chacune, d'un seul tenant.
+     Posée au-dessus de la carte, là où on la cherche. -->
+<nav class="frise" aria-label="Choisir une journée">
+  <div class="frise__defilement">
+    <svg class="frise__svg" id="frise" role="img"
+         aria-label="Profil d'altitude du voyage entier, du jour 1 au jour 15. Cliquez une étape pour la détailler."></svg>
+  </div>
+</nav>
+
 <main class="scene">
-  <div id="carte" class="carte" role="application" aria-label="Carte du parcours"></div>
+  <div id="carte" class="carte" role="application" aria-label="Carte du parcours">
+    <!-- Le choix du fond commande la carte : il vit donc DANS la carte, et
+         reste à portée sur toutes les vues. Placé dans la scène, il se serait
+         retrouvé par-dessus le panneau dès que les deux ont échangé de côté ;
+         placé dans le panneau, il aurait disparu à l'ouverture d'une étape. -->
+    <div class="fonds" role="group" aria-label="Fond de carte">
+      <button type="button" class="fonds__bouton" data-fond="satellite" aria-pressed="true">Satellite</button>
+      <button type="button" class="fonds__bouton" data-fond="relief" aria-pressed="false">Relief</button>
+      <button type="button" class="fonds__bouton" data-fond="plan" aria-pressed="false">Plan</button>
+    </div>
+  </div>
 
   <button type="button" class="panneau__poignee" id="poignee" aria-expanded="false" aria-controls="panneau">
     <span class="panneau__poignee-barre" aria-hidden="true"></span>
@@ -59,14 +74,6 @@
 
   <aside class="panneau" id="panneau" tabindex="-1" aria-live="polite"></aside>
 </main>
-
-<footer class="frise">
-  <div class="frise__defilement">
-    <svg class="frise__svg" id="frise" role="img"
-         aria-label="Profil d'altitude du voyage entier, du jour 1 au jour 15. Cliquez une étape pour la détailler."></svg>
-  </div>
-  <p class="frise__aide">Cliquez une étape pour la détailler. Le relief est à l'échelle des distances réelles.</p>
-</footer>
 
 <script src="js/vendor/leaflet.js"></script>
 <script type="module" src="js/app.js"></script>

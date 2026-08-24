@@ -46,12 +46,29 @@ function positionJourSansRide(jour, segments, totalKm) {
 
 // ------------------------------------------------------------------- frise
 
-export function dessinerFrise(svg, { voyage, etapes, jourActif, surChoixEtape }) {
+/** Pastille de décompte posée à côté d'une étiquette de jour.
+
+    La frise est devenue la seule barre de navigation du site : elle doit donc
+    porter aussi l'information « il y a quelque chose à voir ici », qui vivait
+    jusque-là dans un bandeau séparé. Sans elle, il faudrait ouvrir les
+    journées une à une pour le savoir. */
+function poserDecompte(svg, creer, x, y, nombre) {
+  if (!nombre) return;
+  svg.append(creer('circle', { class: 'frise__pastille', cx: x, cy: y, r: 6.5 }));
+  const texte = creer('text', { class: 'frise__pastille-texte', x, y: y + 3 });
+  texte.textContent = nombre;
+  svg.append(texte);
+}
+
+export function dessinerFrise(svg, { voyage, etapes, jourActif, surChoixEtape, decomptes = {} }) {
   const largeur = svg.clientWidth || svg.parentElement.clientWidth;
   const hauteur = svg.clientHeight || 100;
   if (!largeur) return;
 
-  const marge = { haut: 14, bas: 26, gauche: 36, droite: 10 };
+  // 54 à gauche : « 4 000 m » mesure une quarantaine de pixels dans la police
+  // à chasse fixe de la frise. À 36, il débordait sur le tracé et percutait le
+  // repère du jour 1, posé lui aussi au bord gauche.
+  const marge = { haut: 14, bas: 26, gauche: 54, droite: 10 };
   const l = largeur - marge.gauche - marge.droite;
   const h = hauteur - marge.haut - marge.bas;
 
@@ -109,6 +126,7 @@ export function dessinerFrise(svg, { voyage, etapes, jourActif, surChoixEtape })
     });
     etiquette.textContent = `J${segment.jour}`;
     svg.append(etiquette);
+    poserDecompte(svg, creer, (gauche + droite) / 2 + 16, hauteur - 12.5, decomptes[segment.jour]);
   }
 
   // Les jours sans ride : un point posé sur la crête, cliquable lui aussi.
@@ -137,6 +155,7 @@ export function dessinerFrise(svg, { voyage, etapes, jourActif, surChoixEtape })
     });
     etiquette.textContent = `J${etape.jour}`;
     svg.append(etiquette);
+    poserDecompte(svg, creer, x(km) + 16, y(releve.altitude) - 13.5, decomptes[etape.jour]);
   }
 }
 

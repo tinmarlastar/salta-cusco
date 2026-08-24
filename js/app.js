@@ -34,7 +34,6 @@ const elements = {
   boutonAccueil: document.getElementById('bouton-accueil'),
   etapePrecedente: document.getElementById('etape-precedente'),
   etapeSuivante: document.getElementById('etape-suivante'),
-  etapePosition: document.getElementById('etape-position'),
 };
 
 // ------------------------------------------------------------------ données
@@ -146,13 +145,6 @@ function majPasAPas(etape) {
   nommerFleche(elements.etapePrecedente, '←', precedente, 'Étape précédente');
   nommerFleche(elements.etapeSuivante, '→', suivante, 'Étape suivante');
 
-  // Le nom de l'arrivée, et non le titre complet : « J4 · San Pedro de
-  // Atacama » dit où l'on va, là où « Susques → San Pedro de Atacama »
-  // doublerait la largeur du bloc pour redire d'où l'on vient. C'est aussi la
-  // façon dont la barre précédent/suivant nomme les étapes.
-  elements.etapePosition.textContent = etape
-    ? `J${etape.jour} · ${etape.arrivee.nom}`
-    : '—';
   elements.etapePrecedente.disabled = index <= 0;
   elements.etapeSuivante.disabled = index === jours.length - 1;
 }

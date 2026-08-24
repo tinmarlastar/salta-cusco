@@ -155,26 +155,6 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 }
 .pas-a-pas button:hover:not(:disabled) .pas-a-pas__nom { color: var(--sel); }
 
-.pas-a-pas__position {
-  display: grid;
-  place-items: center;
-  min-width: 2.75rem;
-  /* Le nom de l'arrivée s'y ajoute : on borne la largeur et on coupe, sinon
-     une étape au nom long — « San Pedro de Atacama » — pousserait le titre du
-     voyage hors de l'entête. */
-  max-width: 14rem;
-  padding: 0 .5rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  background: var(--nuit-2);
-  color: var(--soufre);
-  font-family: var(--mono);
-  font-size: .6875rem;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: .04em;
-}
-
 /* Retour à la vue d'ensemble, visible uniquement quand une étape est ouverte. */
 
 .bouton-accueil {
@@ -617,9 +597,14 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 
 /* La frise est passée au-dessus de la carte : le trait qui la sépare du reste
    change de bord, et le rembourrage suit. */
+/* La frise se centre dans son bandeau. Elle mesure 6,25 rem pour un bandeau de
+   8,75 : la différence tombait entièrement sous elle depuis que la ligne
+   d'aide qui l'occupait a disparu avec le déplacement au-dessus de la carte. */
 .frise {
+  display: flex;
+  align-items: center;
   height: var(--frise-h);
-  padding: .25rem 0 .375rem;
+  padding: .3125rem 0;   /* symétrique : sinon `align-items: center` centre dans une boîte qui ne l'est pas */
   border-bottom: 1px solid var(--nuit-3);
   background: var(--nuit);
 }
@@ -635,22 +620,13 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
   pointer-events: none;
 }
 
-.frise__defilement { overflow-x: auto; overflow-y: hidden; }
+.frise__defilement { flex: 1 1 auto; min-width: 0; overflow-x: auto; overflow-y: hidden; }
 
 .frise__svg {
   display: block;
   width: 100%;
   min-width: 44rem;
   height: 6.25rem;
-}
-
-.frise__aide {
-  margin: 0;
-  padding: .25rem 1.25rem 0;
-  font-family: var(--mono);
-  font-size: .625rem;
-  letter-spacing: .06em;
-  color: var(--poussiere);
 }
 
 /* Éléments dessinés dans la frise */

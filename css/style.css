@@ -458,7 +458,7 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
   align-items: baseline;
   gap: .625rem;
   font-family: var(--mono);
-  font-size: .6875rem;
+  font-size: .75rem;
   letter-spacing: .14em;
   text-transform: uppercase;
   color: var(--poussiere);
@@ -538,7 +538,7 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
   display: flex;
   justify-content: space-between;
   font-family: var(--mono);
-  font-size: .625rem;
+  font-size: .8125rem;
   letter-spacing: .06em;
   text-transform: uppercase;
   color: var(--poussiere);

@@ -121,12 +121,16 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 
 .pas-a-pas {
   display: flex;
+  min-width: 0;
   gap: 1px;
   background: var(--nuit-3);
   border: 1px solid var(--nuit-3);
 }
 
 .pas-a-pas button {
+  display: flex;
+  align-items: center;
+  gap: .375rem;
   padding: .3125rem .625rem;
   border: 0;
   background: var(--nuit-2);
@@ -139,6 +143,17 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 }
 .pas-a-pas button:hover:not(:disabled) { background: var(--soufre); color: var(--nuit); }
 .pas-a-pas button:disabled { color: var(--nuit-3); cursor: default; }
+
+/* Le nom de la destination, à côté du chevron. Borné et coupé : « San Pedro
+   de Atacama » ne doit pas repousser le titre du voyage hors de l'entête. */
+.pas-a-pas__nom {
+  max-width: 7.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--poussiere);
+}
+.pas-a-pas button:hover:not(:disabled) .pas-a-pas__nom { color: var(--sel); }
 
 .pas-a-pas__position {
   display: grid;
@@ -519,12 +534,20 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
   gap: 1px;
   margin: 1.25rem -1.375rem 0;
   background: var(--nuit-3);
-  border-top: 1px solid var(--nuit-3);
+  /* Elle se détache franchement du texte qui défile dessous : un trait soufre
+     plutôt qu'un filet de la même couleur que le fond, et une ombre portée
+     vers le haut. Sans quoi elle se confondait avec la dernière ligne du
+     récit. */
+  border-top: 2px solid var(--soufre);
+  box-shadow: 0 -8px 16px rgba(8, 13, 24, .5);
 }
 
 .navigation button {
+  display: flex;
+  align-items: center;
+  gap: .625rem;
   flex: 1;
-  padding: .625rem .75rem;
+  padding: .6875rem .875rem;
   border: 0;
   background: var(--nuit);
   color: var(--sel);
@@ -541,8 +564,19 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 .navigation button:not(:disabled) { background: var(--nuit); }
 .navigation button:hover:not(:disabled) { background: var(--nuit-2); }
 .navigation button:disabled { color: var(--nuit-3); cursor: default; }
-.navigation button:last-child { text-align: right; }
-.navigation span { display: block; color: var(--poussiere); font-size: .625rem; }
+.navigation button:last-child { justify-content: flex-end; text-align: right; }
+.navigation__texte { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.navigation span span { display: block; color: var(--poussiere); font-size: .625rem; }
+
+/* Le chevron porte la couleur d'accent : c'est lui qu'on vise du pouce. */
+.navigation button b {
+  flex: 0 0 auto;
+  color: var(--soufre);
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1;
+}
+.navigation button:disabled b { color: var(--nuit-3); }
 
 /* --------------------------------------------------------------- accueil */
 
@@ -1189,6 +1223,13 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 .admin-filtre__menu:focus { border-color: var(--soufre); outline: none; }
 
 /* --------------------------------------------------------------- mobile */
+
+/* Trois destinations nommées, le titre du voyage et « Tout le parcours » ne
+   tiennent pas ensemble sous 64 rem : les noms s'effacent, les chevrons
+   restent. Le nom de l'étape courante, lui, demeure — c'est le repère. */
+@media (max-width: 64rem) {
+  .pas-a-pas__nom { display: none; }
+}
 
 @media (max-width: 60rem) {
   /* La variable n'a plus d'effet sur la largeur, désormais à 50 % ; elle reste

@@ -137,6 +137,15 @@ function majPasAPas(etape) {
   const jours = etat.etapes.map((e) => e.jour);
   const index = etape ? jours.indexOf(etape.jour) : -1;
 
+  // Les flèches nomment leur destination, comme la barre du bas de panneau.
+  // Une flèche seule oblige à cliquer pour savoir où elle mène ; avec le nom,
+  // on sait avant de partir. Depuis l'accueil, « suivant » ouvre la première
+  // étape : c'est elle qu'il annonce.
+  const precedente = index > 0 ? etat.etapes[index - 1] : null;
+  const suivante = index === -1 ? etat.etapes[0] : etat.etapes[index + 1];
+  nommerFleche(elements.etapePrecedente, '←', precedente, 'Étape précédente');
+  nommerFleche(elements.etapeSuivante, '→', suivante, 'Étape suivante');
+
   // Le nom de l'arrivée, et non le titre complet : « J4 · San Pedro de
   // Atacama » dit où l'on va, là où « Susques → San Pedro de Atacama »
   // doublerait la largeur du bloc pour redire d'où l'on vient. C'est aussi la
@@ -146,6 +155,17 @@ function majPasAPas(etape) {
     : '—';
   elements.etapePrecedente.disabled = index <= 0;
   elements.etapeSuivante.disabled = index === jours.length - 1;
+}
+
+/** Écrit une flèche du pas-à-pas : le chevron, puis la destination. */
+function nommerFleche(bouton, chevron, cible, intitule) {
+  const nom = cible ? `J${cible.jour} ${cible.arrivee.nom}` : '';
+  const marque = `<span aria-hidden="true">${chevron}</span>`;
+  const texte = nom ? `<span class="pas-a-pas__nom">${echapper(nom)}</span>` : '';
+  // Le chevron précède le nom à gauche, le suit à droite : chacun pointe vers
+  // l'extérieur du bloc, donc vers le sens du déplacement.
+  bouton.innerHTML = chevron === '←' ? marque + texte : texte + marque;
+  bouton.setAttribute('aria-label', nom ? `${intitule} : ${nom}` : intitule);
 }
 
 /** Déplace la sélection d'un cran ; depuis l'accueil, avance sur la première étape. */
@@ -392,9 +412,11 @@ function gabaritFiche(etape) {
 
     <div class="navigation">
       <button type="button" ${precedente ? `data-jour="${precedente.jour}"` : 'disabled'}>
-        <span>Précédent</span>${precedente ? `J${precedente.jour} ${echapper(precedente.arrivee.nom)}` : '—'}</button>
+        <b aria-hidden="true">←</b>
+        <span class="navigation__texte"><span>Précédent</span>${precedente ? `J${precedente.jour} ${echapper(precedente.arrivee.nom)}` : '—'}</span></button>
       <button type="button" ${suivante ? `data-jour="${suivante.jour}"` : 'disabled'}>
-        <span>Suivant</span>${suivante ? `J${suivante.jour} ${echapper(suivante.arrivee.nom)}` : '—'}</button>
+        <span class="navigation__texte"><span>Suivant</span>${suivante ? `J${suivante.jour} ${echapper(suivante.arrivee.nom)}` : '—'}</span>
+        <b aria-hidden="true">→</b></button>
     </div>
   </div>`;
 }

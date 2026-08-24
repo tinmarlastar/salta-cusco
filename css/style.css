@@ -90,6 +90,10 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
   color: var(--poussiere);
 }
 
+/* Le titre ramène au parcours entier quand une étape est ouverte. */
+.bandeau__identite.est-cliquable { cursor: pointer; }
+.bandeau__identite.est-cliquable:hover .bandeau__titre { color: var(--soufre); }
+
 .bandeau__titre {
   font-size: clamp(1.05rem, 2.2vw, 1.5rem);
   font-stretch: 125%;

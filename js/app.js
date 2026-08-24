@@ -32,6 +32,7 @@ const elements = {
   poignee: document.getElementById('poignee'),
   poigneeTexte: document.getElementById('poignee-texte'),
   boutonAccueil: document.getElementById('bouton-accueil'),
+  identite: document.querySelector('.bandeau__identite'),
   etapePrecedente: document.getElementById('etape-precedente'),
   etapeSuivante: document.getElementById('etape-suivante'),
 };
@@ -128,6 +129,10 @@ function choisir(jour, { recentrer = true, majAdresse = true } = {}) {
     if (location.hash !== cible) history.replaceState(null, '', etape ? cible : location.pathname);
   }
   elements.boutonAccueil.hidden = !etape;
+  // Pas de curseur de main sur l'accueil, où le clic n'aurait nulle part où
+  // aller : une invitation sans destination se remarque tout de suite.
+  elements.identite.classList.toggle('est-cliquable', Boolean(etape));
+  elements.identite.title = etape ? 'Revenir au parcours entier' : '';
   majPasAPas(etape);
 }
 
@@ -467,6 +472,15 @@ function brancherInterface() {
   });
 
   elements.boutonAccueil.addEventListener('click', () => choisir(null));
+
+  // Le titre du voyage ramène au parcours entier, comme le bouton voisin. Le
+  // geste est celui qu'on attend d'un titre de site. Il reste un raccourci à
+  // la souris : le bouton « Tout le parcours », lui, est atteignable au
+  // clavier, et lui ajouter un second point d'arrêt pour la même action
+  // encombrerait la tabulation sans rien apporter.
+  elements.identite.addEventListener('click', () => {
+    if (etat.jour !== null) choisir(null);
+  });
   elements.etapePrecedente.addEventListener('click', () => decaler(-1));
   elements.etapeSuivante.addEventListener('click', () => decaler(1));
 

@@ -97,16 +97,13 @@ export function dessinerFrise(svg, { voyage, etapes, jourActif, surChoixEtape, d
   const hauteur = svg.clientHeight || 100;
   if (!largeur) return;
 
-  // Les deux bords se répondent : « 4 000 m » s'arrête à 39 dans la police à
-  // chasse fixe de la frise, le tracé commence 20 px plus loin, et il s'arrête
-  // 20 px avant le bord droit de la fenêtre. La gouttière gauche vaut donc la
-  // largeur du texte plus la marge droite — l'égalité tient si l'une bouge.
+  // Sans légende d'altitude à loger à gauche, les deux bords se répondent à
+  // l'identique : le tracé est centré dans la fenêtre.
   //
   // 20 et non 10 : le repère du jour 1 et son libellé débordent à gauche du
-  // tracé sans rien devoir à la marge. À 10, « J1 » venait s'inscrire à 4 px de
-  // « 2 000 m » et à la même hauteur, et les deux se lisaient d'un trait.
-  const marge = { haut: 14, bas: 26, droite: 20 };
-  marge.gauche = 39 + marge.droite;
+  // tracé sans rien devoir à la marge. À 10, « J1 » serait venu s'inscrire
+  // trop près du bord.
+  const marge = { haut: 14, bas: 26, gauche: 20, droite: 20 };
   const l = largeur - marge.gauche - marge.droite;
   const h = hauteur - marge.haut - marge.bas;
 
@@ -116,14 +113,6 @@ export function dessinerFrise(svg, { voyage, etapes, jourActif, surChoixEtape, d
 
   svg.setAttribute('viewBox', `0 0 ${largeur} ${hauteur}`);
   svg.replaceChildren();
-
-  // Graduations d'altitude, tous les 2 000 mètres.
-  for (let altitude = 2000; altitude < altitudeMax; altitude += 2000) {
-    svg.append(
-      creer('line', { class: 'frise__graduation', x1: marge.gauche, x2: largeur - marge.droite, y1: y(altitude), y2: y(altitude) }),
-      Object.assign(creer('text', { class: 'frise__graduation-texte', x: 4, y: y(altitude) + 3 }), { textContent: `${nombre(altitude)} m` }),
-    );
-  }
 
   // Silhouette du voyage : l'aire d'abord, la crête ensuite.
   const chemin = voyage.releves.map((r, i) => `${i ? 'L' : 'M'}${x(r.km).toFixed(1)} ${y(r.altitude).toFixed(1)}`).join('');
@@ -266,6 +255,18 @@ export function dessinerProfilEtape(svg, trace, { surSurvol, surSortie }) {
   const chemin = profil.map(([km, altitude], i) => `${i ? 'L' : 'M'}${x(km).toFixed(1)} ${y(altitude).toFixed(1)}`).join('');
   svg.append(creer('path', { class: 'frise__relief', d: `${chemin}L${largeur} ${hauteur}L0 ${hauteur}Z` }));
   svg.append(creer('path', { class: 'frise__trace', d: chemin }));
+
+  // Légendes de l'axe des ordonnées : les deux bornes du relief du jour, haut
+  // et bas. Pas de gouttière ici, contrairement à la frise du haut — la fiche
+  // n'a pas la place — donc le texte se pose par-dessus le relief plutôt qu'à
+  // côté de lui, chaque étiquette tournée vers l'intérieur du graphique pour
+  // rester lisible même quand sa ligne longe un bord.
+  svg.append(
+    creer('line', { class: 'frise__graduation', x1: 0, x2: largeur, y1: y(haut), y2: y(haut) }),
+    Object.assign(creer('text', { class: 'frise__graduation-texte', x: 4, y: y(haut) + 9 }), { textContent: `${nombre(haut)} m` }),
+    creer('line', { class: 'frise__graduation', x1: 0, x2: largeur, y1: y(bas), y2: y(bas) }),
+    Object.assign(creer('text', { class: 'frise__graduation-texte', x: 4, y: y(bas) - 4 }), { textContent: `${nombre(bas)} m` }),
+  );
 
   const repere = creer('line', { class: 'frise__separation', x1: 0, x2: 0, y1: 0, y2: hauteur, opacity: 0 });
   const bulle = creer('text', { class: 'frise__graduation-texte', x: 0, y: 8, fill: '#e8b33c' });

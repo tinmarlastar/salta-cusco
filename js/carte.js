@@ -66,26 +66,34 @@ export function creerCarte(conteneur, { etapes, traces, surChoixEtape }) {
   const jalons = new Map();
   const pointsInteret = L.layerGroup().addTo(carte);
 
-  // Une pastille par lieu d'étape. Les jours sans ride partagent le lieu de la
-  // veille : on ne pose qu'une pastille, étiquetée par le premier jour concerné.
-  const dejaPose = new Map();
+  // Une pastille par LIEU, et non par jour : les journées sans moto se passent
+  // là où la veille s'est arrêtée. Elle porte tous les jours qu'elle couvre —
+  // « 9-10 » à Copacabana, « 14-15 » à Cusco. Étiquetée du seul premier jour,
+  // comme auparavant, les journées de repos n'avaient aucun repère à leur nom
+  // sur la carte, y compris quand elles étaient la journée choisie.
+  const parLieu = new Map();
   for (const etape of etapes) {
     const { lat, lon, nom } = etape.arrivee;
     const cle = `${lat},${lon}`;
-    if (dejaPose.has(cle)) {
-      jalons.set(etape.jour, dejaPose.get(cle));
-      continue;
-    }
+    if (!parLieu.has(cle)) parLieu.set(cle, { lat, lon, nom, jours: [] });
+    parLieu.get(cle).jours.push(etape.jour);
+  }
+
+  for (const { lat, lon, nom, jours } of parLieu.values()) {
+    const etiquette = jours.join('-');
     const pastille = L.marker([lat, lon], {
-      icon: L.divIcon({ className: '', html: `<div class="jalon">${etape.jour}</div>`, iconSize: null }),
+      icon: L.divIcon({ className: '', html: `<div class="jalon">${etiquette}</div>`, iconSize: null }),
       keyboard: true,
-      title: `Jour ${etape.jour} — ${nom}`,
+      title: jours.length > 1
+        ? `Jours ${jours.join(' et ')} — ${nom}`
+        : `Jour ${jours[0]} — ${nom}`,
     });
-    pastille.on('click', () => surChoixEtape(etape.jour));
+    // Le clic ouvre le premier jour du lieu ; la frise et le pas-à-pas mènent
+    // au second, qui est de toute façon le lendemain.
+    pastille.on('click', () => surChoixEtape(jours[0]));
     pastille.bindTooltip(nom, { className: 'infobulle', direction: 'top', offset: [0, -12] });
     pastille.addTo(carte);
-    dejaPose.set(cle, pastille);
-    jalons.set(etape.jour, pastille);
+    for (const jour of jours) jalons.set(jour, pastille);
   }
 
   function montrerPoints(etape) {

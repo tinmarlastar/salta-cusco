@@ -674,23 +674,37 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 
 /* Pastilles d'étape posées sur la carte */
 
+/* Une pastille peut porter deux jours (« 9-10 ») : elle s'allonge en gélule
+   plutôt que de rogner son texte, et reste un rond sur un chiffre seul.
+
+   Le centrage passe par `translate` et non plus par des marges négatives
+   fixes, qui supposaient une largeur connue d'avance. Conséquence : chaque
+   règle qui agrandit la pastille doit répéter la translation, faute de quoi
+   elle la remplacerait et la pastille sauterait au survol. */
 .jalon {
   display: grid;
   place-items: center;
-  width: 1.5rem;
+  min-width: 1.5rem;
   height: 1.5rem;
-  margin: -.75rem 0 0 -.75rem;
+  padding: 0 .3125rem;
   border: 1.5px solid var(--sel);
-  border-radius: 50%;
+  border-radius: .75rem;
   background: var(--nuit);
   color: var(--sel);
   font-family: var(--mono);
   font-size: .625rem;
   font-weight: 500;
+  white-space: nowrap;
+  transform: translate(-50%, -50%);
   transition: transform var(--transition), background var(--transition), color var(--transition);
 }
-.jalon:hover { transform: scale(1.15); }
-.jalon.est-actif { background: var(--soufre); border-color: var(--soufre); color: var(--nuit); transform: scale(1.2); }
+.jalon:hover { transform: translate(-50%, -50%) scale(1.15); }
+.jalon.est-actif {
+  background: var(--soufre);
+  border-color: var(--soufre);
+  color: var(--nuit);
+  transform: translate(-50%, -50%) scale(1.2);
+}
 
 .jalon-poi {
   width: .5rem;

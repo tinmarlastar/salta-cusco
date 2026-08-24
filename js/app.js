@@ -102,9 +102,24 @@ function remplirBandeau(voyage) {
   // La monture est déjà détaillée dans le panneau d'accueil : la répéter ici
   // ferait déborder le bandeau sur un téléphone.
   elements.eyebrow.textContent = `${voyage.operateur} · ${voyage.duree}`;
-  elements.titre.innerHTML =
-    `${echapper(voyage.titre)} <span>${echapper(voyage.sousTitre.replace('Horizons sud-américains, ', ''))}</span>`;
 
+  // Le drapeau du pays de départ, puis celui d'arrivée, glissés après le nom
+  // de chaque ville — pris sur la première et la dernière étape plutôt
+  // qu'écrits en dur, pour rester justes si le voyage change un jour de
+  // point de départ ou d'arrivée.
+  const drapeauPays = (code) => voyage.pays.find((p) => p.code === code)?.drapeau ?? '';
+  const depart = etat.etapes[0];
+  const arrivee = etat.etapes[etat.etapes.length - 1];
+  let sousTitre = voyage.sousTitre.replace('Horizons sud-américains, ', '');
+  if (depart) {
+    sousTitre = sousTitre.replace(depart.depart.nom, `${depart.depart.nom} ${drapeauPays(depart.pays[0])}`);
+  }
+  if (arrivee) {
+    const code = arrivee.pays[arrivee.pays.length - 1];
+    sousTitre = sousTitre.replace(arrivee.arrivee.nom, `${arrivee.arrivee.nom} ${drapeauPays(code)}`);
+  }
+
+  elements.titre.innerHTML = `${echapper(voyage.titre)} <span>${echapper(sousTitre)}</span>`;
 }
 
 // ---------------------------------------------------------------- sélection

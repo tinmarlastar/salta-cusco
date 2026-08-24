@@ -311,15 +311,23 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
    s'y répartissent en grille plutôt que d'être poussés au bout d'un entête. */
 .chiffres {
   display: grid;
-  /* Trois colonnes fixes, deux sur les petits écrans (plus bas). Six mesures se
-     divisent par les deux, si bien qu'aucune rangée ne reste bancale — ce qu'un
-     `auto-fit` ne sait pas garantir : selon la largeur il tombait sur quatre ou
-     cinq colonnes et laissait une orpheline. */
-  grid-template-columns: repeat(3, 1fr);
+  /* Quatre colonnes fixes, deux sur les petits écrans (plus bas). Le compte est
+     choisi pour diviser le nombre de mesures : aucune rangée ne reste bancale,
+     ce qu'un `auto-fit` ne sait pas garantir — au gré de la largeur il tombait
+     sur cinq colonnes et laissait une orpheline. */
+  grid-template-columns: repeat(4, 1fr);
   gap: .75rem 1.25rem;
   margin: 0 0 1.25rem;
   padding-bottom: 1.25rem;
   border-bottom: 1px solid var(--nuit-3);
+}
+
+/* Deux colonnes dès que le panneau se resserre. Le pli est à 68 rem et non au
+   60 rem du reste de la mise en page : le panneau prend la moitié de la fenêtre,
+   si bien qu'à 60 rem ses quatre colonnes tombent à 94 px et coupent « Dénivelé
+   total » en deux lignes. Il lui faut 105 px, donc 68 rem de fenêtre. */
+@media (max-width: 68rem) {
+  .chiffres { grid-template-columns: repeat(2, 1fr); }
 }
 
 .chiffres div { text-align: left; }
@@ -1295,9 +1303,6 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 /* Sur téléphone, les flèches passent en bas, à portée du pouce, plutôt que
    sur les bords où elles recouvrent la photo. */
 @media (max-width: 40rem) {
-  /* Deux colonnes : à trois, « Dénivelé par étape » se coupait en deux. */
-  .chiffres { grid-template-columns: repeat(2, 1fr); }
-
   .visionneuse__fleche { top: auto; bottom: 2.75rem; margin-top: 0; height: 2.75rem; }
   .visionneuse__fleche.est-avant { left: 1.5rem; }
   .visionneuse__fleche.est-apres { right: 1.5rem; }

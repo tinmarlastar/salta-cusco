@@ -366,20 +366,38 @@ function gabaritAccueil(voyage) {
   </div>`;
 }
 
-/** Temps de trajet, quand l'étape en porte un.
+// Allures retenues pour estimer un temps de trajet à partir des distances, en
+// km/h. Grossier par nature — un col à 4 800 m ne se monte pas à l'allure d'une
+// piste plate, et le sable du salar n'est pas la latérite — mais du bon ordre
+// de grandeur sur une journée entière, où le rapide et le lent se compensent.
+const VITESSE_ROUTE = 60;
+const VITESSE_PISTE = 25;
 
-    Le champ `dureeMinutes` n'existe pas encore dans `data/etapes.json` : la
-    case reste donc absente plutôt que d'afficher une estimation. Une durée
-    calculée depuis la distance serait fausse la moitié du temps sur ces
-    pistes, et un chiffre inventé sur une fiche de voyage est pire qu'un
-    chiffre manquant. Renseigner le champ suffit à faire apparaître la case. */
-function gabaritDuree(etape) {
-  const minutes = etape.dureeMinutes;
+function dureeEstimee(kmRoute, kmPiste) {
+  return Math.round((kmRoute / VITESSE_ROUTE + kmPiste / VITESSE_PISTE) * 60);
+}
+
+/** Temps de trajet : celui de l'étape s'il est connu, sinon une estimation.
+
+    Les distances, elles, sont sûres : la durée s'en déduit plutôt que d'être
+    saisie une seconde fois. Un chiffre estimé n'a le droit de figurer sur une
+    fiche de voyage qu'à condition de se dire tel — d'où le « ≈ » sur la valeur
+    et la règle écrite en toutes lettres sous le tableau, plutôt qu'une infobulle
+    invisible sur le téléphone où ce site se lit. Renseigner `dureeMinutes` sur
+    une étape remplace l'estimation par le vrai chiffre, sans le « ≈ ». */
+function gabaritDuree(etape, kmRoute) {
+  const reelle = etape.dureeMinutes;
+  const minutes = reelle || dureeEstimee(kmRoute, etape.kmPiste);
   if (!minutes) return '';
   const heures = Math.floor(minutes / 60);
   const reste = minutes % 60;
   const valeur = reste ? `${heures} <small>h</small> ${String(reste).padStart(2, '0')}` : `${heures} <small>h</small>`;
-  return `<div><dt>Temps de trajet</dt><dd>${valeur}</dd></div>`;
+  // Le libellé porte lui-même la réserve : « Durée estimée » ne se lit pas de
+  // travers, là où « Temps de trajet » suivi d'un chiffre passait pour un
+  // relevé. Le « ≈ » reste sur la valeur — c'est elle qu'on retient, et
+  // l'intitulé se saute d'un coup d'œil.
+  const intitule = reelle ? 'Temps de trajet' : 'Durée estimée';
+  return `<div><dt>${intitule}</dt><dd>${reelle ? '' : '≈ '}${valeur}</dd></div>`;
 }
 
 function gabaritFiche(etape) {
@@ -401,9 +419,17 @@ function gabaritFiche(etape) {
          <dd>${nombre(etape.kmPiste)} <small>km</small></dd></div>
        <div><dt>Dont route</dt><dd>${nombre(kmRoute)} <small>km</small></dd></div>
        <div><dt>Arrivée à</dt><dd>${nombre(etape.arrivee.altitudeM)} <small>m</small></dd></div>
-       ${gabaritDuree(etape)}`
+       ${gabaritDuree(etape, kmRoute)}`
     : `<div><dt>Étape</dt><dd>${echapper(etape.arrivee.nom)}</dd></div>
        <div><dt>Altitude</dt><dd>${nombre(etape.arrivee.altitudeM)} <small>m</small></dd></div>`;
+
+  // La règle qui produit le « ≈ », dite à l'écran et non en infobulle : sur un
+  // téléphone, un `title` ne s'ouvre pas. Elle ne paraît que quand la durée est
+  // bien estimée — une étape qui porte son temps réel n'a rien à justifier.
+  const noteDuree = etape.ride && !etape.dureeMinutes
+    ? `<p class="mesures__note">Durée estimée d'après les distances :
+       ${VITESSE_ROUTE} km/h sur route, ${VITESSE_PISTE} km/h sur piste, pauses non comprises.</p>`
+    : '';
 
   const profil = etape.ride
     ? `<figure class="profil-etape"><svg></svg>
@@ -438,6 +464,7 @@ function gabaritFiche(etape) {
 
     <div class="volet" data-volet="etape" id="volet-etape" role="tabpanel" aria-labelledby="onglet-etape">
       <dl class="mesures">${mesures}</dl>
+      ${noteDuree}
       ${profil}
 
       <p class="recit">${echapper(etape.recit)}</p>

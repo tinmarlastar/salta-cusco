@@ -519,6 +519,21 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 
 .mesures div { padding: .625rem .75rem; background: var(--nuit); }
 
+/* La note qui dit d'où sort le « ≈ » du temps de trajet. Elle se serre contre
+   le tableau qu'elle commente : sans cela, l'écart du bas la faisait flotter
+   entre les mesures et le profil, sans plus se rattacher à ni l'un ni l'autre. */
+.mesures:has(+ .mesures__note) { margin-bottom: .375rem; }
+
+.mesures__note {
+  margin: 0 0 1.25rem;
+  font-size: .75rem;
+  line-height: 1.45;
+  /* `--texte-2` et non `--poussiere`, la couleur des intitulés du tableau :
+     à .75rem elle tombe à 4.1 de contraste sur les habillages clairs, sous le
+     seuil lisible. Une réserve sur un chiffre ne vaut que si elle se lit. */
+  color: var(--texte-2);
+}
+
 .mesures dt {
   font-family: var(--mono);
   font-size: .5625rem;

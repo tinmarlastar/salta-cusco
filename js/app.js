@@ -74,6 +74,7 @@ async function demarrer() {
     surChoixEtape: (jour) => choisir(jour),
   });
 
+  brancherHabillages();
   brancherInterface();
   reglerFeuille('fermee');
   choisir(jourDepuisAdresse(), { recentrer: false });
@@ -465,6 +466,42 @@ function reglerFeuille(hauteur) {
 }
 
 // ------------------------------------------------------------- interactions
+
+/* --------------------------------------------------------------- habillage
+
+   Quatre jeux de couleurs, choisis par un attribut sur <html>. Le choix tient
+   d'une visite à l'autre : comparer suppose de vivre avec chacun un moment,
+   pas de le voir trois secondes. */
+
+const CLE_HABILLAGE = 'salta-cusco.habillage';
+
+function appliquerHabillage(nom) {
+  if (nom) document.documentElement.dataset.habillage = nom;
+  else delete document.documentElement.dataset.habillage;
+
+  for (const bouton of document.querySelectorAll('[data-habillage]')) {
+    bouton.setAttribute('aria-pressed', String(bouton.dataset.habillage === nom));
+  }
+  try {
+    if (nom) localStorage.setItem(CLE_HABILLAGE, nom);
+    else localStorage.removeItem(CLE_HABILLAGE);
+  } catch {
+    // Navigation privée, stockage refusé : l'habillage vaut pour cette visite.
+  }
+}
+
+function brancherHabillages() {
+  for (const bouton of document.querySelectorAll('.habillages [data-habillage]')) {
+    bouton.addEventListener('click', () => appliquerHabillage(bouton.dataset.habillage));
+  }
+  let garde = '';
+  try {
+    garde = localStorage.getItem(CLE_HABILLAGE) || '';
+  } catch {
+    garde = '';
+  }
+  appliquerHabillage(garde);
+}
 
 function brancherInterface() {
   // Les photos du voyage s'ouvrent en grand comme celles des souvenirs : celles

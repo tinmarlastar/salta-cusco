@@ -4,15 +4,33 @@
    seule source de lumière de la page. */
 
 :root {
-  --nuit:      #101b31;  /* le ciel à 5 000 m */
-  --nuit-2:    #172641;  /* surfaces */
-  --nuit-3:    #22334f;  /* bordures */
-  --nuit-voile:rgba(16, 27, 49, .88);
+  /* Habillage « Nuit andine », celui d'origine. Trois autres sont définis plus
+     bas ; le site en change par l'attribut `data-habillage` sur <html>.
 
-  --sel:       #edebe4;  /* le blanc du salar : texte principal */
+     Tout ce qui a une couleur passe par ces jetons, y compris les voiles et les
+     ombres : une seule valeur laissée en dur suffirait à trahir le changement
+     d'habillage, en laissant un bouton bleu nuit sur un fond de papier. */
+  --nuit:      #101b31;  /* fond de la page */
+  --nuit-2:    #172641;  /* surfaces : cartes, champs */
+  --nuit-3:    #22334f;  /* bordures et filets */
+  --nuit-voile:rgba(16, 27, 49, .88);   /* feuille du téléphone */
+
+  --sel:       #edebe4;  /* texte principal */
+  --texte-2:   #cdd3de;  /* texte courant : récits, souvenirs */
   --poussiere: #8e99ae;  /* texte secondaire */
   --soufre:    #e8b33c;  /* fumerolles du Sol de Mañana : accent */
-  --colorada:  #c2452d;  /* Laguna Colorada : piste et frontières */
+  --colorada:  #c2452d;  /* Laguna Colorada : piste, alertes */
+
+  /* Ce qui se pose SUR une couleur d'accent. Sans ces deux jetons, un habillage
+     clair afficherait du texte clair sur un bouton jaune. */
+  --sur-accent: #101b31;
+  --sur-alerte: #ffffff;
+
+  --voile-media:      rgba(16, 27, 49, .78);  /* boutons posés sur une photo */
+  --voile-visionneuse:rgba(8, 13, 24, .94);
+  --ombre:            rgba(8, 13, 24, .5);
+  --accent-voile:     rgba(232, 179, 60, .1);   /* survol d'une étape sur la frise */
+  --accent-voile-fort:rgba(232, 179, 60, .18);
 
   --display: 'Archivo', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --mono: 'Spline Sans Mono', ui-monospace, 'SF Mono', Menlo, monospace;
@@ -23,6 +41,88 @@
 
   --rythme: .5rem;
   --transition: 180ms cubic-bezier(.2, .6, .3, 1);
+}
+
+/* ------------------------------------------------------- autres habillages
+
+   Chacun ne redéfinit que les jetons : pas une règle de mise en page ne change.
+   C'est ce qui permet d'en essayer quatre sans risquer la moindre régression
+   de disposition. */
+
+/* Sel — le salar : papier chaud, encre bleu nuit, soufre assombri pour rester
+   lisible sur clair. Mêmes couleurs qu'à l'origine, rôles inversés. */
+[data-habillage="sel"] {
+  --nuit:      #f6f3ec;
+  --nuit-2:    #ffffff;
+  --nuit-3:    #ddd6c8;
+  --nuit-voile:rgba(246, 243, 236, .92);
+
+  --sel:       #1b2433;
+  --texte-2:   #3b4557;
+  --poussiere: #6d7686;
+  --soufre:    #c8891b;
+  --colorada:  #b8442c;
+
+  /* Encre et non blanc : sur ce jaune, le blanc tombe à 2,98 de contraste,
+     l'encre monte à 5,23. Les trois autres habillages ont un accent assez
+     foncé pour porter du blanc. */
+  --sur-accent: #1b2433;
+  --sur-alerte: #ffffff;
+
+  --voile-media:      rgba(27, 36, 51, .62);
+  --voile-visionneuse:rgba(27, 36, 51, .93);
+  --ombre:            rgba(27, 36, 51, .16);
+  --accent-voile:     rgba(200, 137, 27, .12);
+  --accent-voile-fort:rgba(200, 137, 27, .22);
+}
+
+/* Altiplano — la terre : sable, encre brune, turquoise de la Laguna Verde pour
+   agir, rouge de la Colorada pour alerter. Deux accents distincts, là où le
+   soufre faisait les deux. */
+[data-habillage="altiplano"] {
+  --nuit:      #efe7d9;
+  --nuit-2:    #fbf7ee;
+  --nuit-3:    #d8c9ad;
+  --nuit-voile:rgba(239, 231, 217, .93);
+
+  --sel:       #33291d;
+  --texte-2:   #4e4132;
+  --poussiere: #7d6c55;
+  --soufre:    #1c7a72;
+  --colorada:  #bf4326;
+
+  --sur-accent: #fbf7ee;
+  --sur-alerte: #ffffff;
+
+  --voile-media:      rgba(51, 41, 29, .62);
+  --voile-visionneuse:rgba(51, 41, 29, .93);
+  --ombre:            rgba(51, 41, 29, .18);
+  --accent-voile:     rgba(28, 122, 114, .12);
+  --accent-voile-fort:rgba(28, 122, 114, .22);
+}
+
+/* Quatre nations — carte d'état-major : papier froid, bleu d'encre pour agir,
+   orange pour ce qui alerte. */
+[data-habillage="nations"] {
+  --nuit:      #f4f6f8;
+  --nuit-2:    #ffffff;
+  --nuit-3:    #cdd6e0;
+  --nuit-voile:rgba(244, 246, 248, .93);
+
+  --sel:       #14243a;
+  --texte-2:   #37485e;
+  --poussiere: #5f7288;
+  --soufre:    #1f5fa8;
+  --colorada:  #d2622a;
+
+  --sur-accent: #ffffff;
+  --sur-alerte: #ffffff;
+
+  --voile-media:      rgba(20, 36, 58, .62);
+  --voile-visionneuse:rgba(20, 36, 58, .93);
+  --ombre:            rgba(20, 36, 58, .16);
+  --accent-voile:     rgba(31, 95, 168, .12);
+  --accent-voile-fort:rgba(31, 95, 168, .2);
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -58,7 +158,7 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
   z-index: 1200;
   padding: .625rem 1rem;
   background: var(--soufre);
-  color: var(--nuit);
+  color: var(--sur-accent);
   font-weight: 700;
 }
 .saut-contenu:focus { left: .5rem; top: .5rem; }
@@ -113,6 +213,32 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 
 /* Bloc de navigation : retour à la vue d'ensemble, et pas-à-pas entre étapes. */
 
+/* Choix de l'habillage : discret, en retrait de la navigation, puisqu'il sert
+   à comparer et non à circuler dans le voyage. */
+.habillages {
+  display: flex;
+  flex-shrink: 0;
+  gap: 1px;
+  margin-left: auto;
+  background: var(--nuit-3);
+  border: 1px solid var(--nuit-3);
+}
+
+.habillages button {
+  padding: .25rem .4375rem;
+  border: 0;
+  background: var(--nuit);
+  color: var(--poussiere);
+  font-family: var(--mono);
+  font-size: .5625rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color var(--transition), background var(--transition);
+}
+.habillages button:hover { color: var(--sel); }
+.habillages button[aria-pressed="true"] { background: var(--soufre); color: var(--sur-accent); }
+
 /* Une commande à trois volets, d'un seul tenant : étape précédente, retour au
    parcours entier, étape suivante. Les filets de 1 px sont le fond qui
    transparaît entre les boutons. */
@@ -120,7 +246,6 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
   display: flex;
   flex-shrink: 0;
   gap: 1px;
-  margin-left: auto;
   background: var(--nuit-3);
   border: 1px solid var(--nuit-3);
 }
@@ -140,7 +265,7 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
   cursor: pointer;
   transition: color var(--transition), background var(--transition);
 }
-.bandeau__navigation button:hover:not(:disabled) { background: var(--soufre); color: var(--nuit); }
+.bandeau__navigation button:hover:not(:disabled) { background: var(--soufre); color: var(--sur-accent); }
 .bandeau__navigation button:disabled { color: var(--nuit-3); cursor: default; }
 .bandeau__navigation button[hidden] { display: none; }
 
@@ -221,7 +346,7 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
   transition: color var(--transition), background var(--transition);
 }
 .fonds__bouton:hover { color: var(--sel); }
-.fonds__bouton[aria-pressed="true"] { background: var(--soufre); color: var(--nuit); }
+.fonds__bouton[aria-pressed="true"] { background: var(--soufre); color: var(--sur-accent); }
 
 /* ------------------------------------------------------------------ scène */
 
@@ -311,7 +436,7 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
   line-height: 1.125rem;
   text-align: center;
 }
-.onglets__bouton.est-actif .onglets__compte { background: var(--soufre); color: var(--nuit); }
+.onglets__bouton.est-actif .onglets__compte { background: var(--soufre); color: var(--sur-accent); }
 .onglets__compte[hidden] { display: none; }
 
 .volet[hidden] { display: none; }
@@ -414,7 +539,7 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
   margin: 0 0 1.25rem;
   font-size: .9375rem;
   line-height: 1.65;
-  color: #cdd3de;
+  color: var(--texte-2);
 }
 
 .galerie { display: grid; gap: var(--rythme); margin: 0 0 1.25rem; }
@@ -477,7 +602,7 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
      vers le haut. Sans quoi elle se confondait avec la dernière ligne du
      récit. */
   border-top: 2px solid var(--soufre);
-  box-shadow: 0 -8px 16px rgba(8, 13, 24, .5);
+  box-shadow: 0 -8px 16px var(--ombre);
 }
 
 .navigation button {
@@ -526,7 +651,7 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
   margin: 0 0 1.5rem;
   font-size: .9375rem;
   line-height: 1.65;
-  color: #cdd3de;
+  color: var(--texte-2);
 }
 
 .pays { margin: 0 0 1.5rem; padding: 0; list-style: none; }
@@ -571,7 +696,7 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
    l'étiquette du jour. */
 .frise__pastille { fill: var(--colorada); }
 .frise__pastille-texte {
-  fill: #fff;
+  fill: var(--sur-alerte);
   font-family: var(--mono);
   font-size: 8px;
   text-anchor: middle;
@@ -592,9 +717,9 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 .frise__relief { fill: var(--nuit-2); stroke: var(--nuit-3); stroke-width: 1; }
 .frise__segment { fill: transparent; cursor: pointer; }
 .frise__segment:hover + .frise__voile,
-.frise__segment:focus-visible + .frise__voile { fill: rgba(232, 179, 60, .1); }
+.frise__segment:focus-visible + .frise__voile { fill: var(--accent-voile); }
 .frise__voile { fill: transparent; pointer-events: none; transition: fill var(--transition); }
-.frise__voile.est-actif { fill: rgba(232, 179, 60, .18); }
+.frise__voile.est-actif { fill: var(--accent-voile-fort); }
 .frise__separation { stroke: var(--nuit-3); stroke-width: 1; }
 .frise__trace { fill: none; stroke: var(--soufre); stroke-width: 1.75; stroke-linejoin: round; }
 
@@ -670,7 +795,7 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 .jalon.est-actif {
   background: var(--soufre);
   border-color: var(--soufre);
-  color: var(--nuit);
+  color: var(--sur-accent);
   transform: translate(-50%, -50%) scale(1.2);
 }
 
@@ -759,7 +884,7 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
   margin: 0;
   font-size: .875rem;
   line-height: 1.55;
-  color: #cdd3de;
+  color: var(--texte-2);
 }
 
 .souvenir__actions { display: flex; gap: .5rem; margin: .375rem 0 0; }
@@ -803,7 +928,7 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
   height: 1.375rem;
   border: none;
   border-radius: 50%;
-  background: rgba(16, 27, 49, .78);
+  background: var(--voile-media);
   color: var(--sel);
   font-size: .875rem;
   line-height: 1;
@@ -1002,7 +1127,7 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 .souvenir-form__fichier:hover,
 .souvenir-form__pied button:hover { border-color: var(--soufre); }
 
-.souvenir-form__pied button { margin-left: auto; background: var(--soufre); color: var(--nuit); border-color: var(--soufre); }
+.souvenir-form__pied button { margin-left: auto; background: var(--soufre); color: var(--sur-accent); border-color: var(--soufre); }
 
 .souvenir-form__choisi {
   overflow: hidden;
@@ -1034,7 +1159,7 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
   align-items: center;
   justify-content: center;
   padding: 3rem 1rem;
-  background: rgba(8, 13, 24, .94);
+  background: var(--voile-visionneuse);
 }
 .visionneuse[hidden] { display: none; }
 
@@ -1062,7 +1187,7 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
   align-items: center;
   justify-content: center;
   border: 1px solid var(--nuit-3);
-  background: rgba(16, 27, 49, .8);
+  background: var(--voile-media);
   color: var(--sel);
   cursor: pointer;
   transition: border-color var(--transition), color var(--transition);
@@ -1139,7 +1264,7 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
   height: 2.75rem;
   margin: -1.375rem 0 0 -1.375rem;
   border-radius: 50%;
-  background: rgba(16, 27, 49, .7);
+  background: var(--voile-media);
   color: var(--sel);
   font-size: 1rem;
   padding-left: .1875rem; /* le triangle paraît décentré sans ce décalage */

@@ -96,6 +96,24 @@ leurs points de passage, mais ne sont pas des traces GPS : ne pas s'en servir
 pour naviguer. Si Vintage Rides fournit les GPX des douze jours, ils
 remplaceront avantageusement le calcul.
 
+## Habillages
+
+Quatre jeux de couleurs, choisis par les boutons de l'entête : **Nuit** (celui
+d'origine), **Sel** (le salar : papier chaud, encre bleu nuit), **Altiplano**
+(sable et turquoise des lagunes) et **Nations** (papier froid, bleu d'encre).
+Le choix tient d'une visite à l'autre.
+
+Chaque habillage ne redéfinit que des variables de couleur — pas une règle de
+mise en page ne change. C'est ce qui permet d'en essayer quatre sans risquer la
+moindre régression de disposition, et cela suppose qu'aucune couleur ne soit
+écrite en dur ailleurs : une seule suffirait à laisser un bouton bleu nuit sur
+un fond de papier.
+
+Deux jetons méritent l'attention si l'on en ajoute un cinquième :
+`--sur-accent` et `--sur-alerte`, ce qui se pose **sur** une couleur vive. Dans
+« Sel », l'accent est un jaune trop clair pour porter du blanc — le contraste
+tombe à 2,98 — et c'est l'encre qui s'y pose, à 5,23.
+
 ## Naviguer dans le voyage
 
 **La frise est la barre de navigation**, posée au-dessus de la carte : le

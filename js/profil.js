@@ -74,10 +74,14 @@ export function dessinerFrise(svg, { voyage, etapes, jourActif, surChoixEtape, d
   if (!largeur) return;
 
   // Les deux bords se répondent : « 4 000 m » s'arrête à 39 dans la police à
-  // chasse fixe de la frise, le tracé commence 10 px plus loin, et il s'arrête
-  // 10 px avant le bord droit de la fenêtre. La gouttière gauche vaut donc la
-  // largeur du texte plus la marge droite.
-  const marge = { haut: 14, bas: 26, droite: 10 };
+  // chasse fixe de la frise, le tracé commence 20 px plus loin, et il s'arrête
+  // 20 px avant le bord droit de la fenêtre. La gouttière gauche vaut donc la
+  // largeur du texte plus la marge droite — l'égalité tient si l'une bouge.
+  //
+  // 20 et non 10 : le repère du jour 1 et son libellé débordent à gauche du
+  // tracé sans rien devoir à la marge. À 10, « J1 » venait s'inscrire à 4 px de
+  // « 2 000 m » et à la même hauteur, et les deux se lisaient d'un trait.
+  const marge = { haut: 14, bas: 26, droite: 20 };
   marge.gauche = 39 + marge.droite;
   const l = largeur - marge.gauche - marge.droite;
   const h = hauteur - marge.haut - marge.bas;

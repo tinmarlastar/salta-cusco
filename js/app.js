@@ -137,7 +137,13 @@ function majPasAPas(etape) {
   const jours = etat.etapes.map((e) => e.jour);
   const index = etape ? jours.indexOf(etape.jour) : -1;
 
-  elements.etapePosition.textContent = etape ? `J${etape.jour}` : '—';
+  // Le nom de l'arrivée, et non le titre complet : « J4 · San Pedro de
+  // Atacama » dit où l'on va, là où « Susques → San Pedro de Atacama »
+  // doublerait la largeur du bloc pour redire d'où l'on vient. C'est aussi la
+  // façon dont la barre précédent/suivant nomme les étapes.
+  elements.etapePosition.textContent = etape
+    ? `J${etape.jour} · ${etape.arrivee.nom}`
+    : '—';
   elements.etapePrecedente.disabled = index <= 0;
   elements.etapeSuivante.disabled = index === jours.length - 1;
 }

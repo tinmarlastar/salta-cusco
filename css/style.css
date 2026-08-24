@@ -144,6 +144,14 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
   display: grid;
   place-items: center;
   min-width: 2.75rem;
+  /* Le nom de l'arrivée s'y ajoute : on borne la largeur et on coupe, sinon
+     une étape au nom long — « San Pedro de Atacama » — pousserait le titre du
+     voyage hors de l'entête. */
+  max-width: 14rem;
+  padding: 0 .5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   background: var(--nuit-2);
   color: var(--soufre);
   font-family: var(--mono);
@@ -239,7 +247,12 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 
 .scene {
   position: relative;
+  /* `row-reverse` : le panneau passe à gauche, la carte à droite. L'ordre du
+     document reste carte puis panneau, ce qui garde la carte avant la fiche
+     pour un lecteur d'écran comme pour la version téléphone, où la scène
+     redevient un simple bloc. */
   display: flex;
+  flex-direction: row-reverse;
   min-height: 0;
 }
 
@@ -260,7 +273,7 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
   flex: 0 0 50%;
   overflow-y: auto;
   overscroll-behavior: contain;
-  border-left: 1px solid var(--nuit-3);
+  border-right: 1px solid var(--nuit-3);
   background: var(--nuit);
 }
 
@@ -1178,7 +1191,7 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
     bottom: 0;
     z-index: 1000;
     height: 62%;
-    border-left: 0;
+    border-right: 0;
     border-top: 1px solid var(--nuit-3);
     background: var(--nuit-voile);
     backdrop-filter: blur(12px);

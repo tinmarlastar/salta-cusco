@@ -55,15 +55,16 @@
 </nav>
 
 <main class="scene">
-  <div id="carte" class="carte" role="application" aria-label="Carte du parcours"></div>
-
-  <!-- Le choix du fond commande la carte : il vit donc sur la carte, et reste
-       à portée sur toutes les vues. Dans le panneau, il aurait disparu dès
-       qu'une étape est ouverte. -->
-  <div class="fonds" role="group" aria-label="Fond de carte">
-    <button type="button" class="fonds__bouton" data-fond="satellite" aria-pressed="true">Satellite</button>
-    <button type="button" class="fonds__bouton" data-fond="relief" aria-pressed="false">Relief</button>
-    <button type="button" class="fonds__bouton" data-fond="plan" aria-pressed="false">Plan</button>
+  <div id="carte" class="carte" role="application" aria-label="Carte du parcours">
+    <!-- Le choix du fond commande la carte : il vit donc DANS la carte, et
+         reste à portée sur toutes les vues. Placé dans la scène, il se serait
+         retrouvé par-dessus le panneau dès que les deux ont échangé de côté ;
+         placé dans le panneau, il aurait disparu à l'ouverture d'une étape. -->
+    <div class="fonds" role="group" aria-label="Fond de carte">
+      <button type="button" class="fonds__bouton" data-fond="satellite" aria-pressed="true">Satellite</button>
+      <button type="button" class="fonds__bouton" data-fond="relief" aria-pressed="false">Relief</button>
+      <button type="button" class="fonds__bouton" data-fond="plan" aria-pressed="false">Plan</button>
+    </div>
   </div>
 
   <button type="button" class="panneau__poignee" id="poignee" aria-expanded="false" aria-controls="panneau">

@@ -26,6 +26,15 @@
   --sur-accent: #101b31;
   --sur-alerte: #ffffff;
 
+  /* Ce qui se pose sur --voile-media / --voile-visionneuse : ces deux voiles
+     restent sombres dans les quatre habillages, volontairement — une vitre
+     posée sur une photo n'a pas à suivre le sens du texte de la page. Cette
+     couleur n'est donc PAS redéfinie plus bas : la garder fixe est le point,
+     pas un oubli. Avant ce jeton, ces boutons prenaient `--sel`, qui redevient
+     sombre sur un habillage clair — une croix ou une flèche de la même
+     couleur que son propre fond, donc invisible. */
+  --sur-media: #ffffff;
+
   --voile-media:      rgba(16, 27, 49, .78);  /* boutons posés sur une photo */
   --voile-visionneuse:rgba(8, 13, 24, .94);
   --ombre:            rgba(8, 13, 24, .5);
@@ -965,7 +974,7 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
   border: none;
   border-radius: 50%;
   background: var(--voile-media);
-  color: var(--sel);
+  color: var(--sur-media);
   font-size: .875rem;
   line-height: 1;
   cursor: pointer;
@@ -1224,7 +1233,7 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
   justify-content: center;
   border: 1px solid var(--nuit-3);
   background: var(--voile-media);
-  color: var(--sel);
+  color: var(--sur-media);
   cursor: pointer;
   transition: border-color var(--transition), color var(--transition);
 }
@@ -1263,7 +1272,7 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
   font-family: var(--mono);
   font-size: .6875rem;
   letter-spacing: .08em;
-  color: var(--poussiere);
+  color: var(--sur-media);
 }
 
 /* Sur téléphone, les flèches passent en bas, à portée du pouce, plutôt que
@@ -1301,7 +1310,7 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
   margin: -1.375rem 0 0 -1.375rem;
   border-radius: 50%;
   background: var(--voile-media);
-  color: var(--sel);
+  color: var(--sur-media);
   font-size: 1rem;
   padding-left: .1875rem; /* le triangle paraît décentré sans ce décalage */
   pointer-events: none;

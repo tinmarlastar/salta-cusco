@@ -174,13 +174,18 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 .bouton-accueil:hover { border-color: var(--soufre); color: var(--soufre); }
 .bouton-accueil[hidden] { display: none; }
 
+/* Les chiffres vivent désormais sur la fiche du voyage, dans le panneau : ils
+   s'y répartissent en grille plutôt que d'être poussés au bout d'un entête. */
 .chiffres {
-  display: flex;
-  gap: 1.75rem;
-  margin: 0 0 0 auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(6rem, 1fr));
+  gap: .75rem 1.25rem;
+  margin: 0 0 1.25rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--nuit-3);
 }
 
-.chiffres div { text-align: right; }
+.chiffres div { text-align: left; }
 
 .chiffres dt {
   font-family: var(--mono);
@@ -202,7 +207,18 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 
 /* Boutons de fond de carte */
 
-.fonds { display: flex; gap: 1px; background: var(--nuit-3); border: 1px solid var(--nuit-3); }
+/* Posé sur la carte, en haut à gauche : le coin opposé au zoom de Leaflet et
+   à sa mention de source, les deux seuls occupants des angles. */
+.fonds {
+  position: absolute;
+  top: .625rem;
+  left: .625rem;
+  z-index: 500;
+  display: flex;
+  gap: 1px;
+  background: var(--nuit-3);
+  border: 1px solid var(--nuit-3);
+}
 
 .fonds__bouton {
   padding: .4375rem .75rem;
@@ -1129,7 +1145,6 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
   /* La variable n'a plus d'effet sur la largeur, désormais à 50 % ; elle reste
      comme repère pour d'éventuels retours en arrière. */
   :root { --panneau-l: 20rem; }
-  .chiffres { gap: 1.125rem; }
 }
 
 @media (max-width: 48rem) {
@@ -1143,10 +1158,8 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
   .bandeau__titre { font-size: 1.0625rem; font-stretch: 100%; }
   .bandeau__titre span { display: block; font-size: .9375rem; }
   .eyebrow { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .chiffres { flex-wrap: wrap; margin: 0; gap: .25rem 1.125rem; }
-  .chiffres div { text-align: left; }
+  .chiffres { gap: .5rem 1rem; }
   .chiffres dd { font-size: .9375rem; }
-  .fonds { margin-left: auto; }
 
   /* Le panneau devient une feuille tirée depuis le bas. Sans overflow ici, la
      feuille fermée sort de la scène et reste visible par-dessus la frise. */
@@ -1228,8 +1241,9 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 
   /* Sur un écran étroit, les chiffres occupent déjà toute la ligne : les fonds
      de carte prennent la leur plutôt que de déborder. */
-  .fonds { flex: 1 1 100%; margin-left: 0; }
-  .fonds__bouton { flex: 1; text-align: center; }
+  /* Sur un écran étroit, le choix du fond se resserre pour ne pas manger la
+     carte qu'il commande. */
+  .fonds__bouton { padding: .375rem .5rem; font-size: .625rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {

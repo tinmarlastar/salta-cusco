@@ -27,7 +27,6 @@ const etat = {
 const elements = {
   eyebrow: document.getElementById('eyebrow-voyage'),
   titre: document.getElementById('titre-voyage'),
-  chiffres: document.getElementById('chiffres-voyage'),
   panneau: document.getElementById('panneau'),
   frise: document.getElementById('frise'),
   poignee: document.getElementById('poignee'),
@@ -105,15 +104,6 @@ function remplirBandeau(voyage) {
   elements.titre.innerHTML =
     `${echapper(voyage.titre)} <span>${echapper(voyage.sousTitre.replace('Horizons sud-américains, de ', ''))}</span>`;
 
-  const mesures = [
-    ['Distance', `${nombre(voyage.distanceKm)} <b>km</b>`],
-    ['Dont piste', `${nombre(voyage.pisteKm)} <b>km</b>`],
-    ['Point haut', `${nombre(voyage.altitudeMaxM)} <b>m</b>`],
-    ['Pays', `${voyage.pays.length}`],
-  ];
-  elements.chiffres.innerHTML = mesures
-    .map(([titre, valeur]) => `<div><dt>${titre}</dt><dd>${valeur}</dd></div>`)
-    .join('');
 }
 
 // ---------------------------------------------------------------- sélection
@@ -287,7 +277,21 @@ function gabaritAccueil(voyage) {
     for (const code of etape.pays) joursParPays.set(code, (joursParPays.get(code) || 0) + 1);
   }
 
+  // Les chiffres du voyage vivaient dans l'entête, où ils occupaient une bande
+  // sur toute la largeur à chaque écran. Ils décrivent le voyage entier : leur
+  // place est sur sa fiche, c'est-à-dire ici.
+  const mesures = [
+    ['Distance', `${nombre(voyage.distanceKm)} <b>km</b>`],
+    ['Dont piste', `${nombre(voyage.pisteKm)} <b>km</b>`],
+    ['Point haut', `${nombre(voyage.altitudeMaxM)} <b>m</b>`],
+    ['Pays', `${voyage.pays.length}`],
+  ];
+
   return `<div class="accueil">
+    <dl class="chiffres">${mesures
+      .map(([titre, valeur]) => `<div><dt>${titre}</dt><dd>${valeur}</dd></div>`)
+      .join('')}</dl>
+
     <img class="accueil__photo" src="${voyage.photo}" alt="Le salar d'Uyuni vu du ciel, traversé de traces de roues." loading="lazy">
     <p class="accueil__texte">${echapper(voyage.presentation)}</p>
 

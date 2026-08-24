@@ -98,15 +98,19 @@ remplaceront avantageusement le calcul.
 
 ## Naviguer dans le voyage
 
-**Le bandeau des journées**, sous l'entête, tient les quinze jours à portée de
-clic. Chaque journée porte le nombre de souvenirs qu'elle a reçus : c'est la
-réponse à « où y a-t-il quelque chose à voir ? » sans en ouvrir une seule. Les
-décomptes viennent d'un unique appel au service (`GET /api/decomptes`), et se
-corrigent d'eux-mêmes dès qu'un souvenir est publié ou supprimé.
+**La frise est la barre de navigation**, posée au-dessus de la carte : le
+profil d'altitude, les quinze journées et le nombre de souvenirs de chacune
+d'un seul tenant. Une seule barre, donc, plutôt qu'un profil en pied de page
+et une liste de jours ailleurs. Les décomptes viennent d'un unique appel au
+service (`GET /api/decomptes`) et se corrigent d'eux-mêmes dès qu'un souvenir
+est publié ou supprimé.
 
-**Le panneau a deux onglets**, *Étape* et *Souvenirs*. L'onglet choisi suit
-d'une journée à l'autre : quelqu'un qui remonte le voyage par ses souvenirs
-n'est pas renvoyé au récit à chaque changement de jour. En tête de l'onglet
+**Le panneau a deux onglets**, *Étape* et *Souvenirs*. Il s'ouvre sur les
+souvenirs quand la journée en a reçu, sur l'étape sinon — c'est ce qu'on vient
+chercher. Un clic sur un onglet tient jusqu'au changement de journée. La barre
+« journée précédente / suivante » est collée au bas du panneau, donc toujours
+atteignable : elle vivait auparavant après le récit et tous les souvenirs,
+c'est-à-dire une page entière de défilement plus bas. En tête de l'onglet
 *Étape*, la mosaïque des photos du jour répond à « qu'a-t-on vu ce jour-là ? »
 avant le récit ; au-delà de six fichiers, un « +N » renvoie à l'onglet des
 souvenirs.

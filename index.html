@@ -49,10 +49,15 @@
   </div>
 </header>
 
-<!-- Les quinze journées, toujours à l'écran. C'est la réponse à « où y a-t-il
-     quelque chose à voir ? » : chaque journée porte le nombre de souvenirs
-     qu'elle a reçus. -->
-<nav class="journees" id="journees" aria-label="Choisir une journée"></nav>
+<!-- La frise est la barre de navigation du site : le profil d'altitude, les
+     quinze journées et le nombre de souvenirs de chacune, d'un seul tenant.
+     Posée au-dessus de la carte, là où on la cherche. -->
+<nav class="frise" aria-label="Choisir une journée">
+  <div class="frise__defilement">
+    <svg class="frise__svg" id="frise" role="img"
+         aria-label="Profil d'altitude du voyage entier, du jour 1 au jour 15. Cliquez une étape pour la détailler."></svg>
+  </div>
+</nav>
 
 <main class="scene">
   <div id="carte" class="carte" role="application" aria-label="Carte du parcours"></div>
@@ -64,14 +69,6 @@
 
   <aside class="panneau" id="panneau" tabindex="-1" aria-live="polite"></aside>
 </main>
-
-<footer class="frise">
-  <div class="frise__defilement">
-    <svg class="frise__svg" id="frise" role="img"
-         aria-label="Profil d'altitude du voyage entier, du jour 1 au jour 15. Cliquez une étape pour la détailler."></svg>
-  </div>
-  <p class="frise__aide">Cliquez une étape pour la détailler. Le relief est à l'échelle des distances réelles.</p>
-</footer>
 
 <script src="js/vendor/leaflet.js"></script>
 <script type="module" src="js/app.js"></script>

@@ -17,10 +17,11 @@ const etat = {
   etapes: [], traces: null, voyage: null, jour: null, carte: null,
   // Nombre de souvenirs par journée, pour les pastilles du bandeau.
   decomptes: {},
-  // Onglet du panneau. Gardé ici, et non dans la fiche : changer de journée ne
-  // doit pas ramener sur « Étape » quelqu'un qui suit les souvenirs jour après
-  // jour.
+  // Onglet du panneau, et si l'on y est arrivé par un clic. Le défaut se
+  // recalcule à chaque journée — souvenirs quand il y en a, étape sinon —,
+  // mais un choix explicite tient jusqu'au changement de journée.
   onglet: 'etape',
+  ongletChoisiALaMain: false,
 };
 
 const elements = {
@@ -35,7 +36,6 @@ const elements = {
   etapePrecedente: document.getElementById('etape-precedente'),
   etapeSuivante: document.getElementById('etape-suivante'),
   etapePosition: document.getElementById('etape-position'),
-  journees: document.getElementById('journees'),
 };
 
 // ------------------------------------------------------------------ données
@@ -75,7 +75,6 @@ async function demarrer() {
     surChoixEtape: (jour) => choisir(jour),
   });
 
-  construireJournees();
   brancherInterface();
   reglerFeuille('fermee');
   choisir(jourDepuisAdresse(), { recentrer: false });
@@ -84,7 +83,14 @@ async function demarrer() {
   // Les pastilles arrivent après coup : le bandeau est utilisable sans elles,
   // et un service injoignable ne doit pas retarder l'affichage du parcours.
   listerDecomptes()
-    .then((decomptes) => { etat.decomptes = decomptes; majJournees(); })
+    .then((decomptes) => {
+      etat.decomptes = decomptes;
+      redessinerFrise();
+      // Les décomptes arrivent après le premier affichage : c'est seulement
+      // maintenant qu'on sait si la journée ouverte a des souvenirs, donc quel
+      // onglet elle devait montrer.
+      appliquerOngletParDefaut();
+    })
     .catch(() => {});
 
   // La grille de la page n'est mesurable qu'après le premier rendu : c'est là
@@ -120,6 +126,7 @@ function jourDepuisAdresse() {
 }
 
 function choisir(jour, { recentrer = true, majAdresse = true } = {}) {
+  if (jour !== etat.jour) etat.ongletChoisiALaMain = false;
   etat.jour = jour;
   const etape = etat.etapes.find((e) => e.jour === jour) || null;
 
@@ -133,56 +140,6 @@ function choisir(jour, { recentrer = true, majAdresse = true } = {}) {
   }
   elements.boutonAccueil.hidden = !etape;
   majPasAPas(etape);
-  majJournees();
-}
-
-// ------------------------------------------------------- bandeau des journées
-
-/** Construit les quinze boutons, une seule fois : seuls l'état actif et les
-    pastilles changent ensuite. Les reconstruire à chaque sélection perdrait la
-    position de défilement, et donc la journée qu'on venait d'amener sous le
-    pouce. */
-function construireJournees() {
-  elements.journees.innerHTML = etat.etapes.map((etape) => `
-    <button type="button" class="journees__jour" data-jour="${etape.jour}"
-            title="${echapper(etape.titre)}">
-      <span class="journees__numero">J${etape.jour}</span>
-      <span class="journees__pastille" hidden></span>
-    </button>`).join('');
-
-  elements.journees.addEventListener('click', (evenement) => {
-    const bouton = evenement.target.closest('[data-jour]');
-    if (bouton) choisir(Number(bouton.dataset.jour));
-  });
-}
-
-function majJournees() {
-  for (const bouton of elements.journees.querySelectorAll('[data-jour]')) {
-    const jour = Number(bouton.dataset.jour);
-    const actif = jour === etat.jour;
-    bouton.classList.toggle('est-actif', actif);
-    bouton.setAttribute('aria-current', actif ? 'true' : 'false');
-
-    const nombre = etat.decomptes[jour] || 0;
-    const pastille = bouton.querySelector('.journees__pastille');
-    pastille.hidden = nombre === 0;
-    pastille.textContent = nombre;
-    // Le nombre doit être dit, pas seulement montré : sans ça un lecteur
-    // d'écran annonce « J7 7 », qu'on lit comme une seconde journée.
-    bouton.setAttribute('aria-label', nombre
-      ? `Jour ${jour}, ${nombre} souvenir${nombre > 1 ? 's' : ''}`
-      : `Jour ${jour}`);
-  }
-  amenerJourneeEnVue();
-}
-
-/** Sur un écran étroit le bandeau déborde : on y amène la journée choisie. */
-function amenerJourneeEnVue() {
-  const actif = elements.journees.querySelector('.est-actif');
-  if (!actif) return;
-  if (elements.journees.scrollWidth <= elements.journees.clientWidth) return;
-  const cible = actif.offsetLeft + actif.offsetWidth / 2 - elements.journees.clientWidth / 2;
-  elements.journees.scrollTo({ left: cible, behavior: 'smooth' });
 }
 
 /** Le pas-à-pas reste visible partout : depuis l'accueil, « suivant » ouvre J1. */
@@ -211,6 +168,7 @@ function redessinerFrise() {
     etapes: etat.etapes,
     jourActif: etat.jour,
     surChoixEtape: (jour) => choisir(jour),
+    decomptes: etat.decomptes,
   });
   amenerEtapeEnVue();
 }
@@ -261,8 +219,7 @@ function afficherPanneau(etape) {
         surDecompte: (nombre) => {
           etat.decomptes[etape.jour] = nombre;
           majOngletCompte(nombre);
-          majJournees();
-        },
+                },
       });
       // « +N » sous la mosaïque : bascule sur l'onglet qui montre tout.
       blocSouvenirs.addEventListener('souvenirs:tout-voir', () => activerOnglet('souvenirs'));
@@ -284,9 +241,25 @@ function afficherPanneau(etape) {
 
 function brancherOnglets() {
   for (const bouton of elements.panneau.querySelectorAll('[data-onglet]')) {
-    bouton.addEventListener('click', () => activerOnglet(bouton.dataset.onglet));
+    bouton.addEventListener('click', () => {
+      etat.ongletChoisiALaMain = true;
+      activerOnglet(bouton.dataset.onglet);
+    });
   }
-  activerOnglet(etat.onglet);
+  appliquerOngletParDefaut();
+}
+
+/** Ouvre sur les souvenirs quand la journée en a, sur l'étape sinon.
+
+    C'est ce que l'on vient chercher : une journée qui a reçu des photos se
+    regarde d'abord, une journée vide se lit. Un clic sur un onglet coupe court
+    à cette règle jusqu'au changement de journée — sans quoi le décompte, qui
+    arrive après coup, ramènerait sur « Souvenirs » quelqu'un qui vient d'aller
+    voir le récit. */
+function appliquerOngletParDefaut() {
+  if (etat.ongletChoisiALaMain) return;
+  if (!elements.panneau.querySelector('[data-onglet]')) return;
+  activerOnglet(etat.decomptes[etat.jour] > 0 ? 'souvenirs' : 'etape');
 }
 
 function activerOnglet(nom) {

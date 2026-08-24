@@ -865,17 +865,15 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 
 /* Formulaire */
 
-/* Séparation nette entre ce qui a été posté et ce qu'on s'apprête à poster :
-   un intitulé prolongé d'un trait sur toute la largeur restante. Une simple
-   marge ne suffisait pas — le formulaire paraissait appartenir au dernier
-   souvenir de la liste. */
+/* Séparation entre ce qui a été posté et ce qu'on s'apprête à poster : UN seul
+   trait, celui qui prolonge l'intitulé. Un filet pleine largeur au-dessus s'y
+   ajoutait, et les deux lignes parallèles à quelques millimètres l'une de
+   l'autre faisaient bégayer la coupure au lieu de la marquer. */
 .souvenir-form__titre {
   display: flex;
   align-items: center;
   gap: .75rem;
-  margin: 2rem 0 1rem;
-  padding-top: 1.25rem;
-  border-top: 1px solid var(--nuit-3);
+  margin: 2.25rem 0 1rem;
   font-family: var(--mono);
   font-size: .6875rem;
   letter-spacing: .12em;

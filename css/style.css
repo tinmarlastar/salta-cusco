@@ -19,7 +19,7 @@
 
   --bandeau-h: 4.5rem;
   --frise-h: 8.75rem;
-  --panneau-l: 24rem;
+  --panneau-l: 24rem;      /* plancher du panneau, voir `.panneau` */
 
   --rythme: .5rem;
   --transition: 180ms cubic-bezier(.2, .6, .3, 1);
@@ -237,7 +237,11 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 /* ---------------------------------------------------------------- panneau */
 
 .panneau {
-  flex: 0 0 var(--panneau-l);
+  /* Moitié-moitié avec la carte. La largeur fixe d'avant (24 rem) tenait de
+     l'époque où le panneau n'était qu'une fiche de lecture ; il porte
+     maintenant les photos et les souvenirs, qui méritent autant de place que
+     le terrain. */
+  flex: 0 0 50%;
   overflow-y: auto;
   overscroll-behavior: contain;
   border-left: 1px solid var(--nuit-3);
@@ -249,6 +253,11 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 /* Peu de rembourrage en tête : cette bande vide poussait le titre, les onglets
    et les photos vers le bas, sur un panneau où chaque ligne compte. */
 .fiche { padding: .875rem 1.375rem 0; }
+
+/* Le panneau occupe désormais la moitié de l'écran : sur un grand moniteur,
+   une ligne de récit courrait sur 900 px, illisible. On borne la mesure du
+   texte seul — les photos, elles, prennent toute la largeur. */
+.fiche .recit, .fiche__titre, .souvenir__texte { max-width: 46rem; }
 
 /* ------------------------------------------------------ onglets du panneau */
 
@@ -301,7 +310,14 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 
 /* Mosaïque du jour : la réponse à « qu'a-t-on vu ce jour-là ? », posée avant
    le récit. Vide, elle ne laisse pas de trou — le récit remonte. */
-.mosaique { display: grid; grid-template-columns: repeat(3, 1fr); gap: .25rem; }
+/* Le nombre de colonnes suit la largeur disponible : sur un panneau à
+   moitié d'écran, s'en tenir à trois donnerait des vignettes énormes et une
+   mosaïque qui ne montre presque rien. */
+.mosaique {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(7rem, 100%), 1fr));
+  gap: .25rem;
+}
 .mosaique .souvenir__figure { position: relative; }
 .mosaique .souvenir__media { aspect-ratio: 1; object-fit: cover; }
 .mosaique-jour:not(:empty) { margin-bottom: 1.25rem; }
@@ -1110,6 +1126,8 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 /* --------------------------------------------------------------- mobile */
 
 @media (max-width: 60rem) {
+  /* La variable n'a plus d'effet sur la largeur, désormais à 50 % ; elle reste
+     comme repère pour d'éventuels retours en arrière. */
   :root { --panneau-l: 20rem; }
   .chiffres { gap: 1.125rem; }
 }

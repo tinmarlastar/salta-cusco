@@ -45,6 +45,30 @@ export function assemblerVoyage(traces) {
   return { releves, segments, totalKm: cumul, denivelePositifM: Math.round(denivelePositifM) };
 }
 
+/** Kilomètre où se trouvent les motos quand elles en sont à la journée `jour`.
+
+    Au BOUT de l'étape : dire « on en est à J7 » veut dire qu'elle est faite.
+    `null` — personne n'a encore rien dit — les laisse au kilomètre zéro, à
+    Salta, où le voyage n'a pas commencé. */
+export function kmDeLaJournee(jour, voyage) {
+  if (!jour) return 0;
+  const segment = voyage.segments.find((s) => s.jour === jour);
+  // Une journée sans moto n'a pas de tracé à elle : le compteur y est resté où
+  // la veille l'a laissé, ce que sait déjà dire la fonction ci-dessous.
+  return segment ? segment.finKm : positionJourSansRide(jour, voyage.segments, voyage.totalKm);
+}
+
+/** Relevé du tracé le plus proche d'un kilomètre : sa position et son altitude.
+
+    Le tracé est échantillonné tous les deux kilomètres environ : prendre le
+    relevé le plus proche vaut mieux qu'interpoler entre deux points d'une route
+    qui, elle, tourne — le point tombe toujours SUR la route. */
+export function releveAuKm(km, voyage) {
+  if (!voyage.releves.length) return null;
+  return voyage.releves.reduce((meilleur, r) =>
+    Math.abs(r.km - km) < Math.abs(meilleur.km - km) ? r : meilleur, voyage.releves[0]);
+}
+
 /** Position d'un jour sans ride sur l'axe : là où le compteur s'est arrêté. */
 function positionJourSansRide(jour, segments, totalKm) {
   const precedent = segments.filter((s) => s.jour < jour).pop();
@@ -68,7 +92,7 @@ function poserDecompte(svg, creer, x, y, nombre) {
   svg.append(texte);
 }
 
-export function dessinerFrise(svg, { voyage, etapes, jourActif, surChoixEtape, decomptes = {} }) {
+export function dessinerFrise(svg, { voyage, etapes, jourActif, surChoixEtape, decomptes = {}, positionJour = null }) {
   const largeur = svg.clientWidth || svg.parentElement.clientWidth;
   const hauteur = svg.clientHeight || 100;
   if (!largeur) return;
@@ -196,6 +220,25 @@ export function dessinerFrise(svg, { voyage, etapes, jourActif, surChoixEtape, d
     etiquette.textContent = `J${etape.jour}`;
     svg.append(etiquette);
     poserDecompte(svg, creer, x(km) + 16, y(releve.altitude) - 13.5, decomptes[etape.jour]);
+  }
+
+  // Où en sont les motos, posées sur la crête au bout de la journée dite.
+  // Dessinées en dernier pour passer par-dessus les voiles et les séparations,
+  // et rendues transparentes au clic (CSS) : elles indiquent, elles ne
+  // commandent pas — un clic à cet endroit doit choisir la journée qui est
+  // dessous, comme partout ailleurs sur la frise.
+  const releveMotos = releveAuKm(kmDeLaJournee(positionJour, voyage), voyage);
+  if (releveMotos) {
+    const motos = creer('text', {
+      class: 'frise__motos',
+      x: x(releveMotos.km), y: y(releveMotos.altitude) - 7,
+      role: 'img',
+      'aria-label': positionJour
+        ? `Les motos en sont au jour ${positionJour}`
+        : 'Les motos n\'ont pas encore quitté Salta',
+    });
+    motos.textContent = '\u{1F3CD}\u{FE0F}';
+    svg.append(motos);
   }
 }
 

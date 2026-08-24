@@ -135,6 +135,34 @@ export function creerCarte(conteneur, { etapes, traces, surChoixEtape }) {
     if (curseur) { carte.removeLayer(curseur); curseur = null; }
   }
 
+  // --- Où en sont les motos -------------------------------------------------
+
+  let motos = null;
+
+  /** Pose — ou déplace — le repère des motos, avec ce qu'il faut dire au clic.
+
+      `zIndexOffset` au-dessus du curseur de profil : c'est le repère qu'on
+      cherche des yeux en arrivant sur la page, il ne doit passer sous rien.
+      Cliquable, à la différence du curseur : la date de mise à jour compte
+      autant que la position — une position d'il y a trois jours ne dit pas la
+      même chose que celle de ce matin. */
+  function placerMotos(lat, lon, infobulle) {
+    if (!motos) {
+      motos = L.marker([lat, lon], {
+        icon: L.divIcon({ className: '', html: '<div class="motos">\u{1F3CD}\u{FE0F}</div>', iconSize: null }),
+        keyboard: false,
+        zIndexOffset: 1000,
+      }).addTo(carte);
+    } else {
+      motos.setLatLng([lat, lon]);
+    }
+    motos.bindTooltip(infobulle, { direction: 'top', offset: [0, -18] });
+  }
+
+  function masquerMotos() {
+    if (motos) { carte.removeLayer(motos); motos = null; }
+  }
+
   // --- Sélection ------------------------------------------------------------
 
   let etapeCourante = null;
@@ -186,5 +214,5 @@ export function creerCarte(conteneur, { etapes, traces, surChoixEtape }) {
     attente = setTimeout(() => carte.invalidateSize({ animate: false }), 120);
   }).observe(conteneur);
 
-  return { carte, changerFond, montrerEtape, voirTout, recadrer, placerCurseur, masquerCurseur };
+  return { carte, changerFond, montrerEtape, voirTout, recadrer, placerCurseur, masquerCurseur, placerMotos, masquerMotos };
 }

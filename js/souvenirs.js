@@ -202,6 +202,26 @@ export async function supprimerContribution({ id, jeton, motDePasse }) {
   await appeler(`/api/contribution/${id}`, { method: 'DELETE', headers: entetes });
 }
 
+/** Journée où en sont les motos, `null` si personne ne l'a encore dite.
+
+    Lecture ouverte : c'est ce que les proches viennent voir. */
+export async function lirePosition() {
+  const donnees = await appeler('/api/position');
+  return { jour: donnees.jour ?? null, majLe: donnees.majLe ?? null };
+}
+
+/** Dit où en sont les motos. `jour: null` efface la position.
+
+    Réservée à l'administration : elle parle au nom du groupe, elle n'est pas
+    une contribution parmi d'autres. */
+export async function ecrirePosition({ jour, motDePasse }) {
+  return appeler('/api/position', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', 'X-Mot-De-Passe': motDePasse },
+    body: JSON.stringify({ jour }),
+  });
+}
+
 export async function listerTout(motDePasse) {
   const donnees = await appeler('/api/tout', { headers: { 'X-Mot-De-Passe': motDePasse } });
   return donnees.contributions || [];

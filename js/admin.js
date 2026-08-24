@@ -5,7 +5,7 @@
    et jamais écrit dans le dépôt. */
 
 import {
-  chargerConfig, listerTout, supprimerContribution, ErreurService,
+  chargerConfig, listerTout, supprimerContribution, lirePosition, ecrirePosition, ErreurService,
 } from './souvenirs.js';
 import { gabaritGalerie, brancherVisionneuse } from './souvenirs-vue.js';
 
@@ -20,6 +20,11 @@ let motDePasse = sessionStorage.getItem('souvenirs.admin') || '';
 // serait renvoyé à la liste complète juste après avoir supprimé, et il
 // faudrait retrouver sa journée à chaque fois.
 let jourChoisi = null;
+
+// Où en sont les motos, telle que le service la donne. Relue à chaque
+// affichage : cette page peut être ouverte sur deux téléphones à la fois, et
+// c'est la valeur du service qui fait foi, jamais celle gardée ici.
+let position = { jour: null, majLe: null };
 
 /** Titres des étapes, pour nommer les journées du menu.
 
@@ -66,6 +71,38 @@ function gabaritMenu(contributions) {
       <option value=""${jourChoisi === null ? ' selected' : ''}>Toutes les journées — ${contributions.length}</option>
       ${options}
     </select>
+  </p>`;
+}
+
+const dateLisible = (iso) => new Date(iso).toLocaleDateString('fr-FR', {
+  day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit',
+});
+
+/** Commande de la position des motos, en tête de la page de modération.
+
+    Un menu et rien d'autre : le choix se enregistre à la sélection, sans bouton
+    à part. C'est le geste le plus court sur un téléphone au bord d'une piste,
+    et la valeur EST tout l'état — il n'y a pas de brouillon à valider. La date
+    de mise à jour tient lieu de confirmation : elle change sous les yeux. */
+function gabaritPosition() {
+  const jours = [...titresEtapes.keys()].sort((a, b) => a - b);
+  const options = jours.map((jour) => {
+    const titre = titresEtapes.get(jour);
+    const libelle = titre ? `J${jour} · ${titre}` : `J${jour}`;
+    return `<option value="${jour}"${position.jour === jour ? ' selected' : ''}>${echapper(libelle)}</option>`;
+  }).join('');
+
+  const note = position.majLe
+    ? `Mis à jour le ${dateLisible(position.majLe)}`
+    : 'Aucune position indiquée : les motos attendent à Salta.';
+
+  return `<p class="admin-filtre">
+    <label for="position-jour">Où en sont les motos</label>
+    <select id="position-jour" class="admin-filtre__menu">
+      <option value=""${position.jour === null ? ' selected' : ''}>Pas encore partis</option>
+      ${options}
+    </select>
+    <small class="admin-position__note" id="position-note">${echapper(note)}</small>
   </p>`;
 }
 
@@ -130,6 +167,10 @@ async function afficher() {
     return;
   }
 
+  // La position ne conditionne pas la modération : si sa lecture échoue, on
+  // garde la dernière connue plutôt que de refuser d'afficher la page.
+  position = await lirePosition().catch(() => position);
+
   // Le menu est bâti sur la liste ENTIÈRE, la liste affichée sur le filtre :
   // les décomptes des autres journées doivent rester visibles même quand on
   // n'en regarde qu'une.
@@ -146,7 +187,7 @@ async function afficher() {
           : `Aucune contribution pour la journée ${jourChoisi}.`
       }</p>`;
 
-  racine.innerHTML = menu + corps;
+  racine.innerHTML = gabaritPosition() + menu + corps;
 }
 
 // Écouteur posé une seule fois, en dehors de `afficher()`, sur `racine` — un
@@ -158,11 +199,37 @@ async function afficher() {
 // « Supprimer » muets.
 // Délégué comme le clic, et pour la même raison : `afficher()` remplace tout
 // le contenu de `racine`, donc le menu lui-même, à chaque rendu.
-racine.addEventListener('change', (evenement) => {
-  if (!evenement.target.matches('#filtre-jour')) return;
+racine.addEventListener('change', async (evenement) => {
+  if (evenement.target.matches('#filtre-jour')) {
+    const valeur = evenement.target.value;
+    jourChoisi = valeur === '' ? null : Number(valeur);
+    afficher();
+    return;
+  }
+
+  if (!evenement.target.matches('#position-jour')) return;
+
+  // Enregistrement immédiat, et compte rendu à l'endroit même où l'on vient de
+  // choisir : la page entière n'est pas redessinée, ce qui la ferait remonter
+  // en haut et perdrait la journée en cours de modération.
+  const note = racine.querySelector('#position-note');
   const valeur = evenement.target.value;
-  jourChoisi = valeur === '' ? null : Number(valeur);
-  afficher();
+  const jour = valeur === '' ? null : Number(valeur);
+  if (note) note.textContent = 'Enregistrement…';
+  try {
+    position = await ecrirePosition({ jour, motDePasse });
+    if (note) {
+      note.textContent = position.majLe
+        ? `Enregistré le ${dateLisible(position.majLe)}`
+        : 'Position effacée : les motos attendent à Salta.';
+    }
+  } catch (souci) {
+    if (note) {
+      note.textContent = souci instanceof ErreurService
+        ? souci.message
+        : 'Le service ne répond pas : la position n\'a pas été enregistrée.';
+    }
+  }
 });
 
 // Un fichier s'ouvre en grand ici comme sur le site : voir une photo en entier

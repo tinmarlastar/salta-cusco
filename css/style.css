@@ -805,6 +805,14 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 .frise__pause { fill: var(--nuit); stroke: var(--poussiere); stroke-width: 1.5; cursor: pointer; }
 .frise__pause.est-actif { fill: var(--soufre); stroke: var(--soufre); }
 
+/* Où en sont les motos. Transparent au clic : le repère indique, il ne commande
+   pas — un clic à cet endroit doit choisir la journée qui est dessous. */
+.frise__motos {
+  font-size: .875rem;
+  text-anchor: middle;
+  pointer-events: none;
+}
+
 .frise__graduation { stroke: var(--nuit-3); stroke-width: 1; stroke-dasharray: 2 3; }
 .frise__graduation-texte {
   fill: var(--poussiere);
@@ -844,6 +852,26 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
    fixes, qui supposaient une largeur connue d'avance. Conséquence : chaque
    règle qui agrandit la pastille doit répéter la translation, faute de quoi
    elle la remplacerait et la pastille sauterait au survol. */
+/* Le repère des motos sur la carte. Un fond clair et une ombre portée : posé
+   sur une image satellite, un émoji seul se perd dans le relief. Décalé de sa
+   moitié pour que son centre tombe sur le point, Leaflet ancrant ses icônes
+   sans dimensions par le coin haut gauche. */
+.motos {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  font-size: 1.125rem;
+  line-height: 1;
+  background: var(--nuit);
+  border: 2px solid var(--soufre);
+  border-radius: 50%;
+  box-shadow: 0 2px 6px var(--ombre);
+  cursor: pointer;
+}
+
 .jalon {
   display: grid;
   place-items: center;
@@ -1349,6 +1377,7 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 /* Choix de la journée à modérer. */
 .admin-filtre {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: .625rem;
   margin: 0 0 1.25rem;
@@ -1372,6 +1401,16 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
   font-size: .875rem;
 }
 .admin-filtre__menu:focus { border-color: var(--soufre); outline: none; }
+
+/* Compte rendu de l'enregistrement de la position, sous le menu qui la choisit.
+   La ligne passe à la ligne suivante — `flex-basis: 100%` — plutôt que de se
+   serrer à côté du menu : elle change de longueur à chaque enregistrement, et
+   ferait autrement sauter la largeur du menu sous les doigts. */
+.admin-position__note {
+  flex: 0 0 100%;
+  font-size: .75rem;
+  color: var(--poussiere);
+}
 
 /* --------------------------------------------------------------- mobile */
 

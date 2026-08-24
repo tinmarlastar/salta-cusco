@@ -6,6 +6,7 @@ import { creerId, creerJeton, hacherJeton, memeSecret } from './lib/securite.js'
 
 const TEXTE_MAX = 5000; // de quoi raconter une journée entière, pas seulement une légende
 const AUTEUR_MAX = 40;
+const JOURS = 15;       // le voyage entier ; borne la journée d'une position
 
 const VIDEO_OCTETS_MAX = 60 * 1024 * 1024; // 60 Mo : au-delà, l'envoi en altitude n'aboutit pas
 const IMAGE_OCTETS_MAX = 12 * 1024 * 1024; // le navigateur compresse déjà ; cette marge couvre les cas non compressés
@@ -29,7 +30,7 @@ function entetesCors(requete, env) {
   if (!autorisees.includes(origine)) return {};
   return {
     'Access-Control-Allow-Origin': origine,
-    'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, X-Mot-De-Passe, X-Jeton, X-Idempotence',
     'Access-Control-Max-Age': '86400',
   };
@@ -585,6 +586,50 @@ async function compter(env, cors) {
   return repondre({ decomptes }, { cors });
 }
 
+const CLE_POSITION = 'position_jour';
+
+/** Journée où en sont les motos, ou `null` si personne ne l'a encore dite.
+
+    Ouverte en lecture, comme les souvenirs : c'est ce que les proches viennent
+    voir. L'écriture, elle, demande le mot de passe d'administration — la
+    position parle au nom du groupe, elle n'est pas une contribution parmi
+    d'autres. */
+async function lirePosition(env, cors) {
+  const ligne = await env.DB
+    .prepare('SELECT valeur, maj_le FROM reglages WHERE cle = ?1').bind(CLE_POSITION).first();
+  const jour = ligne ? Number(ligne.valeur) : NaN;
+  return repondre({
+    jour: Number.isInteger(jour) ? jour : null,
+    majLe: ligne ? ligne.maj_le : null,
+  }, { cors });
+}
+
+async function ecrirePosition(requete, env, cors) {
+  if (!await adminAutorise(requete, env)) return erreur('Mot de passe incorrect', 401, cors);
+
+  const corps = await requete.json().catch(() => ({}));
+  // `null` efface : le voyage n'a pas commencé, ou il est fini. C'est un état
+  // légitime, pas une donnée manquante, d'où la suppression de la ligne plutôt
+  // qu'une valeur convenue qu'il faudrait ensuite reconnaître partout.
+  const efface = corps.jour === null || corps.jour === '';
+  const jour = efface ? null : Number(corps.jour);
+  if (!efface && (!Number.isInteger(jour) || jour < 1 || jour > JOURS)) {
+    return erreur(`Journée attendue entre 1 et ${JOURS}`, 400, cors);
+  }
+
+  if (efface) {
+    await env.DB.prepare('DELETE FROM reglages WHERE cle = ?1').bind(CLE_POSITION).run();
+    return repondre({ jour: null, majLe: null }, { cors });
+  }
+
+  const majLe = new Date().toISOString();
+  await env.DB.prepare(
+    `INSERT INTO reglages (cle, valeur, maj_le) VALUES (?1, ?2, ?3)
+       ON CONFLICT(cle) DO UPDATE SET valeur = ?2, maj_le = ?3`,
+  ).bind(CLE_POSITION, String(jour), majLe).run();
+  return repondre({ jour, majLe }, { cors });
+}
+
 /** Liste toutes les contributions, pour la page de modération. */
 async function listerTout(requete, env, cors) {
   if (!await adminAutorise(requete, env)) return erreur('Mot de passe incorrect', 401, cors);
@@ -643,6 +688,11 @@ export default {
       const unMedia = chemin.match(/^\/api\/media\/([0-9a-z]+)$/);
       if (unMedia && requete.method === 'DELETE') {
         return await supprimerMedia(unMedia[1], requete, env, cors);
+      }
+
+      if (chemin === '/api/position') {
+        if (requete.method === 'GET') return await lirePosition(env, cors);
+        if (requete.method === 'PUT') return await ecrirePosition(requete, env, cors);
       }
 
       if (chemin === '/api/decomptes' && requete.method === 'GET') {

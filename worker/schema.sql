@@ -44,3 +44,13 @@ SELECT id, id, media_cle, COALESCE(media_genre, 'image'), COALESCE(media_octets,
        0, cree_le, 'reprise:' || id
 FROM contributions
 WHERE media_cle IS NOT NULL;
+
+-- ---------------------------------------------------------------- réglages
+-- Table clé/valeur plutôt qu'une table dédiée : le seul réglage d'aujourd'hui
+-- — `position_jour`, la journée où en sont les motos — tiendrait sur une ligne
+-- unique, et une table d'une ligne appelle une migration au réglage suivant.
+CREATE TABLE IF NOT EXISTS reglages (
+  cle     TEXT PRIMARY KEY,
+  valeur  TEXT NOT NULL,
+  maj_le  TEXT NOT NULL
+);

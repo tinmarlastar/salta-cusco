@@ -5,9 +5,9 @@
    vers un jour précis du voyage. */
 
 import { creerCarte } from './carte.js';
-import { assemblerVoyage, dessinerFrise, dessinerProfilEtape } from './profil.js';
+import { assemblerVoyage, dessinerFrise, dessinerProfilEtape, kmDeLaJournee, releveAuKm } from './profil.js';
 import { monterSouvenirs, brancherVisionneuse } from './souvenirs-vue.js';
-import { listerDecomptes } from './souvenirs.js';
+import { listerDecomptes, lirePosition } from './souvenirs.js';
 
 const nombre = (valeur) => valeur.toLocaleString('fr-FR');
 const echapper = (texte) => String(texte).replace(/[&<>"]/g, (c) =>
@@ -17,6 +17,10 @@ const etat = {
   etapes: [], traces: null, voyage: null, jour: null, carte: null,
   // Nombre de souvenirs par journée, pour les pastilles du bandeau.
   decomptes: {},
+  // Où en sont les motos : la journée dite depuis la zone d'administration, et
+  // quand elle l'a été. `null` tant que personne ne l'a dite — les motos
+  // attendent alors au kilomètre zéro, à Salta.
+  position: { jour: null, majLe: null },
   // Onglet du panneau, et si l'on y est arrivé par un clic. Le défaut se
   // recalcule à chaque journée — souvenirs quand il y en a, étape sinon —,
   // mais un choix explicite tient jusqu'au changement de journée.
@@ -79,6 +83,9 @@ async function demarrer() {
   reglerFeuille('fermee');
   choisir(jourDepuisAdresse(), { recentrer: false });
   redessinerFrise();
+  // Posées dès le premier rendu, avant même de savoir où elles en sont : sans
+  // réponse du service, les motos attendent à Salta, et c'est déjà une réponse.
+  poserMotosSurLaCarte();
 
   // Les pastilles arrivent après coup : le bandeau est utilisable sans elles,
   // et un service injoignable ne doit pas retarder l'affichage du parcours.
@@ -90,6 +97,16 @@ async function demarrer() {
       // maintenant qu'on sait si la journée ouverte a des souvenirs, donc quel
       // onglet elle devait montrer.
       appliquerOngletParDefaut();
+    })
+    .catch(() => {});
+
+  // La position des motos suit le même chemin que les décomptes : elle arrive
+  // quand elle arrive, et son absence n'empêche rien de s'afficher.
+  lirePosition()
+    .then((position) => {
+      etat.position = position;
+      redessinerFrise();
+      poserMotosSurLaCarte();
     })
     .catch(() => {});
 
@@ -199,6 +216,26 @@ function decaler(pas) {
   if (cible !== undefined && cible !== null) choisir(cible);
 }
 
+const dateLisible = (iso) => new Date(iso).toLocaleDateString('fr-FR', {
+  day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit',
+});
+
+/** Pose le repère des motos sur la carte, à l'endroit du tracé où elles en sont.
+
+    L'infobulle porte la date de mise à jour : une position d'il y a trois jours
+    ne dit pas la même chose que celle de ce matin, et rien à l'écran ne
+    distingue les deux. */
+function poserMotosSurLaCarte() {
+  if (!etat.carte || !etat.voyage) return;
+  const releve = releveAuKm(kmDeLaJournee(etat.position.jour, etat.voyage), etat.voyage);
+  if (!releve) return;
+
+  const etape = etat.etapes.find((e) => e.jour === etat.position.jour);
+  const ou = etape ? `Jour ${etape.jour} — ${etape.arrivee.nom}` : 'Pas encore partis de Salta';
+  const quand = etat.position.majLe ? `<br>Mis à jour le ${dateLisible(etat.position.majLe)}` : '';
+  etat.carte.placerMotos(releve.lat, releve.lon, `${ou}${quand}`);
+}
+
 function redessinerFrise() {
   if (!etat.voyage) return;
   dessinerFrise(elements.frise, {
@@ -207,6 +244,7 @@ function redessinerFrise() {
     jourActif: etat.jour,
     surChoixEtape: (jour) => choisir(jour),
     decomptes: etat.decomptes,
+    positionJour: etat.position.jour,
   });
   amenerEtapeEnVue();
 }

@@ -6,7 +6,7 @@
 
 import { creerCarte } from './carte.js';
 import { assemblerVoyage, dessinerFrise, dessinerProfilEtape } from './profil.js';
-import { monterSouvenirs } from './souvenirs-vue.js';
+import { monterSouvenirs, brancherVisionneuse } from './souvenirs-vue.js';
 import { listerDecomptes } from './souvenirs.js';
 
 const nombre = (valeur) => valeur.toLocaleString('fr-FR');
@@ -234,6 +234,30 @@ function afficherPanneau(etape) {
       });
       // « +N » sous la mosaïque : bascule sur l'onglet qui montre tout.
       blocSouvenirs.addEventListener('souvenirs:tout-voir', () => activerOnglet('souvenirs'));
+
+      // Une vignette de la mosaïque : même bascule, mais on amène le souvenir
+      // d'où elle vient. Sans le défilement, on atterrirait en haut d'une liste
+      // parfois longue, à charge de retrouver la photo qu'on venait de viser.
+      blocSouvenirs.addEventListener('souvenirs:aller-au-souvenir', (evenement) => {
+        activerOnglet('souvenirs');
+        const cible = blocSouvenirs.querySelector(`[data-id="${CSS.escape(evenement.detail.id)}"]`);
+        if (!cible) return;
+        // Après le changement d'onglet : l'élément était masqué, donc sans
+        // position mesurable tant que son volet ne s'affichait pas. Un délai
+        // plutôt que `requestAnimationFrame`, qui ne s'exécute pas dans un
+        // onglet en arrière-plan — le souvenir n'aurait alors jamais été
+        // amené, et le geste serait resté sans effet au retour sur l'onglet.
+        setTimeout(() => {
+          // Défilement direct, sans lissage : `behavior: 'smooth'` n'a
+          // produit aucun mouvement à l'essai — le panneau restait à zéro,
+          // alors que le défilement par défaut l'amenait bien. Un saut net
+          // convient de toute façon mieux ici : on veut être au souvenir, pas
+          // le voir venir.
+          cible.scrollIntoView({ block: 'start' });
+          cible.classList.add('est-vise');
+          setTimeout(() => cible.classList.remove('est-vise'), 1600);
+        }, 0);
+      });
     }
     brancherOnglets();
   }
@@ -333,7 +357,8 @@ function gabaritAccueil(voyage) {
 
     <p class="sous-titre">Aperçu des hébergements</p>
     <div class="vignettes">
-      ${voyage.hebergements.map((photo) => `<img src="${photo}" alt="" loading="lazy">`).join('')}
+      ${voyage.hebergements.map((photo) =>
+        `<img src="${photo}" alt="" loading="lazy" tabindex="0">`).join('')}
     </div>
   </div>`;
 }
@@ -393,7 +418,7 @@ function gabaritFiche(etape) {
       <p class="recit">${echapper(etape.recit)}</p>
 
       ${etape.photos.length ? `<div class="galerie">${etape.photos
-        .map((photo) => `<img src="${photo}" alt="" loading="lazy">`).join('')}</div>` : ''}
+        .map((photo) => `<img src="${photo}" alt="" loading="lazy" tabindex="0">`).join('')}</div>` : ''}
 
       ${points}
     </div>
@@ -433,6 +458,19 @@ function reglerFeuille(hauteur) {
 // ------------------------------------------------------------- interactions
 
 function brancherInterface() {
+  // Les photos du voyage s'ouvrent en grand comme celles des souvenirs : celles
+  // des hébergements sur la fiche d'accueil, celles de l'étape dans son onglet.
+  // Chaque galerie est sa propre série — on ne passe pas d'un hôtel à un col.
+  //
+  // Branché une seule fois, sur le panneau, qui ne change jamais d'élément :
+  // le poser à chaque rendu de fiche empilerait un écouteur par étape
+  // consultée. Le sélecteur ne croise pas celui des souvenirs, qui ont leur
+  // propre branchement dans leur module.
+  brancherVisionneuse(elements.panneau, {
+    selecteur: '.vignettes img, .galerie img',
+    groupe: '.vignettes, .galerie',
+  });
+
   elements.boutonAccueil.addEventListener('click', () => choisir(null));
   elements.etapePrecedente.addEventListener('click', () => decaler(-1));
   elements.etapeSuivante.addEventListener('click', () => decaler(1));

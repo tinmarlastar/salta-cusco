@@ -116,7 +116,10 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
-  align-items: flex-end;
+  /* `stretch` : les deux rangées prennent la largeur de la plus large, donc
+     la même. Alignées à droite, chacune se réglait sur son propre contenu et
+     l'escalier se voyait. */
+  align-items: stretch;
   gap: .3125rem;
   margin-left: auto;
 }
@@ -130,8 +133,12 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 }
 
 .pas-a-pas button {
+  /* Les deux flèches se partagent la rangée : sans ça, la rangée étirée
+     laissait une zone bordée vide à droite quand les noms sont masqués. */
+  flex: 1 1 auto;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: .375rem;
   padding: .3125rem .625rem;
   border: 0;
@@ -163,6 +170,7 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
   display: flex;
   flex-shrink: 0;
   align-items: center;
+  justify-content: center;   /* étiré à la largeur de la rangée voisine */
   gap: .375rem;
   padding: .4375rem .75rem;
   border: 1px solid var(--nuit-3);
@@ -345,6 +353,22 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
   gap: .25rem;
 }
 .mosaique .souvenir__figure { position: relative; }
+/* La vignette mène au souvenir, elle ne l'agrandit pas : le curseur annonce un
+   déplacement, pas une loupe. */
+.mosaique .souvenir__media { cursor: pointer; }
+
+/* Souvenir atteint depuis la mosaïque : un halo bref, le temps de le repérer
+   dans une liste qui peut être longue. */
+.souvenir.est-vise {
+  animation: souvenir-vise 1.6s ease-out;
+}
+@keyframes souvenir-vise {
+  0%, 40% { background: rgba(232, 179, 60, .16); }
+  100%    { background: transparent; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .souvenir.est-vise { animation: none; outline: 2px solid var(--soufre); }
+}
 .mosaique .souvenir__media { aspect-ratio: 1; object-fit: cover; }
 .mosaique-jour:not(:empty) { margin-bottom: 1.25rem; }
 
@@ -1143,8 +1167,14 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 }
 
 /* Photo comme vidéo s'ouvrent du même geste : le curseur le dit pour les
-   deux, sans quoi la galerie proposerait deux façons de faire la même chose. */
-.souvenir__media { cursor: zoom-in; }
+   deux, sans quoi la galerie proposerait deux façons de faire la même chose.
+   Vaut aussi pour les photos du voyage — hébergements et étapes —, qui
+   s'ouvrent dans la même visionneuse. */
+.souvenir__media,
+.vignettes img,
+.galerie img { cursor: zoom-in; }
+.vignettes img:focus-visible,
+.galerie img:focus-visible { outline: 2px solid var(--soufre); outline-offset: 2px; }
 .souvenir__media:focus-visible { outline: 2px solid var(--soufre); outline-offset: 2px; }
 
 /* Pastille de lecture : le seul signe qui distingue une vignette de vidéo

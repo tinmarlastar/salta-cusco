@@ -91,8 +91,8 @@ export function gabaritGalerie(medias, { avecRetraits = false } = {}) {
     Relevé au moment du clic plutôt que tenu à jour : la liste est reconstruite
     à chaque rafraîchissement, un index mémorisé y désignerait vite autre
     chose. */
-function serieDe(conteneur) {
-  return [...conteneur.querySelectorAll('.souvenir__media')].map((element) => ({
+function serieDe(conteneur, selecteur) {
+  return [...conteneur.querySelectorAll(selecteur)].map((element) => ({
     // `data-source` pour une vidéo : son `src` de vignette porte le fragment
     // `#t=0.1` qui n'a rien à faire en plein écran.
     source: element.dataset.source || element.getAttribute('src') || '',
@@ -107,27 +107,31 @@ function serieDe(conteneur) {
 
     Le conteneur ne sert qu'à la délégation : c'est un élément stable dont seul
     le contenu change, si bien que rien n'est à reposer après un rendu. */
-export function brancherVisionneuse(conteneur) {
+export function brancherVisionneuse(conteneur, {
+  selecteur = '.souvenir__media',
+  groupe = '.souvenir',
+} = {}) {
   function ouvrirDepuis(vise) {
     if (!vise) return;
-    // Repli sur le conteneur pour un fichier qui ne serait pas dans une carte
-    // de souvenir : la visionneuse continue de fonctionner plutôt que de
-    // rester muette.
-    const publication = vise.closest('.souvenir') || conteneur;
-    const fichiers = serieDe(publication);
+    // La série est celle du groupe qui entoure l'image — une publication pour
+    // les souvenirs, une galerie pour les photos du voyage. Repli sur le
+    // conteneur quand il n'y a pas de groupe : la visionneuse continue de
+    // fonctionner plutôt que de rester muette.
+    const bloc = vise.closest(groupe) || conteneur;
+    const fichiers = serieDe(bloc, selecteur);
     const depart = fichiers.findIndex((f) => f.element === vise);
     if (depart >= 0) ouvrirVisionneuse(fichiers, depart);
   }
 
   conteneur.addEventListener('click', (evenement) => {
-    ouvrirDepuis(evenement.target.closest('.souvenir__media'));
+    ouvrirDepuis(evenement.target.closest(selecteur));
   });
 
   // Au clavier : une vignette est atteignable par tabulation, elle doit donc
   // s'ouvrir à l'Entrée comme un bouton.
   conteneur.addEventListener('keydown', (evenement) => {
     if (evenement.key !== 'Enter' && evenement.key !== ' ') return;
-    const vise = evenement.target.closest?.('.souvenir__media');
+    const vise = evenement.target.closest?.(selecteur);
     if (!vise) return;
     evenement.preventDefault();
     ouvrirDepuis(vise);
@@ -461,9 +465,12 @@ function fermerVisionneuse() {
 const MOSAIQUE_MAX = 6;
 
 function gabaritMosaique(publiees) {
+  // Chaque vignette retient la publication d'où elle vient : le clic n'ouvre
+  // pas la photo, il mène au souvenir qui la porte — avec son auteur, sa date
+  // et son texte, c'est-à-dire ce qui lui donne son sens.
   const fichiers = publiees.flatMap((c) => (c.medias?.length
-    ? c.medias
-    : (c.media ? [c.media] : [])));
+    ? c.medias.map((m) => ({ ...m, contribution: c.id }))
+    : (c.media ? [{ ...c.media, contribution: c.id }] : [])));
   if (!fichiers.length) return '';
 
   const visibles = fichiers.slice(0, MOSAIQUE_MAX);
@@ -482,7 +489,7 @@ function gabaritMosaique(publiees) {
       const surplus = (reste > 0 && i === visibles.length - 1)
         ? `<button type="button" class="mosaique__reste" data-action="tout-voir">+${reste}</button>`
         : '';
-      return `<figure class="souvenir__figure">${corps}${surplus}</figure>`;
+      return `<figure class="souvenir__figure" data-contribution="${echapper(m.contribution)}">${corps}${surplus}</figure>`;
     }).join('')}
   </div>`;
 }
@@ -899,15 +906,28 @@ export function monterSouvenirs(conteneur, jour, { mosaique = null, surDecompte 
   brancherVisionneuse(liste);
 
   if (mosaique) {
-    // Dans la mosaïque il n'y a pas de carte de souvenir : la série est donc
-    // la mosaïque elle-même — on feuillette les photos de la journée, ce qui
-    // est exactement ce qu'on attend d'un aperçu.
-    brancherVisionneuse(mosaique);
+    // La mosaïque ne montre pas les photos en grand : elle y mène. Un clic
+    // bascule sur l'onglet des souvenirs et amène celui d'où vient la vignette
+    // — la photo s'y ouvre ensuite si on le veut, mais accompagnée de son
+    // auteur et de son texte.
     mosaique.addEventListener('click', (evenement) => {
-      if (!evenement.target.closest('[data-action="tout-voir"]')) return;
-      // Ce clic ne doit pas ouvrir la photo qui se trouve dessous.
-      evenement.stopPropagation();
-      conteneur.dispatchEvent(new CustomEvent('souvenirs:tout-voir', { bubbles: true }));
+      if (evenement.target.closest('[data-action="tout-voir"]')) {
+        conteneur.dispatchEvent(new CustomEvent('souvenirs:tout-voir', { bubbles: true }));
+        return;
+      }
+      const figure = evenement.target.closest('[data-contribution]');
+      if (!figure) return;
+      conteneur.dispatchEvent(new CustomEvent('souvenirs:aller-au-souvenir', {
+        bubbles: true,
+        detail: { id: figure.dataset.contribution },
+      }));
+    });
+
+    mosaique.addEventListener('keydown', (evenement) => {
+      if (evenement.key !== 'Enter' && evenement.key !== ' ') return;
+      if (!evenement.target.closest?.('[data-contribution]')) return;
+      evenement.preventDefault();
+      evenement.target.click();
     });
   }
 

@@ -450,7 +450,7 @@ function gabaritFiche(etape) {
 
   return `<div class="fiche">
     <p class="fiche__jour" data-pays="${etape.pays[etape.pays.length - 1]}"><span class="fiche__numero">J${etape.jour}</span>
-      <span class="fiche__pays">${drapeaux.map((p) => `${p.drapeau} ${echapper(p.nom)}`).join(' · ')}</span></p>
+      <span class="fiche__pays">· ${drapeaux.map((p) => `${p.drapeau} ${echapper(p.nom)}`).join(' · ')}</span></p>
     <h2 class="fiche__titre">${echapper(etape.titre)}</h2>
     ${etape.ride ? '' : '<p class="fiche__repos">Journée sans moto</p>'}
 

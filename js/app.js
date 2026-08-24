@@ -569,11 +569,13 @@ function brancherHabillages() {
   for (const bouton of document.querySelectorAll('.habillages [data-habillage]')) {
     bouton.addEventListener('click', () => appliquerHabillage(bouton.dataset.habillage));
   }
-  let garde = '';
+  // « Nations » par défaut : c'est l'habillage qui distingue le plus ce site,
+  // la couleur y portant une information plutôt qu'un décor.
+  let garde = 'nations';
   try {
-    garde = localStorage.getItem(CLE_HABILLAGE) || '';
+    garde = localStorage.getItem(CLE_HABILLAGE) || 'nations';
   } catch {
-    garde = '';
+    garde = 'nations';
   }
   appliquerHabillage(garde);
 }

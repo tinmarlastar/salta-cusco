@@ -218,26 +218,37 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 .habillages {
   display: flex;
   flex-shrink: 0;
-  gap: 1px;
+  align-items: center;
+  gap: .3125rem;
   margin-left: auto;
-  background: var(--nuit-3);
-  border: 1px solid var(--nuit-3);
 }
 
+/* Un carré par habillage, sans texte : quatre noms prenaient dans l'entête la
+   place d'une commande de navigation. Chaque carré montre le fond de son
+   habillage et, en diagonale, sa couleur d'accent — c'est ce qui les distingue
+   les uns des autres, deux d'entre eux ayant un fond clair voisin.
+
+   Les couleurs sont écrites en clair, et non prises dans les jetons : un carré
+   doit montrer l'habillage QU'IL PROPOSE, pas celui qui est en cours. */
 .habillages button {
-  padding: .25rem .4375rem;
-  border: 0;
-  background: var(--nuit);
-  color: var(--poussiere);
-  font-family: var(--mono);
-  font-size: .5625rem;
-  letter-spacing: .08em;
-  text-transform: uppercase;
+  width: 1.125rem;
+  height: 1.125rem;
+  padding: 0;
+  border: 1px solid var(--nuit-3);
+  border-radius: 2px;
   cursor: pointer;
-  transition: color var(--transition), background var(--transition);
+  transition: transform var(--transition), box-shadow var(--transition);
 }
-.habillages button:hover { color: var(--sel); }
-.habillages button[aria-pressed="true"] { background: var(--soufre); color: var(--sur-accent); }
+.habillages button:hover { transform: scale(1.15); }
+.habillages button[aria-pressed="true"] {
+  border-color: var(--sel);
+  box-shadow: 0 0 0 2px var(--nuit), 0 0 0 3px var(--sel);
+}
+
+.habillages [data-habillage=""]          { background: linear-gradient(135deg, #101b31 50%, #e8b33c 50%); }
+.habillages [data-habillage="sel"]       { background: linear-gradient(135deg, #f6f3ec 50%, #c8891b 50%); }
+.habillages [data-habillage="altiplano"] { background: linear-gradient(135deg, #efe7d9 50%, #1c7a72 50%); }
+.habillages [data-habillage="nations"]   { background: linear-gradient(135deg, #f4f6f8 50%, #1f5fa8 50%); }
 
 /* Une commande à trois volets, d'un seul tenant : étape précédente, retour au
    parcours entier, étape suivante. Les filets de 1 px sont le fond qui

@@ -219,7 +219,6 @@ function afficherPanneau(etape) {
     const blocSouvenirs = elements.panneau.querySelector('#souvenirs-etape');
     if (blocSouvenirs) {
       monterSouvenirs(blocSouvenirs, etape.jour, {
-        mosaique: elements.panneau.querySelector('#mosaique-jour'),
         // Le décompte vient de la vue des souvenirs, seule à connaître le
         // nombre réellement publié pour cette journée. Il corrige la pastille
         // de la frise dès qu'un souvenir est publié ou supprimé, sans
@@ -231,32 +230,6 @@ function afficherPanneau(etape) {
           majOngletCompte(nombre);
           redessinerFrise();
         },
-      });
-      // « +N » sous la mosaïque : bascule sur l'onglet qui montre tout.
-      blocSouvenirs.addEventListener('souvenirs:tout-voir', () => activerOnglet('souvenirs'));
-
-      // Une vignette de la mosaïque : même bascule, mais on amène le souvenir
-      // d'où elle vient. Sans le défilement, on atterrirait en haut d'une liste
-      // parfois longue, à charge de retrouver la photo qu'on venait de viser.
-      blocSouvenirs.addEventListener('souvenirs:aller-au-souvenir', (evenement) => {
-        activerOnglet('souvenirs');
-        const cible = blocSouvenirs.querySelector(`[data-id="${CSS.escape(evenement.detail.id)}"]`);
-        if (!cible) return;
-        // Après le changement d'onglet : l'élément était masqué, donc sans
-        // position mesurable tant que son volet ne s'affichait pas. Un délai
-        // plutôt que `requestAnimationFrame`, qui ne s'exécute pas dans un
-        // onglet en arrière-plan — le souvenir n'aurait alors jamais été
-        // amené, et le geste serait resté sans effet au retour sur l'onglet.
-        setTimeout(() => {
-          // Défilement direct, sans lissage : `behavior: 'smooth'` n'a
-          // produit aucun mouvement à l'essai — le panneau restait à zéro,
-          // alors que le défilement par défaut l'amenait bien. Un saut net
-          // convient de toute façon mieux ici : on veut être au souvenir, pas
-          // le voir venir.
-          cible.scrollIntoView({ block: 'start' });
-          cible.classList.add('est-vise');
-          setTimeout(() => cible.classList.remove('est-vise'), 1600);
-        }, 0);
       });
     }
     brancherOnglets();
@@ -410,8 +383,6 @@ function gabaritFiche(etape) {
     </div>
 
     <div class="volet" data-volet="etape" id="volet-etape" role="tabpanel" aria-labelledby="onglet-etape">
-      <div class="mosaique-jour" id="mosaique-jour"></div>
-
       <dl class="mesures">${mesures}</dl>
       ${profil}
 

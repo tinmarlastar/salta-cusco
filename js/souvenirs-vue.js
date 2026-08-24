@@ -456,45 +456,7 @@ function fermerVisionneuse() {
   elementRendu = null;
 }
 
-/** Mosaïque des photos de la journée, tous souvenirs confondus.
-
-    Elle vit dans l'onglet « Étape », juste sous les chiffres : c'est la réponse
-    à « qu'est-ce qu'on a vu ce jour-là ? », et elle doit tomber sous les yeux
-    avant le récit. Au-delà de six vignettes, la dernière devient un « +N » qui
-    renvoie à l'onglet des souvenirs plutôt que d'étirer la colonne. */
-const MOSAIQUE_MAX = 6;
-
-function gabaritMosaique(publiees) {
-  // Chaque vignette retient la publication d'où elle vient : le clic n'ouvre
-  // pas la photo, il mène au souvenir qui la porte — avec son auteur, sa date
-  // et son texte, c'est-à-dire ce qui lui donne son sens.
-  const fichiers = publiees.flatMap((c) => (c.medias?.length
-    ? c.medias.map((m) => ({ ...m, contribution: c.id }))
-    : (c.media ? [{ ...c.media, contribution: c.id }] : [])));
-  if (!fichiers.length) return '';
-
-  const visibles = fichiers.slice(0, MOSAIQUE_MAX);
-  const reste = fichiers.length - visibles.length;
-
-  return `<div class="mosaique">
-    ${visibles.map((m, i) => {
-      const source = echapper(urlMedia(m.cle));
-      const corps = m.genre === 'video'
-        ? `<video class="souvenir__media" src="${source}#t=0.1" data-source="${source}"
-                  preload="metadata" muted playsinline tabindex="0"></video>
-           <span class="souvenir__lecture" aria-hidden="true">▶</span>`
-        : `<img class="souvenir__media" src="${source}" alt="" loading="lazy" tabindex="0">`;
-      // Le « +N » se pose sur la dernière vignette visible : il montre encore
-      // une photo au lieu d'occuper une case pour un simple chiffre.
-      const surplus = (reste > 0 && i === visibles.length - 1)
-        ? `<button type="button" class="mosaique__reste" data-action="tout-voir">+${reste}</button>`
-        : '';
-      return `<figure class="souvenir__figure" data-contribution="${echapper(m.contribution)}">${corps}${surplus}</figure>`;
-    }).join('')}
-  </div>`;
-}
-
-export function monterSouvenirs(conteneur, jour, { mosaique = null, surDecompte = null } = {}) {
+export function monterSouvenirs(conteneur, jour, { surDecompte = null } = {}) {
   // Le formulaire porte son propre intitulé : rien ne le séparait de la liste,
   // si bien que la ligne « vous publiez en tant que… » se lisait comme la
   // suite du dernier souvenir plutôt que comme le début d'un geste nouveau.
@@ -595,9 +557,6 @@ export function monterSouvenirs(conteneur, jour, { mosaique = null, surDecompte 
       liste.innerHTML = attente.length
         ? attente.map((e) => gabaritEnAttente(e, progressionEnvoi())).join('')
         : '<p class="souvenirs__vide">Les souvenirs ne se chargent pas pour le moment.</p>';
-      // Service injoignable : on vide la mosaïque plutôt que d'y laisser les
-      // photos de l'étape précédente, qui passeraient pour celles de celle-ci.
-      if (mosaique) mosaique.innerHTML = '';
       return;
     }
     if (mienne !== generation) return; // un appel plus récent a pris le dessus
@@ -606,11 +565,8 @@ export function monterSouvenirs(conteneur, jour, { mosaique = null, surDecompte 
         + attente.map((e) => gabaritEnAttente(e, progressionEnvoi())).join('')
       : '<p class="souvenirs__vide">Aucun souvenir pour cette étape. Soyez le premier.</p>';
 
-    // La mosaïque et le décompte sortent du MÊME chargement que la liste : les
-    // recalculer ailleurs demanderait une seconde requête pour les mêmes
-    // données, et les deux affichages pourraient se contredire le temps qu'elle
-    // revienne.
-    if (mosaique) mosaique.innerHTML = gabaritMosaique(publiees);
+    // Le décompte sort du MÊME chargement que la liste : le recalculer ailleurs
+    // demanderait une seconde requête pour les mêmes données.
     if (surDecompte) {
       try {
         surDecompte(publiees.length);
@@ -904,132 +860,6 @@ export function monterSouvenirs(conteneur, jour, { mosaique = null, surDecompte 
 
   // Les flèches restent dans le souvenir cliqué : c'est lui qu'on regarde.
   brancherVisionneuse(liste);
-
-  if (mosaique) {
-    // La mosaïque ne montre pas les photos en grand : elle y mène. Un clic
-    // bascule sur l'onglet des souvenirs et amène celui d'où vient la vignette
-    // — la photo s'y ouvre ensuite si on le veut, mais accompagnée de son
-    // auteur et de son texte.
-    mosaique.addEventListener('click', (evenement) => {
-      if (evenement.target.closest('[data-action="tout-voir"]')) {
-        conteneur.dispatchEvent(new CustomEvent('souvenirs:tout-voir', { bubbles: true }));
-        return;
-      }
-      const figure = evenement.target.closest('[data-contribution]');
-      if (!figure) return;
-      conteneur.dispatchEvent(new CustomEvent('souvenirs:aller-au-souvenir', {
-        bubbles: true,
-        detail: { id: figure.dataset.contribution },
-      }));
-    });
-
-    mosaique.addEventListener('keydown', (evenement) => {
-      if (evenement.key !== 'Enter' && evenement.key !== ' ') return;
-      if (!evenement.target.closest?.('[data-contribution]')) return;
-      evenement.preventDefault();
-      evenement.target.click();
-    });
-  }
-
-  liste.addEventListener('click', async (evenement) => {
-    const bouton = evenement.target.closest('button[data-action]');
-    if (!bouton) return;
-    const carte = bouton.closest('[data-id], [data-local]');
-    const action = bouton.dataset.action;
-
-    if (action === 'abandonner') {
-      await viderEntree(carte.dataset.local);
-      await rafraichir();
-      return;
-    }
-
-    if (action === 'reessayer') {
-      // Ordre de priorité : le champ de la carte elle-même (celui qu'on vient
-      // de remplir sous les yeux du texte concerné), puis celui du formulaire
-      // du bas — il reste la source quand l'entrée est bloquée pour une autre
-      // raison que le mot de passe et n'a donc pas de champ à elle —, puis
-      // enfin le mot de passe mémorisé.
-      const champCarte = carte.querySelector('.souvenir__mot-de-passe');
-      const champFormulaire = formulaire.querySelector('[name="motDePasse"]');
-      const motDePasseCourant = (champCarte && champCarte.value.trim())
-        || (champFormulaire && !champFormulaire.hidden && champFormulaire.value.trim())
-        || localStorage.getItem(CLE_MOT_DE_PASSE) || '';
-      if (!motDePasseCourant) {
-        // Le message du formulaire s'affiche sous le bouton Publier, très loin
-        // du « Réessayer » qu'on vient de cliquer et hors de l'écran sur un
-        // téléphone. Quand la carte a son propre champ, on parle donc dans la
-        // carte ; le pied de formulaire ne sert plus que de repli.
-        const champ = champCarte || champFormulaire;
-        if (champCarte) {
-          const consigne = carte.querySelector('.souvenir__consigne');
-          if (consigne) consigne.textContent = 'Tapez le mot de passe du groupe ci-dessous, puis « Réessayer ».';
-        } else {
-          souci.textContent = 'Indiquez le mot de passe du groupe avant de réessayer.';
-          souci.hidden = false;
-        }
-        if (champ) {
-          champ.hidden = false;
-          champ.focus({ preventScroll: true });
-          champ.scrollIntoView({ block: 'center' });
-        }
-        return;
-      }
-      localStorage.setItem(CLE_MOT_DE_PASSE, motDePasseCourant);
-      await reprendreEntree(carte.dataset.local, motDePasseCourant);
-      renvoyerMaintenant();
-      await rafraichir();
-      return;
-    }
-
-    const id = carte.dataset.id;
-    const jeton = jetons()[id];
-    if (!jeton) return;
-
-    if (action === 'ajouter-media') {
-      // Le sélecteur de fichiers ne peut s'ouvrir que depuis un geste de
-      // l'utilisateur : on mémorise la cible, puis on clique le champ caché
-      // dans la foulée du clic en cours.
-      contributionAComplete = { id, jeton };
-      champAjout.value = '';
-      champAjout.click();
-      return;
-    }
-
-    if (action === 'retirer-media') {
-      if (!confirm('Retirer ce fichier du souvenir ?')) return;
-      try {
-        await supprimerFichier({ idMedia: bouton.dataset.media, jeton });
-      } catch (probleme) {
-        alert(probleme instanceof ErreurService ? probleme.message : 'Retrait impossible pour le moment.');
-      }
-      await rafraichir();
-      return;
-    }
-
-    if (action === 'supprimer') {
-      if (!confirm('Supprimer ce souvenir ?')) return;
-      try {
-        await supprimerContribution({ id, jeton });
-        oublierJeton(id);
-      } catch (probleme) {
-        alert(probleme instanceof ErreurService ? probleme.message : 'Suppression impossible pour le moment.');
-      }
-      await rafraichir();
-      return;
-    }
-
-    if (action === 'modifier') {
-      const actuel = carte.querySelector('.souvenir__texte')?.textContent || '';
-      const nouveau = prompt('Modifier le texte :', actuel);
-      if (nouveau === null) return;
-      try {
-        await modifierContribution({ id, texte: nouveau.trim(), jeton });
-      } catch (probleme) {
-        alert(probleme instanceof ErreurService ? probleme.message : 'Modification impossible pour le moment.');
-      }
-      await rafraichir();
-    }
-  });
 
   // Idempotente côté file (écouteurs et minuterie armés une seule fois par
   // onglet) : on peut donc l'appeler à chaque affichage de fiche d'étape sans

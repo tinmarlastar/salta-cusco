@@ -342,48 +342,6 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 .volet[hidden] { display: none; }
 .volet { padding-bottom: .5rem; }
 
-/* Mosaïque du jour : la réponse à « qu'a-t-on vu ce jour-là ? », posée avant
-   le récit. Vide, elle ne laisse pas de trou — le récit remonte. */
-/* Le nombre de colonnes suit la largeur disponible : sur un panneau à
-   moitié d'écran, s'en tenir à trois donnerait des vignettes énormes et une
-   mosaïque qui ne montre presque rien. */
-.mosaique {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(7rem, 100%), 1fr));
-  gap: .25rem;
-}
-.mosaique .souvenir__figure { position: relative; }
-/* La vignette mène au souvenir, elle ne l'agrandit pas : le curseur annonce un
-   déplacement, pas une loupe. */
-.mosaique .souvenir__media { cursor: pointer; }
-
-/* Souvenir atteint depuis la mosaïque : un halo bref, le temps de le repérer
-   dans une liste qui peut être longue. */
-.souvenir.est-vise {
-  animation: souvenir-vise 1.6s ease-out;
-}
-@keyframes souvenir-vise {
-  0%, 40% { background: rgba(232, 179, 60, .16); }
-  100%    { background: transparent; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .souvenir.est-vise { animation: none; outline: 2px solid var(--soufre); }
-}
-.mosaique .souvenir__media { aspect-ratio: 1; object-fit: cover; }
-.mosaique-jour:not(:empty) { margin-bottom: 1.25rem; }
-
-.mosaique__reste {
-  position: absolute;
-  inset: 0;
-  border: 0;
-  background: rgba(16, 27, 49, .74);
-  color: var(--sel);
-  font-family: var(--mono);
-  font-size: .875rem;
-  cursor: pointer;
-}
-.mosaique__reste:hover { background: rgba(16, 27, 49, .55); color: var(--soufre); }
-
 .fiche__jour {
   display: flex;
   align-items: baseline;
@@ -778,11 +736,25 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 
 .souvenirs { margin: 1.5rem 0 0; }
 
-.souvenirs__vide, .souvenirs__liste { font-size: .875rem; color: var(--poussiere); }
+.souvenirs__vide { font-size: .875rem; color: var(--poussiere); }
 
+/* Les souvenirs s'espacent au lieu de se séparer par un filet. */
+.souvenirs__liste {
+  display: grid;
+  gap: .5rem;
+  font-size: .875rem;
+  color: var(--poussiere);
+}
+
+/* Chaque souvenir est une carte posée sur un fond plus clair que la page.
+   Le filet qui les séparait auparavant était celui-là même qui structure le
+   panneau — onglets, mesures, sections — si bien que rien ne distinguait la
+   limite entre deux souvenirs d'une limite de rubrique. Une surface propre
+   les détache sans ajouter une seule ligne. */
 .souvenir {
-  padding: .625rem 0;
-  border-top: 1px solid var(--nuit-3);
+  padding: .75rem .875rem;
+  border-radius: 3px;
+  background: var(--nuit-2);
 }
 
 .souvenir__entete {
@@ -804,7 +776,9 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
   width: 100%;
   height: auto;
   margin-bottom: .375rem;
-  background: var(--nuit-2);
+  /* Un ton plus foncé que la carte : sur `--nuit-2`, la réserve d'une image en
+     cours de chargement se confondait avec elle. */
+  background: var(--nuit-3);
 }
 
 .souvenir__texte {
@@ -863,7 +837,7 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 }
 .souvenir__retirer:hover { background: var(--colorada); }
 
-.souvenir.est-en-attente { opacity: .6; border-left: 2px solid var(--soufre); padding-left: .625rem; }
+.souvenir.est-en-attente { opacity: .6; border-left: 2px solid var(--soufre); }
 /* Une entrée qui attend le réseau se fait discrète ; une entrée qui attend un
    geste de l'auteur, non. */
 .souvenir.est-en-attente.est-refusee { opacity: 1; }

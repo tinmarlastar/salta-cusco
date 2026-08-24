@@ -110,10 +110,8 @@ souvenirs quand la journée en a reçu, sur l'étape sinon — c'est ce qu'on vi
 chercher. Un clic sur un onglet tient jusqu'au changement de journée. La barre
 « journée précédente / suivante » est collée au bas du panneau, donc toujours
 atteignable : elle vivait auparavant après le récit et tous les souvenirs,
-c'est-à-dire une page entière de défilement plus bas. En tête de l'onglet
-*Étape*, la mosaïque des photos du jour répond à « qu'a-t-on vu ce jour-là ? »
-avant le récit ; au-delà de six fichiers, un « +N » renvoie à l'onglet des
-souvenirs.
+c'est-à-dire une page entière de défilement plus bas. L'onglet *Étape* garde ce qui décrit la
+journée — chiffres, profil, récit, points — et laisse les souvenirs au sien.
 
 **Sur téléphone**, la fiche est une feuille à trois hauteurs, que la poignée
 fait défiler : repliée, à mi-hauteur, pleine. La position intermédiaire est

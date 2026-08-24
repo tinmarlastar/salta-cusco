@@ -514,34 +514,23 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
      faut. `minmax(0, …)` et non `1fr` : le `nowrap` des valeurs empêcherait
      sinon les colonnes de se répartir également. */
   grid-template-columns: repeat(auto-fit, minmax(min(7rem, 100%), 1fr));
-  /* Ni fond ni bordure : les mesures se posent sur la page comme le reste du
-     panneau. Le fond servait à peindre les filets par les interstices d'une
-     grille de 1 px — commode tant que la dernière rangée était pleine, mais
-     six valeurs sur cinq colonnes laissent quatre cases vides, et le fond s'y
-     étalait en pavé gris. L'écart seul sépare désormais les mesures ; ce qui
-     manque en cadre, les intitulés le rendent en alignement. */
-  gap: .875rem 1.5rem;
+  gap: 1px;
+  /* 1 px de rembourrage pour loger le cadre des cases du bord : il est peint
+     hors de la case, et sans cette réserve il déborderait de la grille. */
+  padding: 1px;
   margin: 0 0 1.25rem;
 }
 
-.mesures div { padding: 0; }
+/* Chaque case porte son propre cadre, au lieu du fond de grille qu'on laissait
+   transparaître par les interstices. Ce fond peignait tous les filets d'un
+   coup — commode tant que la dernière rangée était pleine, mais six valeurs sur
+   cinq colonnes laissent quatre cases vides, et il s'y étalait en pavé gris.
+   Un cadre par case : les vides restent vides.
 
-/* La note qui dit d'où sort le « ≈ » du temps de trajet. Elle se tient près du
-   tableau qu'elle commente, mais pas plus près que les rangées ne le sont entre
-   elles : sans cadre pour marquer la fin des mesures, un écart plus court
-   l'aurait fait passer pour une rangée de plus. */
-.mesures:has(+ .mesures__note) { margin-bottom: 1rem; }
-
-.mesures__note {
-  margin: 0 0 1.25rem;
-  font-size: .75rem;
-  line-height: 1.45;
-  /* `--texte-2` et non `--poussiere`, la couleur des intitulés du tableau :
-     à .75rem elle tombe à 4.1 de contraste sur les habillages clairs, sous le
-     seuil lisible. Une réserve sur un chiffre ne vaut que si elle se lit. */
-  color: var(--texte-2);
-}
-
+   `box-shadow` et non `border` : l'ombre se peint hors de la case sans rien
+   prendre à sa largeur. Deux cases voisines déposent la leur dans le même
+   interstice de 1 px, où elles se superposent — un filet, pas deux. */
+.mesures div { padding: .625rem .75rem; box-shadow: 0 0 0 1px var(--nuit-3); }
 .mesures dt {
   font-family: var(--mono);
   font-size: .5625rem;

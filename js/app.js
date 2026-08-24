@@ -381,10 +381,11 @@ function dureeEstimee(kmRoute, kmPiste) {
 
     Les distances, elles, sont sûres : la durée s'en déduit plutôt que d'être
     saisie une seconde fois. Un chiffre estimé n'a le droit de figurer sur une
-    fiche de voyage qu'à condition de se dire tel — d'où le « ≈ » sur la valeur
-    et la règle écrite en toutes lettres sous le tableau, plutôt qu'une infobulle
-    invisible sur le téléphone où ce site se lit. Renseigner `dureeMinutes` sur
-    une étape remplace l'estimation par le vrai chiffre, sans le « ≈ ». */
+    fiche de voyage qu'à condition de se dire tel : l'intitulé le dit — « Durée
+    estimée » et non « Temps de trajet », qui se lirait comme un relevé — et le
+    « ≈ » le répète sur la valeur. Renseigner `dureeMinutes` sur une étape
+    remplace l'estimation par le vrai chiffre, reprend l'intitulé « Temps de
+    trajet » et fait tomber le « ≈ ». */
 function gabaritDuree(etape, kmRoute) {
   const reelle = etape.dureeMinutes;
   const minutes = reelle || dureeEstimee(kmRoute, etape.kmPiste);
@@ -423,14 +424,6 @@ function gabaritFiche(etape) {
     : `<div><dt>Étape</dt><dd>${echapper(etape.arrivee.nom)}</dd></div>
        <div><dt>Altitude</dt><dd>${nombre(etape.arrivee.altitudeM)} <small>m</small></dd></div>`;
 
-  // La règle qui produit le « ≈ », dite à l'écran et non en infobulle : sur un
-  // téléphone, un `title` ne s'ouvre pas. Elle ne paraît que quand la durée est
-  // bien estimée — une étape qui porte son temps réel n'a rien à justifier.
-  const noteDuree = etape.ride && !etape.dureeMinutes
-    ? `<p class="mesures__note">Durée estimée d'après les distances :
-       ${VITESSE_ROUTE} km/h sur route, ${VITESSE_PISTE} km/h sur piste, pauses non comprises.</p>`
-    : '';
-
   const profil = etape.ride
     ? `<figure class="profil-etape"><svg></svg>
          <figcaption><span>${echapper(etape.depart.nom)}</span><span>${echapper(etape.arrivee.nom)}</span></figcaption>
@@ -464,7 +457,6 @@ function gabaritFiche(etape) {
 
     <div class="volet" data-volet="etape" id="volet-etape" role="tabpanel" aria-labelledby="onglet-etape">
       <dl class="mesures">${mesures}</dl>
-      ${noteDuree}
       ${profil}
 
       <p class="recit">${echapper(etape.recit)}</p>

@@ -463,6 +463,9 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 .volet { padding-bottom: .5rem; }
 
 .fiche__jour {
+  /* Sans ce zéro, la marge par défaut d'un paragraphe ajoute 12 px sous le
+     filet, et la journée flotte au lieu d'ouvrir la fiche. */
+  margin: 0;
   display: flex;
   align-items: baseline;
   gap: .625rem;

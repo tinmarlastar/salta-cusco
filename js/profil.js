@@ -65,7 +65,10 @@ export function dessinerFrise(svg, { voyage, etapes, jourActif, surChoixEtape, d
   const hauteur = svg.clientHeight || 100;
   if (!largeur) return;
 
-  const marge = { haut: 14, bas: 26, gauche: 36, droite: 10 };
+  // 54 à gauche : « 4 000 m » mesure une quarantaine de pixels dans la police
+  // à chasse fixe de la frise. À 36, il débordait sur le tracé et percutait le
+  // repère du jour 1, posé lui aussi au bord gauche.
+  const marge = { haut: 14, bas: 26, gauche: 54, droite: 10 };
   const l = largeur - marge.gauche - marge.droite;
   const h = hauteur - marge.haut - marge.bas;
 

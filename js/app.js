@@ -209,13 +209,16 @@ function afficherPanneau(etape) {
       monterSouvenirs(blocSouvenirs, etape.jour, {
         mosaique: elements.panneau.querySelector('#mosaique-jour'),
         // Le décompte vient de la vue des souvenirs, seule à connaître le
-        // nombre réellement publié pour cette journée : il corrige la pastille
-        // du bandeau, chargée une fois au démarrage, dès qu'un souvenir est
-        // publié ou supprimé sans recharger la page.
+        // nombre réellement publié pour cette journée. Il corrige la pastille
+        // de la frise dès qu'un souvenir est publié ou supprimé, sans
+        // recharger la page — d'où le redessin, sans lequel la valeur était
+        // bien enregistrée mais n'apparaissait qu'au changement de journée
+        // suivant, celui-ci redessinant la frise pour d'autres raisons.
         surDecompte: (nombre) => {
           etat.decomptes[etape.jour] = nombre;
           majOngletCompte(nombre);
-                },
+          redessinerFrise();
+        },
       });
       // « +N » sous la mosaïque : bascule sur l'onglet qui montre tout.
       blocSouvenirs.addEventListener('souvenirs:tout-voir', () => activerOnglet('souvenirs'));

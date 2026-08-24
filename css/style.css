@@ -480,6 +480,8 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
   letter-spacing: 0;
 }
 
+.fiche__pays { font-size: .875rem; }
+
 .fiche__titre {
   margin: .375rem 0 1rem;
   font-size: 1.5rem;

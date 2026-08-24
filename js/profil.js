@@ -65,10 +65,13 @@ export function dessinerFrise(svg, { voyage, etapes, jourActif, surChoixEtape, d
   const hauteur = svg.clientHeight || 100;
   if (!largeur) return;
 
-  // 54 à gauche : « 4 000 m » mesure une quarantaine de pixels dans la police
-  // à chasse fixe de la frise. À 36, il débordait sur le tracé et percutait le
-  // repère du jour 1, posé lui aussi au bord gauche.
-  const marge = { haut: 14, bas: 26, gauche: 54, droite: 10 };
+  // 72 à gauche : « 4 000 m » mesure 35 px dans la police à chasse fixe de la
+  // frise et s'arrête donc à 39. Le tracé commence à 54, mais ce n'est pas lui
+  // le plus proche : le repère du jour 1 et son libellé débordent à sa gauche
+  // et venaient s'arrêter à 9 px du texte, si près qu'on lisait « 2 000 m J1 »
+  // d'un seul tenant. À 72, il reste 27 px — l'altitude appartient à l'axe, le
+  // jour au graphique, et l'œil ne les confond plus.
+  const marge = { haut: 14, bas: 26, gauche: 72, droite: 10 };
   const l = largeur - marge.gauche - marge.droite;
   const h = hauteur - marge.haut - marge.bas;
 

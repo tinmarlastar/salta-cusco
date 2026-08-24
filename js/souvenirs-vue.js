@@ -885,6 +885,111 @@ export function monterSouvenirs(conteneur, jour, { surDecompte = null } = {}) {
   // Les flèches restent dans le souvenir cliqué : c'est lui qu'on regarde.
   brancherVisionneuse(liste);
 
+  // Les commandes d'un souvenir, déléguées à la liste : elle est reconstruite
+  // à chaque rafraîchissement, brancher chaque carte reviendrait à rebrancher
+  // sans fin. Cet écouteur a été supprimé par inadvertance avec la mosaïque
+  // (c635086), qui vivait juste au-dessus : ×, Ajouter, Modifier, Supprimer,
+  // Réessayer et Abandonner s'affichaient alors sans plus rien faire.
+  liste.addEventListener('click', async (evenement) => {
+    const bouton = evenement.target.closest('button[data-action]');
+    if (!bouton) return;
+    const carte = bouton.closest('[data-id], [data-local]');
+    const action = bouton.dataset.action;
+
+    if (action === 'abandonner') {
+      await viderEntree(carte.dataset.local);
+      await rafraichir();
+      return;
+    }
+
+    if (action === 'reessayer') {
+      // Ordre de priorité : le champ de la carte elle-même (celui qu'on vient
+      // de remplir sous les yeux du texte concerné), puis celui du formulaire
+      // du bas — il reste la source quand l'entrée est bloquée pour une autre
+      // raison que le mot de passe et n'a donc pas de champ à elle —, puis
+      // enfin le mot de passe mémorisé.
+      const champCarte = carte.querySelector('.souvenir__mot-de-passe');
+      const champFormulaire = formulaire.querySelector('[name="motDePasse"]');
+      const motDePasseCourant = (champCarte && champCarte.value.trim())
+        || (champFormulaire && !champFormulaire.hidden && champFormulaire.value.trim())
+        || localStorage.getItem(CLE_MOT_DE_PASSE) || '';
+      if (!motDePasseCourant) {
+        // Le message du formulaire s'affiche sous le bouton Publier, très loin
+        // du « Réessayer » qu'on vient de cliquer et hors de l'écran sur un
+        // téléphone. Quand la carte a son propre champ, on parle donc dans la
+        // carte ; le pied de formulaire ne sert plus que de repli.
+        const champ = champCarte || champFormulaire;
+        if (champCarte) {
+          const consigne = carte.querySelector('.souvenir__consigne');
+          if (consigne) consigne.textContent = 'Tapez le mot de passe du groupe ci-dessous, puis « Réessayer ».';
+        } else {
+          souci.textContent = 'Indiquez le mot de passe du groupe avant de réessayer.';
+          souci.hidden = false;
+        }
+        if (champ) {
+          champ.hidden = false;
+          champ.focus({ preventScroll: true });
+          champ.scrollIntoView({ block: 'center' });
+        }
+        return;
+      }
+      localStorage.setItem(CLE_MOT_DE_PASSE, motDePasseCourant);
+      await reprendreEntree(carte.dataset.local, motDePasseCourant);
+      renvoyerMaintenant();
+      await rafraichir();
+      return;
+    }
+
+    const id = carte.dataset.id;
+    const jeton = jetons()[id];
+    if (!jeton) return;
+
+    if (action === 'ajouter-media') {
+      // Le sélecteur de fichiers ne peut s'ouvrir que depuis un geste de
+      // l'utilisateur : on mémorise la cible, puis on clique le champ caché
+      // dans la foulée du clic en cours.
+      contributionAComplete = { id, jeton };
+      champAjout.value = '';
+      champAjout.click();
+      return;
+    }
+
+    if (action === 'retirer-media') {
+      if (!confirm('Retirer ce fichier du souvenir ?')) return;
+      try {
+        await supprimerFichier({ idMedia: bouton.dataset.media, jeton });
+      } catch (probleme) {
+        alert(probleme instanceof ErreurService ? probleme.message : 'Retrait impossible pour le moment.');
+      }
+      await rafraichir();
+      return;
+    }
+
+    if (action === 'supprimer') {
+      if (!confirm('Supprimer ce souvenir ?')) return;
+      try {
+        await supprimerContribution({ id, jeton });
+        oublierJeton(id);
+      } catch (probleme) {
+        alert(probleme instanceof ErreurService ? probleme.message : 'Suppression impossible pour le moment.');
+      }
+      await rafraichir();
+      return;
+    }
+
+    if (action === 'modifier') {
+      const actuel = carte.querySelector('.souvenir__texte')?.textContent || '';
+      const nouveau = prompt('Modifier le texte :', actuel);
+      if (nouveau === null) return;
+      try {
+        await modifierContribution({ id, texte: nouveau.trim(), jeton });
+      } catch (probleme) {
+        alert(probleme instanceof ErreurService ? probleme.message : 'Modification impossible pour le moment.');
+      }
+      await rafraichir();
+    }
+  });
+
   // Idempotente côté file (écouteurs et minuterie armés une seule fois par
   // onglet) : on peut donc l'appeler à chaque affichage de fiche d'étape sans
   // rien empiler. `memoriserJeton` est ce qui permet à l'auteur de retrouver

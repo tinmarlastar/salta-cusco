@@ -1,4 +1,4 @@
-/* Bloc « Souvenirs des compagnons » sous le récit de chaque étape.
+/* Bloc des souvenirs, dans l'onglet du même nom de chaque étape.
 
    Ce module possède le DOM du bloc ; il ne parle au réseau qu'à travers
    souvenirs.js et souvenirs-file.js. */
@@ -491,8 +491,9 @@ export function monterSouvenirs(conteneur, jour, { mosaique = null, surDecompte 
   // Le formulaire porte son propre intitulé : rien ne le séparait de la liste,
   // si bien que la ligne « vous publiez en tant que… » se lisait comme la
   // suite du dernier souvenir plutôt que comme le début d'un geste nouveau.
-  conteneur.innerHTML = `<p class="sous-titre">Souvenirs des compagnons</p>
-    <div class="souvenirs__liste">Chargement…</div>
+  // Pas de titre au-dessus de la liste : l'onglet « Souvenirs » le dit déjà,
+  // juste au-dessus, et le répéter volait une ligne au premier souvenir.
+  conteneur.innerHTML = `<div class="souvenirs__liste">Chargement…</div>
     <p class="souvenir-form__titre">Ajouter un souvenir</p>
     ${gabaritFormulaire()}`;
 

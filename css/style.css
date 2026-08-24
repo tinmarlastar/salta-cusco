@@ -865,7 +865,31 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 
 /* Formulaire */
 
-.souvenir-form { margin: 1rem 0 0; }
+/* Séparation nette entre ce qui a été posté et ce qu'on s'apprête à poster :
+   un intitulé prolongé d'un trait sur toute la largeur restante. Une simple
+   marge ne suffisait pas — le formulaire paraissait appartenir au dernier
+   souvenir de la liste. */
+.souvenir-form__titre {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  margin: 2rem 0 1rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--nuit-3);
+  font-family: var(--mono);
+  font-size: .6875rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--soufre);
+}
+.souvenir-form__titre::after {
+  content: '';
+  flex: 1 1 auto;
+  height: 1px;
+  background: var(--nuit-3);
+}
+
+.souvenir-form { margin: 0; }
 
 /* Ligne de statut : lecture seule, ou droit de publier et sous quel nom. */
 .souvenir-form__statut {

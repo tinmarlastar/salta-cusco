@@ -488,8 +488,12 @@ function gabaritMosaique(publiees) {
 }
 
 export function monterSouvenirs(conteneur, jour, { mosaique = null, surDecompte = null } = {}) {
+  // Le formulaire porte son propre intitulé : rien ne le séparait de la liste,
+  // si bien que la ligne « vous publiez en tant que… » se lisait comme la
+  // suite du dernier souvenir plutôt que comme le début d'un geste nouveau.
   conteneur.innerHTML = `<p class="sous-titre">Souvenirs des compagnons</p>
     <div class="souvenirs__liste">Chargement…</div>
+    <p class="souvenir-form__titre">Ajouter un souvenir</p>
     ${gabaritFormulaire()}`;
 
   const liste = conteneur.querySelector('.souvenirs__liste');

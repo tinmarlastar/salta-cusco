@@ -238,7 +238,12 @@ export function dessinerProfilEtape(svg, trace, { surSurvol, surSortie }) {
   const hauteur = svg.clientHeight || 88;
   const profil = trace.properties.profil;
 
-  const marge = { haut: 10, bas: 4, gauche: 0, droite: 0 };
+  // Une gouttière à gauche pour les légendes d'altitude, une en bas pour les
+  // distances : sans elles le texte se posait à même le relief, illisible dès
+  // que la courbe passait dessous. 46, la largeur de « 4 764 m » dans la
+  // police à chasse fixe des légendes, plus un peu d'air.
+  const marge = { haut: 10, bas: 16, gauche: 46, droite: 6 };
+  const l = largeur - marge.gauche - marge.droite;
   const h = hauteur - marge.haut - marge.bas;
   const totalKm = profil[profil.length - 1][0];
   const altitudes = profil.map(([, altitude]) => altitude);
@@ -246,35 +251,44 @@ export function dessinerProfilEtape(svg, trace, { surSurvol, surSortie }) {
   const haut = Math.max(...altitudes);
   const amplitude = Math.max(haut - bas, 100);
 
-  const x = (km) => (km / totalKm) * largeur;
+  const x = (km) => marge.gauche + (km / totalKm) * l;
   const y = (altitude) => marge.haut + h - ((altitude - bas) / amplitude) * h;
 
   svg.setAttribute('viewBox', `0 0 ${largeur} ${hauteur}`);
   svg.replaceChildren();
 
   const chemin = profil.map(([km, altitude], i) => `${i ? 'L' : 'M'}${x(km).toFixed(1)} ${y(altitude).toFixed(1)}`).join('');
-  svg.append(creer('path', { class: 'frise__relief', d: `${chemin}L${largeur} ${hauteur}L0 ${hauteur}Z` }));
+  const base = `L${x(totalKm).toFixed(1)} ${hauteur - marge.bas} L${marge.gauche} ${hauteur - marge.bas}Z`;
+  svg.append(creer('path', { class: 'frise__relief', d: chemin + base }));
   svg.append(creer('path', { class: 'frise__trace', d: chemin }));
 
   // Légendes de l'axe des ordonnées : les deux bornes du relief du jour, haut
-  // et bas. Pas de gouttière ici, contrairement à la frise du haut — la fiche
-  // n'a pas la place — donc le texte se pose par-dessus le relief plutôt qu'à
-  // côté de lui, chaque étiquette tournée vers l'intérieur du graphique pour
-  // rester lisible même quand sa ligne longe un bord.
+  // et bas, posées dans la gouttière de gauche plutôt que par-dessus le relief.
   svg.append(
-    creer('line', { class: 'frise__graduation', x1: 0, x2: largeur, y1: y(haut), y2: y(haut) }),
-    Object.assign(creer('text', { class: 'frise__graduation-texte', x: 4, y: y(haut) + 9 }), { textContent: `${nombre(haut)} m` }),
-    creer('line', { class: 'frise__graduation', x1: 0, x2: largeur, y1: y(bas), y2: y(bas) }),
-    Object.assign(creer('text', { class: 'frise__graduation-texte', x: 4, y: y(bas) - 4 }), { textContent: `${nombre(bas)} m` }),
+    creer('line', { class: 'frise__graduation', x1: marge.gauche, x2: largeur - marge.droite, y1: y(haut), y2: y(haut) }),
+    Object.assign(creer('text', { class: 'frise__graduation-texte', x: 2, y: y(haut) + 3 }), { textContent: `${nombre(haut)} m` }),
+    creer('line', { class: 'frise__graduation', x1: marge.gauche, x2: largeur - marge.droite, y1: y(bas), y2: y(bas) }),
+    Object.assign(creer('text', { class: 'frise__graduation-texte', x: 2, y: y(bas) + 3 }), { textContent: `${nombre(bas)} m` }),
   );
 
-  const repere = creer('line', { class: 'frise__separation', x1: 0, x2: 0, y1: 0, y2: hauteur, opacity: 0 });
-  const bulle = creer('text', { class: 'frise__graduation-texte', x: 0, y: 8, fill: '#e8b33c' });
+  // Légendes de l'axe des abscisses : la distance du jour, du départ à
+  // l'arrivée, alignées sous les deux bouts de la courbe.
+  svg.append(
+    Object.assign(creer('text', { class: 'frise__graduation-texte', x: marge.gauche, y: hauteur - 3 }), { textContent: '0 km' }),
+    Object.assign(creer('text', { class: 'frise__graduation-texte', x: largeur - marge.droite, y: hauteur - 3, 'text-anchor': 'end' }), { textContent: `${Math.round(totalKm)} km` }),
+  );
+
+  const repere = creer('line', { class: 'frise__separation', x1: 0, x2: 0, y1: marge.haut, y2: hauteur - marge.bas, opacity: 0 });
+  const bulle = creer('text', { class: 'frise__graduation-texte', x: 0, y: marge.haut - 2, fill: '#e8b33c' });
   svg.append(repere, bulle);
 
   svg.addEventListener('pointermove', (evenement) => {
     const boite = svg.getBoundingClientRect();
-    const km = ((evenement.clientX - boite.left) / boite.width) * totalKm;
+    // La souris ne connaît que la boîte CSS : on y repère la fraction du
+    // graphique survolée avant de la reconvertir en kilomètres, gouttières
+    // déduites — sans quoi le curseur glisserait plus vite que la courbe.
+    const fraction = ((evenement.clientX - boite.left) / boite.width) * largeur;
+    const km = Math.min(Math.max((fraction - marge.gauche) / l, 0), 1) * totalKm;
     const point = profil.reduce((meilleur, p) =>
       Math.abs(p[0] - km) < Math.abs(meilleur[0] - km) ? p : meilleur, profil[0]);
 
@@ -282,7 +296,7 @@ export function dessinerProfilEtape(svg, trace, { surSurvol, surSortie }) {
     repere.setAttribute('x2', x(point[0]));
     repere.setAttribute('opacity', 1);
     bulle.textContent = `${Math.round(point[0])} km · ${nombre(point[1])} m`;
-    bulle.setAttribute('x', Math.min(Math.max(x(point[0]) - 34, 2), largeur - 78));
+    bulle.setAttribute('x', Math.min(Math.max(x(point[0]) - 34, marge.gauche + 2), largeur - marge.droite - 78));
     surSurvol?.(point[2], point[3]);
   });
 

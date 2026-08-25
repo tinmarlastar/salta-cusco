@@ -275,12 +275,21 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 .habillages [data-habillage="altiplano"] { background: linear-gradient(135deg, #efe7d9 50%, #1c7a72 50%); }
 .habillages [data-habillage="nations"]   { background: linear-gradient(135deg, #f4f6f8 50%, #1f5fa8 50%); }
 
-/* La commande n'a plus qu'un volet : le retour au parcours entier. Le cadre de
-   1 px lui reste, c'est lui qui la pose dans l'entête. */
+/* La commande n'a plus qu'un volet : le retour au parcours entier.
+
+   Le cadre de 1 px est porté par le BOUTON, pas par ce conteneur. Sur le
+   conteneur, il survivait à la disparition de son contenu : sur la vue
+   d'ensemble, où « Tout le parcours » n'a nulle part où ramener, la boîte
+   retombait à zéro de haut mais peignait toujours ses deux bords — deux pixels
+   l'un sur l'autre. En grand écran elle ne prend alors aucune largeur et le
+   défaut ne se voyait pas ; sur écran étroit, où elle occupe toute une ligne,
+   il se lisait comme un filet en trop sous les pastilles d'habillage.
+
+   Un cadre appartient à ce qu'il encadre, et s'en va avec lui. C'est déjà
+   ainsi que ce même bouton s'habille sur la page de modération. */
 .bandeau__navigation {
   display: flex;
   flex-shrink: 0;
-  border: 1px solid var(--nuit-3);
 }
 
 .bandeau__navigation button {
@@ -289,7 +298,7 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
   justify-content: center;
   gap: .375rem;
   padding: .3125rem .625rem;
-  border: 0;
+  border: 1px solid var(--nuit-3);
   background: var(--nuit-2);
   color: var(--sel);
   font-family: var(--mono);

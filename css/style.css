@@ -43,6 +43,9 @@
 
   --display: 'Archivo', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --mono: 'Spline Sans Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  /* Une seule phrase du site est manuscrite : « Nous sommes ici ! » sur la
+     frise. Elle a sa police à elle parce qu'elle a un statut à elle. */
+  --manuscrite: 'Caveat', 'Segoe Script', 'Bradley Hand', cursive;
 
   --bandeau-h: 4.5rem;
   --frise-h: 8.75rem;
@@ -725,9 +728,10 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 
 /* La frise est passée au-dessus de la carte : le trait qui la sépare du reste
    change de bord, et le rembourrage suit. */
-/* La frise se centre dans son bandeau. Elle mesure 6,25 rem pour un bandeau de
-   8,75 : la différence tombait entièrement sous elle depuis que la ligne
-   d'aide qui l'occupait a disparu avec le déplacement au-dessus de la carte. */
+/* La frise se centre dans son bandeau. Elle mesure 7,25 rem pour un bandeau de
+   8,75 : le reste du jeu qui traînait sous elle depuis la disparition de la
+   ligne d'aide est passé en ciel au-dessus de la courbe, pour y loger
+   « Nous sommes ici ! ». */
 .frise {
   display: flex;
   align-items: center;
@@ -754,7 +758,7 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
   display: block;
   width: 100%;
   min-width: 44rem;
-  height: 6.25rem;
+  height: 7.25rem;
 }
 
 /* Éléments dessinés dans la frise */
@@ -810,6 +814,34 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 .frise__motos {
   font-size: .875rem;
   text-anchor: middle;
+  pointer-events: none;
+}
+
+/* « Nous sommes ici ! » et sa flèche. Manuscrites : partout ailleurs la frise
+   mesure, ici quelqu'un parle. Transparentes au clic comme le repère, et
+   posées avant lui dans le dessin pour qu'il reste au-dessus.
+
+   Le liseré de fond (`paint-order`) est une ceinture : le mot est censé rester
+   dans le ciel, mais si un sommet venait un jour le toucher, il ne s'y perdrait
+   pas. */
+.frise__ici {
+  font-family: var(--manuscrite);
+  font-size: 1.0625rem;
+  font-weight: 600;
+  fill: var(--soufre);
+  paint-order: stroke;
+  stroke: var(--nuit);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+
+.frise__ici-fleche {
+  fill: none;
+  stroke: var(--soufre);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
   pointer-events: none;
 }
 
@@ -1428,7 +1460,7 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 }
 
 @media (max-width: 48rem) {
-  :root { --frise-h: 7.5rem; }
+  :root { --frise-h: 8.25rem; }   /* 7,25 rem de dessin + le rembourrage */
 
   .bandeau { flex-wrap: wrap; gap: .5rem 1rem; padding: .625rem 1rem; }
   /* Sur un écran étroit, la navigation reprend toute une ligne : côte à côte

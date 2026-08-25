@@ -103,7 +103,12 @@ export function dessinerFrise(svg, { voyage, etapes, jourActif, surChoixEtape, d
   // 20 et non 10 : le repère du jour 1 et son libellé débordent à gauche du
   // tracé sans rien devoir à la marge. À 10, « J1 » serait venu s'inscrire
   // trop près du bord.
-  const marge = { haut: 14, bas: 26, gauche: 20, droite: 20 };
+  //
+  // 32 en haut, et non 14 : cette marge est le ciel où s'écrit « Nous sommes
+  // ici ! ». Il faut qu'elle tienne la hauteur du mot même là où la montagne
+  // monte le plus haut — d'où le dessin agrandi d'autant (CSS), pour que le
+  // relief garde la même amplitude qu'avant qu'on lui creuse ce ciel.
+  const marge = { haut: 32, bas: 26, gauche: 20, droite: 20 };
   const l = largeur - marge.gauche - marge.droite;
   const h = hauteur - marge.haut - marge.bas;
 
@@ -218,9 +223,75 @@ export function dessinerFrise(svg, { voyage, etapes, jourActif, surChoixEtape, d
   // dessous, comme partout ailleurs sur la frise.
   const releveMotos = releveAuKm(kmDeLaJournee(positionJour, voyage), voyage);
   if (releveMotos) {
+    const xMotos = x(releveMotos.km);
+    const yMotos = y(releveMotos.altitude) - 7;
+
+    // « Nous sommes ici ! » : ce que dit déjà le repère, mais dit d'une voix.
+    // Le mot se range du côté où il reste de la place, et sa flèche va chercher
+    // les motos.
+    //
+    // Sa hauteur ne suit pas le repère : elle est fixe, dans le ciel, au-dessus
+    // de la courbe quelle que soit la journée. Écrit à la hauteur des motos, il
+    // se posait à même le relief, illisible dès qu'elles roulaient haut ; posé
+    // dans le ciel, il a toujours le fond uni derrière lui. Le calcul tient
+    // parce que `altitudeMax` garde 300 m de réserve au-dessus du sommet : la
+    // crête ne monte jamais jusqu'à `marge.haut`, et le mot passe dessus.
+    const cote = xMotos > largeur / 2 ? -1 : 1;
+    const yMot = marge.haut - 10;
+
+    // La flèche part de sous le mot et s'arrête au bord du repère. Elle est
+    // bombée sur le côté — perpendiculairement à sa propre course, d'autant
+    // plus qu'elle est longue — parce qu'un arc se lit comme tracé à la main
+    // là où un segment se lirait comme tiré à la règle.
+    const depart = { x: xMotos + cote * 34, y: yMot + 4 };
+    const pointe = { x: xMotos + cote * 13, y: yMotos - 5 };
+    const course = { x: pointe.x - depart.x, y: pointe.y - depart.y };
+    const longueur = Math.hypot(course.x, course.y) || 1;
+    const courbure = Math.min(longueur * 0.16, 14);
+    const bombe = {
+      x: (depart.x + pointe.x) / 2 - (cote * course.y / longueur) * courbure,
+      y: (depart.y + pointe.y) / 2 + (cote * course.x / longueur) * courbure,
+    };
+
+    // Les deux barbes se déduisent de la tangente au bout de la courbe : sans
+    // ça elles cesseraient de pointer dans le bon sens dès que le mot change de
+    // côté ou que le repère passe au-dessus de lui.
+    const dx = pointe.x - bombe.x;
+    const dy = pointe.y - bombe.y;
+    const norme = Math.hypot(dx, dy) || 1;
+    const ux = dx / norme;
+    const uy = dy / norme;
+    const barbe = (angle) => {
+      const cos = Math.cos(angle);
+      const sin = Math.sin(angle);
+      const bx = pointe.x - (ux * cos - uy * sin) * 7;
+      const by = pointe.y - (uy * cos + ux * sin) * 7;
+      return ` M${pointe.x.toFixed(1)} ${pointe.y.toFixed(1)} L${bx.toFixed(1)} ${by.toFixed(1)}`;
+    };
+
+    svg.append(creer('path', {
+      class: 'frise__ici-fleche',
+      'aria-hidden': 'true',
+      d: `M${depart.x.toFixed(1)} ${depart.y.toFixed(1)}`
+        + ` Q${bombe.x.toFixed(1)} ${bombe.y.toFixed(1)} ${pointe.x.toFixed(1)} ${pointe.y.toFixed(1)}`
+        + barbe(0.45) + barbe(-0.45),
+    }));
+
+    // `aria-hidden` sur le mot comme sur la flèche : le repère dit déjà la même
+    // chose en toutes lettres juste en dessous, et le répéter ne ferait
+    // qu'allonger la lecture à voix haute.
+    const mot = creer('text', {
+      class: 'frise__ici',
+      x: xMotos + cote * 40, y: yMot,
+      'text-anchor': cote > 0 ? 'start' : 'end',
+      'aria-hidden': 'true',
+    });
+    mot.textContent = 'Nous sommes ici !';
+    svg.append(mot);
+
     const motos = creer('text', {
       class: 'frise__motos',
-      x: x(releveMotos.km), y: y(releveMotos.altitude) - 7,
+      x: xMotos, y: yMotos,
       role: 'img',
       'aria-label': positionJour
         ? `Les motos en sont au jour ${positionJour}`

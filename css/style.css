@@ -706,7 +706,10 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
 
 /* --------------------------------------------------------------- accueil */
 
-.accueil { padding: 1.5rem 1.375rem 2.5rem; }
+/* Rien sous la barre de navigation, qui ferme maintenant l'accueil comme elle
+   ferme une journée : le rembourrage du bas confinait la barre collante deux
+   centimètres au-dessus du plancher du panneau, où elle flottait. */
+.accueil { padding: 1.5rem 1.375rem 0; }
 
 .accueil__photo { display: block; width: 100%; height: auto; margin-bottom: 1.25rem; }
 

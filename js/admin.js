@@ -112,8 +112,8 @@ function gabaritJourManuel() {
     Pas de valeur inventée pour la date : tant qu'elle est vide, rien ne
     s'enregistre — voir le gestionnaire de `change` plus bas. */
 function gabaritAuto() {
-  const depart = position.mode === 'auto' ? (position.depart || '') : '';
-  const decalage = position.mode === 'auto' ? position.decalage : 0;
+  const depart = position.depart || '';
+  const decalage = position.decalage ?? 0;
 
   return `<p class="admin-filtre">
       <label for="position-depart">Date de départ</label>

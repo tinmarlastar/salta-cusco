@@ -6,6 +6,7 @@
    voyage change un jour de longueur. */
 
 const JOURS_VOYAGE = 15;
+const MS_PAR_JOUR = 24 * 60 * 60 * 1000;
 
 /** La date du jour à Paris, au format AAAA-MM-JJ.
 
@@ -25,10 +26,30 @@ function versInstant(aaaaMmJj) {
   return Date.UTC(annee, mois - 1, jour); // `mois - 1` : Date.UTC compte les mois à partir de 0
 }
 
+// Minuit UTC en entrée comme en sortie : les deux conversions se répondent, et
+// `toISOString` recrache exactement la date posée, sans dérive de fuseau.
+function versDate(instant) {
+  return new Date(instant).toISOString().slice(0, 10);
+}
+
 /** Jours entiers entre deux dates AAAA-MM-JJ (positif si `arrivee` suit `depart`). */
 export function joursEntre(depart, arrivee) {
-  const MS_PAR_JOUR = 24 * 60 * 60 * 1000;
   return Math.round((versInstant(arrivee) - versInstant(depart)) / MS_PAR_JOUR);
+}
+
+/** La date (AAAA-MM-JJ) à laquelle le voyage en sera à sa journée `jour`.
+
+    L'inverse de `calculerPositionAuto` : celle-ci part de la date du jour et
+    trouve la journée, celle-là part d'une journée et retrouve sa date. Elle
+    sert à annoncer les deux extrémités du voyage — « Départ prévu le… » avant
+    J1, « Nous sommes arrivés le… » une fois J15 atteint.
+
+    Le décalage joue en sens INVERSE ici : deux jours d'avance, c'est une
+    journée atteinte deux jours plus tôt. Sans ce signe, la frise annoncerait
+    un départ le 1er septembre tout en attendant le 3 pour passer à J1 — elle
+    se contredirait à l'écran. */
+export function dateDuJourVoyage({ depart, decalage = 0, jour }) {
+  return versDate(versInstant(depart) + (jour - 1 - decalage) * MS_PAR_JOUR);
 }
 
 /** La journée à montrer (1 à 15), ou `null` avant le départ.

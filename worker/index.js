@@ -3,7 +3,7 @@
    Le site reste statique ; seul le bloc « souvenirs » appelle ce service. */
 
 import { creerId, creerJeton, hacherJeton, memeSecret } from './lib/securite.js';
-import { calculerPositionAuto } from './lib/position.js';
+import { calculerPositionAuto, dateDuJourVoyage } from './lib/position.js';
 
 const TEXTE_MAX = 5000; // de quoi raconter une journée entière, pas seulement une légende
 const AUTEUR_MAX = 40;
@@ -598,8 +598,9 @@ const CLES_POSITION = {
     souvenirs : c'est ce que les proches viennent voir. `mode`, `depart` et
     `decalage` accompagnent la réponse pour la modération, qui en a besoin
     pour réafficher le formulaire tel qu'il a été laissé — rien de sensible,
-    le site public les ignore (voir `lirePosition` dans souvenirs.js, qui ne
-    garde que `jour` et `majLe`). */
+    le site public les ignore (voir `lirePosition` dans souvenirs.js, qui n'en
+    garde rien). `departPrevuLe` et `arriveeLe`, eux, s'adressent au site
+    public : c'est ce qu'il écrit sur la frise aux deux bouts du voyage. */
 async function lirePosition(env, cors) {
   const { results } = await env.DB
     .prepare('SELECT cle, valeur, maj_le FROM reglages WHERE cle IN (?1, ?2, ?3, ?4)')
@@ -619,13 +620,29 @@ async function lirePosition(env, cors) {
 
   let jour = null;
   if (mode === 'manuel' && Number.isInteger(jourManuel)) jour = jourManuel;
-  if (mode === 'auto' && depart) jour = calculerPositionAuto({ depart, decalage });
+
+  // Les deux extrémités du voyage, à annoncer plutôt qu'à taire : avant le
+  // départ, la frise dit quand il est prévu ; une fois J15 atteint, elle dit
+  // quand on est arrivés. Datées ICI, et non côté site : le calendrier du
+  // voyage est l'affaire du service, le site public n'a jamais eu à savoir
+  // qu'un mode automatique existe (il reçoit une journée toute faite).
+  //
+  // Jamais plus d'une des deux à la fois, et seulement en automatique : en
+  // manuel aucune date n'est connue, et en cours de route il n'y a rien à
+  // annoncer — « Nous sommes ici ! » suffit.
+  let departPrevuLe = null;
+  let arriveeLe = null;
+  if (mode === 'auto' && depart) {
+    jour = calculerPositionAuto({ depart, decalage });
+    if (jour === null) departPrevuLe = dateDuJourVoyage({ depart, decalage, jour: 1 });
+    if (jour === JOURS) arriveeLe = dateDuJourVoyage({ depart, decalage, jour: JOURS });
+  }
 
   const majLe = parCle.get(CLES_POSITION.mode)?.maj_le
     ?? parCle.get(CLES_POSITION.jour)?.maj_le
     ?? null;
 
-  return repondre({ jour, majLe, mode, depart, decalage }, { cors });
+  return repondre({ jour, majLe, mode, depart, decalage, departPrevuLe, arriveeLe }, { cors });
 }
 
 async function poserReglage(env, cle, valeur, majLe) {

@@ -117,11 +117,11 @@ tombe à 2,98 — et c'est l'encre qui s'y pose, à 5,23.
 ## Naviguer dans le voyage
 
 **La frise est la barre de navigation**, posée au-dessus de la carte : le
-profil d'altitude, les quinze journées et le nombre de souvenirs de chacune
+profil d'altitude, les quinze journées et le nombre de notes de chacune
 d'un seul tenant. Une seule barre, donc, plutôt qu'un profil en pied de page
 et une liste de jours ailleurs. Les décomptes viennent d'un unique appel au
-service (`GET /api/decomptes`) et se corrigent d'eux-mêmes dès qu'un souvenir
-est publié ou supprimé.
+service (`GET /api/decomptes`) et se corrigent d'eux-mêmes dès qu'une note
+est publiée ou supprimée.
 
 **Survoler une journée de la frise la désigne sur la carte**, sans rien
 ouvrir : sa trace ressort du parcours, et les deux pastilles qu'elle relie
@@ -130,11 +130,11 @@ répondent. Le clavier fait de même, au focus. Cela ne vaut qu'en vue
 d'ensemble : une journée déjà ouverte a sa trace en avant et sa pastille
 allumée, un second surlignage y ferait deux journées actives à la fois.
 
-**Le panneau a deux onglets**, *Étape* et *Souvenirs*. Il s'ouvre sur les
-souvenirs quand la journée en a reçu, sur l'étape sinon — c'est ce qu'on vient
+**Le panneau a deux onglets**, *Étape* et *Carnet de route*. Il s'ouvre sur le
+carnet quand la journée a reçu des notes, sur l'étape sinon — c'est ce qu'on vient
 chercher. Un clic sur un onglet tient jusqu'au changement de journée. La barre
 « journée précédente / suivante » est collée au bas du panneau, donc toujours
-atteignable : elle vivait auparavant après le récit et tous les souvenirs,
+atteignable : elle vivait auparavant après le récit et toutes les notes,
 c'est-à-dire une page entière de défilement plus bas.
 
 La même barre ferme aussi la fiche d'accueil, où elle n'a qu'une moitié —
@@ -144,18 +144,22 @@ parcourt ainsi le voyage entier d'un bout à l'autre sans jamais quitter la
 barre. Une moitié sans destination garde sa place mais reste vide, sans
 intitulé ni chevron : un « Suivant — » grisé annonçait une suite qui n'existe
 pas. L'onglet *Étape* garde ce qui décrit la
-journée — chiffres, profil, récit, points — et laisse les souvenirs au sien.
+journée — chiffres, profil, récit, points — et laisse les notes au sien.
 
 **Sur téléphone**, la fiche est une feuille à trois hauteurs, que la poignée
 fait défiler : repliée, à mi-hauteur, pleine. La position intermédiaire est
 réglée pour laisser voir le titre, les onglets et la première rangée de photos
 sans masquer la carte — c'est elle qui remplace les deux gestes qu'il fallait
-faire avant pour atteindre les souvenirs.
+faire avant pour atteindre le carnet.
 
-## Souvenirs des compagnons
+## Le carnet de route
 
-Chaque étape porte un bloc où les participants laissent des notes, photos et
-vidéos. Le site reste statique : ce bloc parle à un petit service Cloudflare
+Chaque étape porte un carnet où les participants laissent des notes — un mot,
+des photos, des vidéos. Le mot « souvenir » a été écarté de l'écran : les
+proches lisent ces notes pendant le voyage, presque en direct, pas des années
+plus tard. Il survit dans le code, où `souvenirs.js`, la base D1 et les routes
+de l'API gardent leur nom : renommer la plomberie aurait demandé une migration
+pour un changement qui ne concerne que la copie. Le site reste statique : ce bloc parle à un petit service Cloudflare
 (dossier `worker/`), qui range les fichiers dans R2 et les notes dans D1.
 
 **Pour poster**, il faut le mot de passe du groupe — donné de vive voix avant le
@@ -174,18 +178,18 @@ recommencer par doute :
 | `Envoi interrompu, nouvel essai automatique` | une tentative a échoué, la suivante est programmée |
 | `Bloqué : …` | refus définitif du service, un geste est attendu |
 
-Si un souvenir reste affiché en attente sans jamais repartir alors que le
+Si une note reste affichée en attente sans jamais repartir alors que le
 réseau fonctionne de nouveau, recharger la page suffit à relancer la file.
 
 **Regarder les photos** : un clic sur une photo l'ouvre en grand. Les flèches
 du clavier, les boutons à l'écran ou un glissé du pouce passent d'un fichier au
-suivant **à l'intérieur d'un même souvenir**, et bouclent sur sa dernière
-photo. Enchaîner sur le souvenir suivant ferait changer d'auteur et de moment
+suivant **à l'intérieur d'une même note**, et bouclent sur sa dernière
+photo. Enchaîner sur la note suivante ferait changer d'auteur et de moment
 sans que rien ne le signale. `Échap` referme. Photos et vidéos s'ouvrent du même geste : dans la grille,
 une vidéo est une vignette marquée d'un rond de lecture, sans commandes — elle
 se joue en grand, dans la visionneuse.
 
-**Plusieurs photos et vidéos par souvenir**, sans limite de nombre. Le
+**Plusieurs photos et vidéos par note**, sans limite de nombre. Le
 sélecteur s'ouvre autant de fois qu'on veut : les fichiers s'ajoutent à la
 liste au lieu de la remplacer, et chacun peut être retiré avant publication.
 Les plafonds restent par fichier — 12 Mo une photo (après recompression
@@ -198,7 +202,7 @@ seul le fichier en cours est à recommencer : la carte en attente indique
 « 6 fichiers · 2 envoyés », et la reprise repart au troisième. Aucun fichier
 n'est jamais attaché deux fois, chacun portant sa propre clé d'idempotence.
 
-**Chacun peut modifier ou supprimer ses propres souvenirs**, y compris leur
+**Chacun peut modifier ou supprimer ses propres notes**, y compris leur
 ajouter une photo après coup ou en retirer une seule : les boutons
 n'apparaissent que sur le téléphone qui les a publiés. Changer d'appareil ou
 vider son navigateur fait perdre cette main — la modération, elle, reste
@@ -335,7 +339,7 @@ le compte Cloudflare. Elles ne demandent qu'un compte gratuit.
    si ce dépôt est hébergé sous un compte GitHub différent de `tinmarlastar`,
    l'adresse GitHub Pages réelle du site publié doit y être ajoutée. Sans ça,
    le CORS échoue silencieusement une fois le service en ligne — le bloc
-   souvenirs ne se charge plus, sans message d'erreur visible.
+   carnet ne se charge plus, sans message d'erreur visible.
 
    ```bash
    npx wrangler deploy
@@ -366,7 +370,7 @@ le compte Cloudflare. Elles ne demandent qu'un compte gratuit.
 
 9. **Publier le site** — envoyer le commit qui met à jour `data/config.json`
    sur `main` ; le workflow GitHub Pages republie le site automatiquement.
-   Vérifier ensuite sur le site publié que le bloc souvenirs se charge et
+   Vérifier ensuite sur le site publié que le carnet se charge et
    qu'une note peut être postée.
 
 ### Redéployer le service

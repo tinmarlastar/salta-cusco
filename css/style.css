@@ -728,10 +728,10 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 
 /* La frise est passée au-dessus de la carte : le trait qui la sépare du reste
    change de bord, et le rembourrage suit. */
-/* La frise se centre dans son bandeau. Elle mesure 7,25 rem pour un bandeau de
-   8,75 : le reste du jeu qui traînait sous elle depuis la disparition de la
-   ligne d'aide est passé en ciel au-dessus de la courbe, pour y loger
-   « Nous sommes ici ! ». */
+/* La frise se centre dans son bandeau. Elle mesure 7,75 rem pour un bandeau de
+   8,75 : le jeu qui traînait sous elle depuis la disparition de la ligne d'aide
+   est passé en ciel au-dessus de la courbe, pour y loger « Nous sommes ici ! »
+   et la flèche qui descend de là sur les motos. */
 .frise {
   display: flex;
   align-items: center;
@@ -758,7 +758,7 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
   display: block;
   width: 100%;
   min-width: 44rem;
-  height: 7.25rem;
+  height: 7.75rem;
 }
 
 /* Éléments dessinés dans la frise */
@@ -812,7 +812,7 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 /* Où en sont les motos. Transparent au clic : le repère indique, il ne commande
    pas — un clic à cet endroit doit choisir la journée qui est dessous. */
 .frise__motos {
-  font-size: .875rem;
+  font-size: 1.25rem;
   text-anchor: middle;
   pointer-events: none;
 }
@@ -1460,7 +1460,7 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 }
 
 @media (max-width: 48rem) {
-  :root { --frise-h: 8.25rem; }   /* 7,25 rem de dessin + le rembourrage */
+  :root { --frise-h: 8.5rem; }   /* 7,75 rem de dessin + le rembourrage */
 
   .bandeau { flex-wrap: wrap; gap: .5rem 1rem; padding: .625rem 1rem; }
   /* Sur un écran étroit, la navigation reprend toute une ligne : côte à côte

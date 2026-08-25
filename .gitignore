@@ -3,3 +3,6 @@ __pycache__/
 tools/.cache-parcours.json
 .worktrees/
 .superpowers/
+
+# Les arbres de travail créés par Claude Code : du transitoire, jamais du dépôt.
+.claude/worktrees/

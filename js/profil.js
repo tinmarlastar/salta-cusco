@@ -104,11 +104,11 @@ export function dessinerFrise(svg, { voyage, etapes, jourActif, surChoixEtape, d
   // tracé sans rien devoir à la marge. À 10, « J1 » serait venu s'inscrire
   // trop près du bord.
   //
-  // 32 en haut, et non 14 : cette marge est le ciel où s'écrit « Nous sommes
-  // ici ! ». Il faut qu'elle tienne la hauteur du mot même là où la montagne
-  // monte le plus haut — d'où le dessin agrandi d'autant (CSS), pour que le
-  // relief garde la même amplitude qu'avant qu'on lui creuse ce ciel.
-  const marge = { haut: 32, bas: 26, gauche: 20, droite: 20 };
+  // 40 en haut, et non 14 : cette marge est le ciel où s'écrit « Nous sommes
+  // ici ! ». Il lui faut la hauteur du mot ET celle du repère moto, qui se
+  // dresse au-dessus de la crête — d'où le dessin agrandi d'autant (CSS), pour
+  // que le relief garde la même amplitude qu'avant qu'on lui creuse ce ciel.
+  const marge = { haut: 40, bas: 26, gauche: 20, droite: 20 };
   const l = largeur - marge.gauche - marge.droite;
   const h = hauteur - marge.haut - marge.bas;
 
@@ -187,6 +187,36 @@ export function dessinerFrise(svg, { voyage, etapes, jourActif, surChoixEtape, d
     poserDecompte(svg, creer, (gauche + droite) / 2 + 16, hauteur - 12.5, decomptes[segment.jour]);
   }
 
+  // Où en sont les motos, posées sur la crête au bout de la journée dite.
+  // Rendues transparentes au clic (CSS) : elles indiquent, elles ne commandent
+  // pas — un clic à cet endroit doit choisir la journée qui est dessous, comme
+  // partout ailleurs sur la frise.
+  //
+  // Posées ici, avant les étiquettes de journée, uniquement pour être mesurées
+  // à temps : ce qui suit a besoin de leur encombrement réel, celui que leur
+  // donne la feuille de style. Elles repasseront en dernier dans le dessin, à
+  // la fin, pour rester par-dessus tout le reste.
+  const releveMotos = releveAuKm(kmDeLaJournee(positionJour, voyage), voyage);
+  let motos = null;
+  let boiteMotos = null;
+  if (releveMotos) {
+    motos = creer('text', {
+      class: 'frise__motos',
+      x: x(releveMotos.km),
+      // -5 : le repère descend un peu sous sa ligne de base. C'est ce qui lui
+      // fait poser ses roues sur la crête au lieu de flotter au-dessus.
+      y: y(releveMotos.altitude) - 5,
+      role: 'img',
+      'aria-label': positionJour
+        ? `Les motos en sont au jour ${positionJour}`
+        : 'Les motos n\'ont pas encore quitté Salta',
+    });
+    motos.textContent = '\u{1F3CD}\u{FE0F}';
+    svg.append(motos);
+    boiteMotos = motos.getBBox();
+    if (!boiteMotos.height) boiteMotos = null;
+  }
+
   // Les jours sans ride : un point posé sur la crête, cliquable lui aussi.
   for (const etape of etapes.filter((e) => !e.ride)) {
     const km = positionJourSansRide(etape.jour, voyage.segments, voyage.totalKm);
@@ -207,79 +237,68 @@ export function dessinerFrise(svg, { voyage, etapes, jourActif, surChoixEtape, d
     });
     svg.append(pastille);
 
+    // L'étiquette se pose au-dessus de la pastille — sauf si les motos sont
+    // justement là : elle passe alors dessous. Le cas n'a rien d'un hasard, il
+    // arrive aux deux bouts du voyage, où la fin d'une étape et une journée
+    // sans ride tombent au même endroit : Salta au départ, Cusco à l'arrivée.
+    // Sans ça le repère avalait le numéro du jour.
+    //
+    // Dessous et non dessus : au-dessus, l'étiquette se serait fait traverser
+    // par la flèche, qui descend justement dans cette colonne-là.
+    const surLesMotos = boiteMotos
+      && Math.abs(x(km) - (boiteMotos.x + boiteMotos.width / 2)) < boiteMotos.width;
+    const yEtiquette = y(releve.altitude) + (surLesMotos ? 17 : -10);
+
     const etiquette = creer('text', {
       class: `frise__jour${etape.jour === jourActif ? ' est-actif' : ''}`,
-      x: x(km), y: y(releve.altitude) - 10,
+      x: x(km), y: yEtiquette,
     });
     etiquette.textContent = `J${etape.jour}`;
     svg.append(etiquette);
-    poserDecompte(svg, creer, x(km) + 16, y(releve.altitude) - 13.5, decomptes[etape.jour]);
+    poserDecompte(svg, creer, x(km) + 16, yEtiquette - 3.5, decomptes[etape.jour]);
   }
 
-  // Où en sont les motos, posées sur la crête au bout de la journée dite.
-  // Dessinées en dernier pour passer par-dessus les voiles et les séparations,
-  // et rendues transparentes au clic (CSS) : elles indiquent, elles ne
-  // commandent pas — un clic à cet endroit doit choisir la journée qui est
-  // dessous, comme partout ailleurs sur la frise.
-  const releveMotos = releveAuKm(kmDeLaJournee(positionJour, voyage), voyage);
-  if (releveMotos) {
+  // « Nous sommes ici ! » : ce que dit déjà le repère, mais dit d'une voix.
+  // Le mot se range du côté où il reste de la place, et sa flèche va chercher
+  // les motos.
+  //
+  // Sa hauteur ne suit pas le repère : elle est fixe, dans le ciel, au-dessus
+  // de la courbe quelle que soit la journée. Écrit à la hauteur des motos, il
+  // se posait à même le relief, illisible dès qu'elles roulaient haut ; posé
+  // dans le ciel, il a toujours le fond uni derrière lui. Le calcul tient parce
+  // que `altitudeMax` garde 300 m de réserve au-dessus du sommet : la crête ne
+  // monte jamais jusqu'à `marge.haut`, et le mot passe dessus.
+  if (motos && boiteMotos) {
     const xMotos = x(releveMotos.km);
-    const yMotos = y(releveMotos.altitude) - 7;
-
-    // « Nous sommes ici ! » : ce que dit déjà le repère, mais dit d'une voix.
-    // Le mot se range du côté où il reste de la place, et sa flèche va chercher
-    // les motos.
-    //
-    // Sa hauteur ne suit pas le repère : elle est fixe, dans le ciel, au-dessus
-    // de la courbe quelle que soit la journée. Écrit à la hauteur des motos, il
-    // se posait à même le relief, illisible dès qu'elles roulaient haut ; posé
-    // dans le ciel, il a toujours le fond uni derrière lui. Le calcul tient
-    // parce que `altitudeMax` garde 300 m de réserve au-dessus du sommet : la
-    // crête ne monte jamais jusqu'à `marge.haut`, et le mot passe dessus.
     const cote = xMotos > largeur / 2 ? -1 : 1;
-    const yMot = marge.haut - 10;
+    const yMot = marge.haut - 14;
 
-    // La flèche part de sous le mot et s'arrête au bord du repère. Elle est
-    // bombée sur le côté — perpendiculairement à sa propre course, d'autant
-    // plus qu'elle est longue — parce qu'un arc se lit comme tracé à la main
-    // là où un segment se lirait comme tiré à la règle.
-    const depart = { x: xMotos + cote * 34, y: yMot + 4 };
-    const pointe = { x: xMotos + cote * 13, y: yMotos - 5 };
-    const course = { x: pointe.x - depart.x, y: pointe.y - depart.y };
-    const longueur = Math.hypot(course.x, course.y) || 1;
-    const courbure = Math.min(longueur * 0.16, 14);
-    const bombe = {
-      x: (depart.x + pointe.x) / 2 - (cote * course.y / longueur) * courbure,
-      y: (depart.y + pointe.y) / 2 + (cote * course.x / longueur) * courbure,
-    };
-
-    // Les deux barbes se déduisent de la tangente au bout de la courbe : sans
-    // ça elles cesseraient de pointer dans le bon sens dès que le mot change de
-    // côté ou que le repère passe au-dessus de lui.
-    const dx = pointe.x - bombe.x;
-    const dy = pointe.y - bombe.y;
-    const norme = Math.hypot(dx, dy) || 1;
-    const ux = dx / norme;
-    const uy = dy / norme;
-    const barbe = (angle) => {
-      const cos = Math.cos(angle);
-      const sin = Math.sin(angle);
-      const bx = pointe.x - (ux * cos - uy * sin) * 7;
-      const by = pointe.y - (uy * cos + ux * sin) * 7;
-      return ` M${pointe.x.toFixed(1)} ${pointe.y.toFixed(1)} L${bx.toFixed(1)} ${by.toFixed(1)}`;
-    };
-
-    svg.append(creer('path', {
+    // La flèche file d'abord à l'horizontale dans le ciel, puis tombe à la
+    // verticale sur le repère. C'est la seule route qui ne traverse jamais la
+    // montagne : le ciel est libre par construction, et la colonne juste
+    // au-dessus des motos l'est aussi, puisqu'elles sont posées sur la crête.
+    // En diagonale directe elle passait devant le relief dès qu'une journée
+    // s'achevait au pied d'une montée — le jour 4, au pied du col qui mène au
+    // sommet du voyage, en était l'exemple criant.
+    const pointe = { x: xMotos, y: boiteMotos.y - 3 };
+    const depart = { x: xMotos + cote * 30, y: yMot + 3 };
+    const fleche = creer('path', {
       class: 'frise__ici-fleche',
       'aria-hidden': 'true',
+      // Le dernier point de contrôle est droit au-dessus de la pointe : la
+      // flèche arrive donc toujours par le haut, et les deux barbes peuvent
+      // s'écrire une fois pour toutes plutôt que se déduire d'une tangente.
       d: `M${depart.x.toFixed(1)} ${depart.y.toFixed(1)}`
-        + ` Q${bombe.x.toFixed(1)} ${bombe.y.toFixed(1)} ${pointe.x.toFixed(1)} ${pointe.y.toFixed(1)}`
-        + barbe(0.45) + barbe(-0.45),
-    }));
+        + ` C${(xMotos + cote * 11).toFixed(1)} ${(yMot + 1).toFixed(1)}`
+        + ` ${xMotos.toFixed(1)} ${(pointe.y - 12).toFixed(1)}`
+        + ` ${pointe.x.toFixed(1)} ${pointe.y.toFixed(1)}`
+        + ` M${(pointe.x - 3.5).toFixed(1)} ${(pointe.y - 7).toFixed(1)} L${pointe.x.toFixed(1)} ${pointe.y.toFixed(1)}`
+        + ` L${(pointe.x + 3.5).toFixed(1)} ${(pointe.y - 7).toFixed(1)}`,
+    });
 
     // `aria-hidden` sur le mot comme sur la flèche : le repère dit déjà la même
-    // chose en toutes lettres juste en dessous, et le répéter ne ferait
-    // qu'allonger la lecture à voix haute.
+    // chose en toutes lettres, et le répéter ne ferait qu'allonger la lecture à
+    // voix haute.
     const mot = creer('text', {
       class: 'frise__ici',
       x: xMotos + cote * 40, y: yMot,
@@ -287,19 +306,13 @@ export function dessinerFrise(svg, { voyage, etapes, jourActif, surChoixEtape, d
       'aria-hidden': 'true',
     });
     mot.textContent = 'Nous sommes ici !';
-    svg.append(mot);
 
-    const motos = creer('text', {
-      class: 'frise__motos',
-      x: xMotos, y: yMotos,
-      role: 'img',
-      'aria-label': positionJour
-        ? `Les motos en sont au jour ${positionJour}`
-        : 'Les motos n\'ont pas encore quitté Salta',
-    });
-    motos.textContent = '\u{1F3CD}\u{FE0F}';
-    svg.append(motos);
+    svg.append(mot, fleche);
   }
+
+  // Le repère repasse en dernier : il doit rester par-dessus les voiles, les
+  // séparations et sa propre flèche.
+  if (motos) svg.append(motos);
 }
 
 // -------------------------------------------------------- profil d'une étape

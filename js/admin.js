@@ -34,7 +34,10 @@ let jourChoisi = null;
 // Où en sont les motos, telle que le service la donne — mode compris. Relue
 // à chaque affichage : cette page peut être ouverte sur deux téléphones à la
 // fois, et c'est la valeur du service qui fait foi, jamais celle gardée ici.
-let position = { jour: null, majLe: null, mode: null, depart: null, decalage: 0 };
+let position = {
+  jour: null, majLe: null, mode: null, depart: null, decalage: 0,
+  departPrevuPose: null, arriveePosee: null, departPrevuLe: null, arriveeLe: null,
+};
 
 // Bascule Manuel/Automatique choisie à l'écran, tant qu'elle n'a pas encore
 // été enregistrée — passer sur « Automatique » n'écrit rien tant qu'aucune
@@ -58,6 +61,14 @@ async function chargerTitres() {
 const dateLisible = (iso) => new Date(iso).toLocaleDateString('fr-FR', {
   day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit',
 });
+
+// Une date sans heure (AAAA-MM-JJ) se découpe à la main : `new Date('2026-09-01')`
+// se lit à minuit UTC et afficherait la veille à l'ouest de Greenwich. Même
+// raison que dans profil.js, où la frise écrit ces mêmes dates.
+const dateSeuleLisible = (iso) => {
+  const [annee, mois, jour] = iso.split('-');
+  return `${jour}/${mois}/${annee}`;
+};
 
 /** Menu des journées du module Modération, avec le nombre de contributions
     de chacune.
@@ -88,7 +99,43 @@ function gabaritMenuModeration(contributions) {
   </p>`;
 }
 
-/** Menu de journée du mode manuel. */
+/** Date à annoncer sur la frise, aux deux bouts du voyage.
+
+    Le mode automatique déduit ces dates de la date de départ ; le manuel,
+    lui, ne sait rien du calendrier — d'où ce champ, qui ne paraît qu'aux
+    deux moments où la frise a une phrase à dater : « Pas encore partis »
+    (« Départ prévu le… ») et la dernière journée (« Nous sommes arrivés
+    le… »). Ailleurs il n'y a rien à annoncer, « Nous sommes ici ! » suffit.
+
+    Facultatif : champ laissé vide, la frise s'en tient à sa flèche sans
+    date. Une date saisie puis mise de côté — on repasse à J7 — n'est pas
+    effacée pour autant, elle ressortira le moment venu. */
+function gabaritDateAnnoncee(jourManuel) {
+  const jours = [...titresEtapes.keys()];
+  const derniere = jours.length ? Math.max(...jours) : null;
+
+  let id;
+  let libelle;
+  let valeur;
+  if (jourManuel === null) {
+    id = 'position-depart-prevu';
+    libelle = 'Date du départ prévu';
+    valeur = position.departPrevuPose;
+  } else if (jourManuel === derniere) {
+    id = 'position-arrivee';
+    libelle = 'Date de l\'arrivée';
+    valeur = position.arriveePosee;
+  } else {
+    return '';
+  }
+
+  return `<p class="admin-filtre">
+    <label for="${id}">${libelle}</label>
+    <input type="date" id="${id}" class="admin-filtre__menu" value="${echapper(valeur || '')}">
+  </p>`;
+}
+
+/** Menu de journée du mode manuel, et la date à annoncer quand il y en a une. */
 function gabaritJourManuel() {
   const jours = [...titresEtapes.keys()].sort((a, b) => a - b);
   const valeurCourante = position.mode === 'manuel' ? position.jour : null;
@@ -99,12 +146,13 @@ function gabaritJourManuel() {
   }).join('');
 
   return `<p class="admin-filtre">
-    <label for="position-jour">Journée</label>
-    <select id="position-jour" class="admin-filtre__menu">
-      <option value=""${valeurCourante === null ? ' selected' : ''}>Pas encore partis</option>
-      ${options}
-    </select>
-  </p>`;
+      <label for="position-jour">Journée</label>
+      <select id="position-jour" class="admin-filtre__menu">
+        <option value=""${valeurCourante === null ? ' selected' : ''}>Pas encore partis</option>
+        ${options}
+      </select>
+    </p>
+    ${gabaritDateAnnoncee(valeurCourante)}`;
 }
 
 /** Date de départ et décalage du mode automatique.
@@ -134,11 +182,24 @@ function gabaritAuto() {
 function gabaritModulePosition() {
   const mode = modeAffiche ?? position.mode ?? 'manuel';
 
-  const note = position.majLe === null
+  const etat = position.majLe === null
     ? 'Aucune position indiquée : les motos attendent à Salta.'
     : position.jour === null
-      ? `Pas encore partis d'après ce réglage : les motos attendent à Salta. (réglé le ${dateLisible(position.majLe)})`
-      : `Mis à jour le ${dateLisible(position.majLe)}`;
+      ? `Pas encore partis d'après ce réglage : les motos attendent à Salta (réglé le ${dateLisible(position.majLe)}).`
+      : `Mis à jour le ${dateLisible(position.majLe)}.`;
+
+  // Ce que la frise annonce en ce moment, dit ici mot pour mot : c'est la
+  // seule confirmation que la date saisie sort bien à l'écran — le champ,
+  // lui, montre ce qui est enregistré, pas ce qui est affiché.
+  const annonce = position.departPrevuLe
+    ? `Frise : « Départ prévu le ${dateSeuleLisible(position.departPrevuLe)} ».`
+    : position.arriveeLe
+      ? `Frise : « Nous sommes arrivés le ${dateSeuleLisible(position.arriveeLe)} ».`
+      : '';
+
+  // Deux phrases, chacune ponctuée : l'état du réglage, puis ce qu'il donne
+  // à lire sur la frise.
+  const note = [etat, annonce].filter(Boolean).join(' ');
 
   return `<div class="position-mode" role="group" aria-label="Mode de position">
       <button type="button" class="position-mode__bouton" data-mode-affiche="manuel"
@@ -327,6 +388,22 @@ racine.addEventListener('change', async (evenement) => {
     const valeur = evenement.target.value;
     const jour = valeur === '' ? null : Number(valeur);
     await enregistrerPosition(jour === null ? { mode: null } : { mode: 'manuel', jour });
+    return;
+  }
+
+  // Les deux dates annoncées s'enregistrent chacune pour soi, sans toucher
+  // à la journée : le mode renvoyé est celui qui est déjà à l'écran — le
+  // champ n'existe pas ailleurs — et le service, lui, ne modifie que ce que
+  // la requête porte.
+  if (evenement.target.matches('#position-depart-prevu')) {
+    await enregistrerPosition({ mode: null, departPrevuLe: evenement.target.value || null });
+    return;
+  }
+
+  if (evenement.target.matches('#position-arrivee')) {
+    await enregistrerPosition({
+      mode: 'manuel', jour: position.jour, arriveeLe: evenement.target.value || null,
+    });
     return;
   }
 

@@ -205,6 +205,15 @@ départ, et le site avance tout seul de J1 à J15 — un décalage en jours
 corrige un retard ou une avance sans changer de mode). Le changement de
 journée automatique se fait à minuit heure de Paris.
 
+Aux deux bouts du voyage, la frise annonce une date plutôt qu'un lieu :
+« Départ prévu le… » tant qu'on n'est pas partis, « Nous sommes arrivés
+le… » une fois J15 atteint. L'automatique les déduit de la date de départ ;
+en manuel, un champ de date paraît dans le module — et seulement à ces deux
+moments-là, « Pas encore partis » et la dernière journée, les seuls où il y
+a quelque chose à dater. Laissé vide, la frise s'en tient à « Nous sommes
+ici ! ». Une date saisie n'est jamais perdue en changeant de journée : elle
+ressort le moment venu.
+
 ### Développer en local
 
 Le service tourne à côté du site, sur un port différent :

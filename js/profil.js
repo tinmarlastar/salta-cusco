@@ -104,11 +104,11 @@ export function dessinerFrise(svg, { voyage, etapes, jourActif, surChoixEtape, d
   // tracé sans rien devoir à la marge. À 10, « J1 » serait venu s'inscrire
   // trop près du bord.
   //
-  // 40 en haut, et non 14 : cette marge est le ciel où s'écrit « Nous sommes
-  // ici ! ». Il lui faut la hauteur du mot ET celle du repère moto, qui se
-  // dresse au-dessus de la crête — d'où le dessin agrandi d'autant (CSS), pour
-  // que le relief garde la même amplitude qu'avant qu'on lui creuse ce ciel.
-  const marge = { haut: 40, bas: 26, gauche: 20, droite: 20 };
+  // 32 en haut, et non 14 : cette marge est le ciel où s'écrit « Nous sommes
+  // ici ! ». Il lui faut la hauteur du mot, et rien de plus — au-delà, le vide
+  // se voit entre le filet de l'entête et le dessin. Le dessin est agrandi
+  // d'autant (CSS) pour que le relief garde son amplitude.
+  const marge = { haut: 32, bas: 26, gauche: 20, droite: 20 };
   const l = largeur - marge.gauche - marge.droite;
   const h = hauteur - marge.haut - marge.bas;
 
@@ -244,29 +244,43 @@ export function dessinerFrise(svg, { voyage, etapes, jourActif, surChoixEtape, d
   if (releveMotos) {
     const xMotos = x(releveMotos.km);
     const cote = xMotos > largeur / 2 ? -1 : 1;
-    const yMot = marge.haut - 14;
+    const yMot = marge.haut - 12;
 
-    // La flèche file à l'horizontale dans le ciel, puis tombe à la verticale sur
-    // le haut de la barre qui sépare les journées. Ce point-là est le seul que
-    // rien n'occupe jamais : le plafond du tracé est au-dessus de toute la
-    // montagne, et au-dessus des numéros posés sur la crête. Visant les motos
-    // elles-mêmes, plus bas sur la courbe, elle passait devant le relief dès
-    // qu'une journée s'achevait au pied d'une montée — le jour 4, au pied du col
-    // qui mène au sommet du voyage, en était l'exemple criant.
+    // La flèche part de sous le mot et se pose sur le haut de la barre qui
+    // ferme la journée. Ce point-là est le seul que rien n'occupe jamais : le
+    // plafond du tracé passe au-dessus de toute la montagne, et au-dessus des
+    // numéros posés sur la crête. C'est ce qui la libère : visant les motos
+    // elles-mêmes, plus bas sur la courbe, il fallait la faire passer à
+    // l'équerre par le ciel pour qu'elle ne traverse pas le relief, et elle se
+    // lisait comme un tuyau. Puisque son but est maintenant le plafond, aucun
+    // point du trajet ne peut descendre plus bas que lui : elle redevient libre
+    // de s'incurver.
+    const depart = { x: xMotos + cote * 34, y: yMot + 2 };
+    const controle = { x: xMotos + cote * 22, y: yMot - 7 };
     const pointe = { x: xMotos, y: marge.haut };
-    const depart = { x: xMotos + cote * 30, y: yMot + 3 };
+
+    // Les deux barbes suivent la tangente d'arrivée — la corde qui va du point
+    // de contrôle à la pointe. Écrites en dur elles auraient regardé de travers
+    // dès que le mot change de côté.
+    const dx = pointe.x - controle.x;
+    const dy = pointe.y - controle.y;
+    const norme = Math.hypot(dx, dy) || 1;
+    const ux = dx / norme;
+    const uy = dy / norme;
+    const barbe = (angle) => {
+      const cos = Math.cos(angle);
+      const sin = Math.sin(angle);
+      const bx = pointe.x - (ux * cos - uy * sin) * 7;
+      const by = pointe.y - (uy * cos + ux * sin) * 7;
+      return ` M${pointe.x.toFixed(1)} ${pointe.y.toFixed(1)} L${bx.toFixed(1)} ${by.toFixed(1)}`;
+    };
+
     const fleche = creer('path', {
       class: 'frise__ici-fleche',
       'aria-hidden': 'true',
-      // Le dernier point de contrôle est droit au-dessus de la pointe : la
-      // flèche arrive donc toujours par le haut, et les deux barbes peuvent
-      // s'écrire une fois pour toutes plutôt que se déduire d'une tangente.
       d: `M${depart.x.toFixed(1)} ${depart.y.toFixed(1)}`
-        + ` C${(xMotos + cote * 11).toFixed(1)} ${(yMot + 1).toFixed(1)}`
-        + ` ${xMotos.toFixed(1)} ${(pointe.y - 9).toFixed(1)}`
-        + ` ${pointe.x.toFixed(1)} ${pointe.y.toFixed(1)}`
-        + ` M${(pointe.x - 3.5).toFixed(1)} ${(pointe.y - 7).toFixed(1)} L${pointe.x.toFixed(1)} ${pointe.y.toFixed(1)}`
-        + ` L${(pointe.x + 3.5).toFixed(1)} ${(pointe.y - 7).toFixed(1)}`,
+        + ` Q${controle.x.toFixed(1)} ${controle.y.toFixed(1)} ${pointe.x.toFixed(1)} ${pointe.y.toFixed(1)}`
+        + barbe(0.42) + barbe(-0.42),
     });
 
     // Le mot porte seul l'information, maintenant que le pictogramme a quitté la

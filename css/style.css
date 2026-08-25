@@ -48,7 +48,7 @@
   --manuscrite: 'Caveat', 'Segoe Script', 'Bradley Hand', cursive;
 
   --bandeau-h: 4.5rem;
-  --frise-h: 8.75rem;
+  --frise-h: 8.125rem;
   --panneau-l: 24rem;      /* plancher du panneau, voir `.panneau` */
 
   --rythme: .5rem;
@@ -710,10 +710,11 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 
 /* La frise est passée au-dessus de la carte : le trait qui la sépare du reste
    change de bord, et le rembourrage suit. */
-/* La frise se centre dans son bandeau. Elle mesure 7,75 rem pour un bandeau de
-   8,75 : le jeu qui traînait sous elle depuis la disparition de la ligne d'aide
-   est passé en ciel au-dessus de la courbe, pour y loger « Nous sommes ici ! »
-   et la flèche qui descend de là sur les motos. */
+/* La frise se centre dans son bandeau : 7,25 rem de dessin pour 8,125 de
+   bandeau, soit juste le rembourrage. Le compte est serré exprès — le jeu qui
+   traînait autrefois autour d'elle creusait un vide entre le filet de l'entête
+   et le dessin. Ce qu'il reste de ciel au-dessus de la courbe est occupé :
+   « Nous sommes ici ! » s'y écrit, et sa flèche en descend. */
 .frise {
   display: flex;
   align-items: center;
@@ -740,7 +741,7 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
   display: block;
   width: 100%;
   min-width: 44rem;
-  height: 7.75rem;
+  height: 7.25rem;
 }
 
 /* Éléments dessinés dans la frise */
@@ -1427,8 +1428,6 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 }
 
 @media (max-width: 48rem) {
-  :root { --frise-h: 8.5rem; }   /* 7,75 rem de dessin + le rembourrage */
-
   .bandeau { flex-wrap: wrap; gap: .5rem 1rem; padding: .625rem 1rem; }
   /* Sur un écran étroit, la navigation reprend toute une ligne : côte à côte
      avec le titre, « Tout le parcours » n'y tiendrait pas. */

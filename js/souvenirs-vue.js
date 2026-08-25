@@ -16,6 +16,12 @@ const CLE_AUTEUR = 'souvenirs.auteur';
 const CLE_MOT_DE_PASSE = 'souvenirs.motDePasse';
 const CLE_JETONS = 'souvenirs.jetons';
 
+// Nombre d'échecs au-delà duquel une entrée cesse de se dire passagère. Trois,
+// et non un : sur le réseau visé, les deux premiers ratés sont la normale, et
+// afficher un motif technique à chacun ferait passer pour une panne ce que la
+// file d'attente sait très bien rattraper toute seule.
+const ESSAIS_AVANT_AVEU = 3;
+
 const echapper = (texte) => String(texte ?? '').replace(/[&<>"]/g, (c) =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -197,6 +203,19 @@ function motifEnAttente(entree, progression) {
   // interface est active — mais son « faux » est fiable : à false, on est
   // certainement hors réseau.
   if (!navigator.onLine) return 'Hors réseau, repart tout seul';
+  // Un envoi qui a échoué deux ou trois fois, c'est le réseau des Andes qui
+  // fait son métier : « nouvel essai automatique » dit exactement ce qu'il
+  // faut, et nommer une panne passagère n'apporterait que de l'inquiétude.
+  // Au-delà, ce n'est plus un creux de réseau : le service refuse toujours la
+  // même chose, et le rassurant « nouvel essai automatique » devient un
+  // mensonge qui peut durer des jours — l'envoi repart bien toutes les cinq
+  // minutes, sans jamais aboutir, et rien ne dit pourquoi. On dit alors ce que
+  // le service a réellement répondu : c'est la seule trace exploitable pour
+  // qui doit corriger, et le seul moyen pour l'auteur de comprendre que son
+  // téléphone n'y est pour rien.
+  if (entree.tentatives >= ESSAIS_AVANT_AVEU && entree.dernierSouci) {
+    return `${entree.tentatives} essais sans succès : ${echapper(entree.dernierSouci)}`;
+  }
   if (entree.tentatives > 0) return 'Envoi interrompu, nouvel essai automatique';
   return "En attente d'envoi";
 }
@@ -206,7 +225,14 @@ function gabaritEnAttente(entree, progression) {
   // Bouton « Réessayer » (C2, revue finale) : sur toute entrée bloquée, pas
   // seulement un mot de passe refusé — c'est un rattrapage général une fois
   // la cause corrigée (mot de passe, vidéo trop lourde raccourcie, etc.).
-  const reessayer = entree.bloque
+  //
+  // Et, depuis, sur une entrée qui échoue encore et encore sans être bloquée
+  // pour autant : elle repart bien toute seule, mais toutes les cinq minutes
+  // au mieux. Une fois la cause corrigée — ou simplement pour savoir tout de
+  // suite si ça passe enfin —, n'avoir aucun moyen d'agir est ce qui donne
+  // envie de tout recommencer, donc de créer un doublon.
+  const echoueToujours = !entree.bloque && entree.tentatives >= ESSAIS_AVANT_AVEU;
+  const reessayer = entree.bloque || echoueToujours
     ? '<button type="button" data-action="reessayer">Réessayer</button>' : '';
 
   // Le fichier voyage avec l'entrée depuis la mise en file : il n'a jamais

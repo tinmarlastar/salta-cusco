@@ -682,7 +682,7 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
   align-items: center;
   gap: .625rem;
   flex: 1;
-  padding: .8125rem .875rem;
+  padding: .4375rem .875rem;
   border: 1px solid var(--nuit-3);
   /* Le bord bas porte l'accent, comme un bouton posé sur la page prend appui
      sur son ombre : c'est ce trait, plus que le cadre, qui les fait sortir du
@@ -708,7 +708,16 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
   cursor: default;
 }
 .navigation button:last-child { justify-content: flex-end; text-align: right; }
-.navigation__texte { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Deux lignes serrées : c'est la hauteur de ce bloc, plus que le rembourrage,
+   qui décidait de celle du bouton — deux interlignes par défaut lui faisaient
+   la taille d'un pavé, pour deux mots et un numéro de journée. */
+.navigation__texte {
+  min-width: 0;
+  overflow: hidden;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .navigation span span { display: block; color: var(--poussiere); font-size: .625rem; }
 
 /* Le chevron devient une pastille pleine : c'est lui qu'on vise du pouce, et
@@ -720,12 +729,12 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
   display: grid;
   place-items: center;
   flex: 0 0 auto;
-  width: 1.75rem;
-  height: 1.75rem;
+  width: 1.5rem;
+  height: 1.5rem;
   border-radius: 50%;
   background: var(--soufre);
   color: var(--sur-accent);
-  font-size: .8125rem;
+  font-size: .75rem;
   font-weight: 400;
   line-height: 1;
 }

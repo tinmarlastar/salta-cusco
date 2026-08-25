@@ -123,6 +123,13 @@ et une liste de jours ailleurs. Les décomptes viennent d'un unique appel au
 service (`GET /api/decomptes`) et se corrigent d'eux-mêmes dès qu'un souvenir
 est publié ou supprimé.
 
+**Survoler une journée de la frise la désigne sur la carte**, sans rien
+ouvrir : sa trace ressort du parcours, et les deux pastilles qu'elle relie
+s'allument. Rien ne s'ajoute à la carte — ce sont les repères déjà posés qui
+répondent. Le clavier fait de même, au focus. Cela ne vaut qu'en vue
+d'ensemble : une journée déjà ouverte a sa trace en avant et sa pastille
+allumée, un second surlignage y ferait deux journées actives à la fois.
+
 **Le panneau a deux onglets**, *Étape* et *Souvenirs*. Il s'ouvre sur les
 souvenirs quand la journée en a reçu, sur l'étape sinon — c'est ce qu'on vient
 chercher. Un clic sur un onglet tient jusqu'au changement de journée. La barre

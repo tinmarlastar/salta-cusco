@@ -1335,6 +1335,21 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
   .visionneuse__fleche.est-avant { left: 1.5rem; }
   .visionneuse__fleche.est-apres { right: 1.5rem; }
   .visionneuse__compteur { bottom: .5rem; }
+
+  .admin-mise-en-page { flex-direction: column; gap: 1rem; }
+  .admin-nav {
+    flex-direction: row;
+    gap: 0;
+    position: static;
+    border-bottom: 1px solid var(--nuit-3);
+  }
+  .admin-nav__bouton {
+    flex: 1 1 0;
+    border-left: 0;
+    border-bottom: 2px solid transparent;
+    text-align: center;
+  }
+  .admin-nav__bouton[aria-pressed="true"] { border-left-color: transparent; border-bottom-color: var(--soufre); }
 }
 
 /* Photo comme vidéo s'ouvrent du même geste : le curseur le dit pour les
@@ -1372,7 +1387,64 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 /* ---------------------------------------------------------- modération */
 
 .page-admin { display: block; overflow: auto; }
-.admin { max-width: 42rem; margin: 0 auto; padding: 1.5rem 1.25rem 3rem; }
+.admin { max-width: 58rem; margin: 0 auto; padding: 1.5rem 1.25rem 3rem; }
+
+/* Le menu à gauche et le module actif, côte à côte — repris des onglets
+   Étape/Souvenirs du site public (voir .onglets plus haut), en colonne
+   plutôt qu'en ligne. */
+.admin-mise-en-page { display: flex; gap: 2.5rem; align-items: flex-start; }
+
+.admin-nav {
+  display: flex;
+  flex: 0 0 12rem;
+  flex-direction: column;
+  gap: .25rem;
+  position: sticky;
+  top: 1.5rem;
+}
+.admin-nav__bouton {
+  padding: .5rem .625rem;
+  border: 0;
+  border-left: 2px solid transparent;
+  background: none;
+  color: var(--poussiere);
+  font-family: var(--mono);
+  font-size: .6875rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  text-align: left;
+  cursor: pointer;
+  transition: color var(--transition), border-color var(--transition);
+}
+.admin-nav__bouton:hover { color: var(--sel); }
+.admin-nav__bouton[aria-pressed="true"] { color: var(--soufre); border-left-color: var(--soufre); }
+
+.admin-contenu { flex: 1 1 0; min-width: 0; }
+
+/* Manuel/Automatique : même motif que les fonds de carte (.fonds__bouton) —
+   un groupe de boutons soudés, celui du mode affiché rempli de l'accent. */
+.position-mode {
+  display: flex;
+  gap: 1px;
+  width: fit-content;
+  margin-bottom: 1rem;
+  background: var(--nuit-3);
+  border: 1px solid var(--nuit-3);
+}
+.position-mode__bouton {
+  padding: .4375rem .75rem;
+  border: 0;
+  background: var(--nuit);
+  color: var(--poussiere);
+  font-family: var(--mono);
+  font-size: .6875rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color var(--transition), background var(--transition);
+}
+.position-mode__bouton:hover { color: var(--sel); }
+.position-mode__bouton[aria-pressed="true"] { background: var(--soufre); color: var(--sur-accent); }
 
 /* Choix de la journée à modérer. */
 .admin-filtre {

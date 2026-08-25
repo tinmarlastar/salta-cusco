@@ -19,8 +19,9 @@ const etat = {
   decomptes: {},
   // Où en sont les motos : la journée dite depuis la zone d'administration, et
   // quand elle l'a été. `null` tant que personne ne l'a dite — les motos
-  // attendent alors au kilomètre zéro, à Salta.
-  position: { jour: null, majLe: null },
+  // attendent alors au kilomètre zéro, à Salta. `departPrevuLe` et `arriveeLe`
+  // datent les deux bouts du voyage quand le service les connaît.
+  position: { jour: null, majLe: null, departPrevuLe: null, arriveeLe: null },
   // Onglet du panneau, et si l'on y est arrivé par un clic. Le défaut se
   // recalcule à chaque journée — souvenirs quand il y en a, étape sinon —,
   // mais un choix explicite tient jusqu'au changement de journée.
@@ -180,6 +181,8 @@ function redessinerFrise() {
     surChoixEtape: (jour) => choisir(jour),
     decomptes: etat.decomptes,
     positionJour: etat.position.jour,
+    departPrevuLe: etat.position.departPrevuLe,
+    arriveeLe: etat.position.arriveeLe,
   });
   amenerEtapeEnVue();
 }

@@ -204,10 +204,23 @@ export async function supprimerContribution({ id, jeton, motDePasse }) {
 
 /** Journée où en sont les motos, `null` si personne ne l'a encore dite.
 
-    Lecture ouverte : c'est ce que les proches viennent voir. */
+    Lecture ouverte : c'est ce que les proches viennent voir.
+
+    `departPrevuLe` et `arriveeLe` (dates AAAA-MM-JJ) accompagnent la journée
+    aux deux bouts du voyage, et une seule à la fois : la première tant qu'on
+    n'est pas partis, la seconde une fois arrivés. Toutes deux `null` en cours
+    de route, et en position manuelle où aucun calendrier n'est connu. Les
+    réglages qui les produisent — mode, date posée, décalage — restent à la
+    modération (`lireReglagesPosition`, ci-dessous) : le site n'affiche que
+    des dates déjà calculées. */
 export async function lirePosition() {
   const donnees = await appeler('/api/position');
-  return { jour: donnees.jour ?? null, majLe: donnees.majLe ?? null };
+  return {
+    jour: donnees.jour ?? null,
+    majLe: donnees.majLe ?? null,
+    departPrevuLe: donnees.departPrevuLe ?? null,
+    arriveeLe: donnees.arriveeLe ?? null,
+  };
 }
 
 /** Réglages complets de la position — mode, date de départ, décalage — en

@@ -92,7 +92,55 @@ function poserDecompte(svg, creer, x, y, nombre) {
   svg.append(texte);
 }
 
-export function dessinerFrise(svg, { voyage, etapes, jourActif, surChoixEtape, decomptes = {}, positionJour = null }) {
+// Découpée à la main plutôt que passée à `Date` : la chaîne est déjà
+// AAAA-MM-JJ, et un `new Date('2026-09-15')` se lit à minuit UTC — de quoi
+// afficher la veille chez un lecteur à l'ouest de Greenwich. Il n'y a pas
+// d'heure ici, seulement une date : autant ne jamais en fabriquer une.
+const dateCourte = (iso) => {
+  const [annee, mois, jour] = iso.split('-');
+  return `${jour}/${mois}/${annee.slice(2)}`;
+};
+
+// Pour les lecteurs d'écran, où « 15/09/26 » s'épellerait chiffre à chiffre.
+// Midi UTC, et non minuit : la date reste la même sous tous les fuseaux.
+const dateEnToutesLettres = (iso) => {
+  const texte = new Date(`${iso}T12:00:00Z`)
+    .toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+  // Le premier du mois est le seul jour que le français ordonne, et `Intl` ne
+  // le sait pas : sans ça une voix de synthèse dirait « un septembre ».
+  return texte.replace(/^1 /, '1er ');
+};
+
+/** Ce que la flèche annonce : la phrase dessinée, et sa version parlée.
+
+    Trois moments, dans l'ordre où le voyage les traverse — avant le départ,
+    en chemin, une fois arrivés. La date courte tient sur la frise, la longue
+    se laisse lire à voix haute. */
+function motDeLaFrise({ positionJour, departPrevuLe, arriveeLe }) {
+  if (arriveeLe) {
+    return {
+      phrase: `Nous sommes arrivés le ${dateCourte(arriveeLe)}`,
+      description: `Nous sommes arrivés à Cusco le ${dateEnToutesLettres(arriveeLe)}`,
+    };
+  }
+  if (!positionJour && departPrevuLe) {
+    return {
+      phrase: `Départ prévu le ${dateCourte(departPrevuLe)}`,
+      description: `Départ prévu le ${dateEnToutesLettres(departPrevuLe)}, de Salta`,
+    };
+  }
+  return {
+    phrase: 'Nous sommes ici !',
+    description: positionJour
+      ? `Nous sommes ici : les motos en sont au jour ${positionJour}`
+      : 'Nous sommes ici : les motos n\'ont pas encore quitté Salta',
+  };
+}
+
+export function dessinerFrise(svg, {
+  voyage, etapes, jourActif, surChoixEtape, decomptes = {},
+  positionJour = null, departPrevuLe = null, arriveeLe = null,
+}) {
   const largeur = svg.clientWidth || svg.parentElement.clientWidth;
   const hauteur = svg.clientHeight || 100;
   if (!largeur) return;
@@ -283,6 +331,18 @@ export function dessinerFrise(svg, { voyage, etapes, jourActif, surChoixEtape, d
         + barbe(0.42) + barbe(-0.42),
     });
 
+    // Aux deux bouts du voyage, le mot dit une DATE plutôt qu'un lieu. « Nous
+    // sommes ici ! » ne se justifie qu'en chemin : posé au kilomètre zéro avant
+    // le départ, il désigne un endroit où personne n'est encore allé ; posé sur
+    // Cusco des semaines après, il fait croire à un voyage sans fin. Ce que la
+    // flèche montre alors n'est plus une position mais un rendez-vous, passé ou
+    // à venir — et c'est la date qui le dit.
+    //
+    // Le service ne date que ce qu'il sait dater : en position manuelle, ou en
+    // cours de route, les deux dates sont nulles et la phrase d'origine
+    // reprend la main.
+    const { phrase, description } = motDeLaFrise({ positionJour, departPrevuLe, arriveeLe });
+
     // Le mot porte seul l'information, maintenant que le pictogramme a quitté la
     // frise : lu à voix haute, « Nous sommes ici ! » ne dirait pas où. La flèche
     // reste muette, elle ne fait que désigner.
@@ -291,11 +351,9 @@ export function dessinerFrise(svg, { voyage, etapes, jourActif, surChoixEtape, d
       x: xMotos + cote * 40, y: yMot,
       'text-anchor': cote > 0 ? 'start' : 'end',
       role: 'img',
-      'aria-label': positionJour
-        ? `Nous sommes ici : les motos en sont au jour ${positionJour}`
-        : 'Nous sommes ici : les motos n\'ont pas encore quitté Salta',
+      'aria-label': description,
     });
-    mot.textContent = 'Nous sommes ici !';
+    mot.textContent = phrase;
 
     svg.append(mot, fleche);
   }

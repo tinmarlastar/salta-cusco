@@ -493,8 +493,11 @@ function appliquerHabillage(nom) {
     bouton.setAttribute('aria-pressed', String(bouton.dataset.habillage === nom));
   }
   try {
-    if (nom) localStorage.setItem(CLE_HABILLAGE, nom);
-    else localStorage.removeItem(CLE_HABILLAGE);
+    // « Nuit » n'a pas de nom d'attribut — c'est le :root — mais il lui faut un
+    // nom en mémoire. Sans lui, le choisir revenait à effacer la clé, donc à
+    // retrouver « Nations » à la visite suivante : le seul des quatre
+    // habillages qu'on ne pouvait pas garder.
+    localStorage.setItem(CLE_HABILLAGE, nom || 'nuit');
   } catch {
     // Navigation privée, stockage refusé : l'habillage vaut pour cette visite.
   }
@@ -508,9 +511,10 @@ function brancherHabillages() {
   // la couleur y portant une information plutôt qu'un décor.
   let garde = 'nations';
   try {
-    garde = localStorage.getItem(CLE_HABILLAGE) || 'nations';
+    const memoire = localStorage.getItem(CLE_HABILLAGE);
+    if (memoire) garde = memoire === 'nuit' ? '' : memoire;
   } catch {
-    garde = 'nations';
+    // Stockage refusé : la visite commence sur l'habillage par défaut.
   }
   appliquerHabillage(garde);
 }

@@ -1,11 +1,19 @@
 <!DOCTYPE html>
-<html lang="fr">
+<!-- « Nations » est posé ici, pas seulement par `js/app.js` : sans cet
+     attribut, la page se peignait en bleu nuit (le :root) le temps que le
+     module démarre, puis virait au papier froid. Un habillage par défaut qui
+     n'existe qu'après le premier rendu n'est pas un défaut, c'est un
+     clignotement. Une visite qui a choisi autre chose est rétablie ensuite. -->
+<html lang="fr" data-habillage="nations">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Aventure des 4 Nations — Salta → Cusco à moto</title>
 <meta name="description" content="Le parcours jour par jour du raid moto Salta–Cusco : 3 036 km, 875 km de piste, quatre pays andins, du désert d'Atacama au Machu Picchu.">
-<meta name="theme-color" content="#101B31">
+<!-- La barre du navigateur suit l'habillage par défaut, pas l'habillage
+     d'origine : sur mobile, un bandeau bleu nuit au-dessus d'une page claire
+     se voyait comme une erreur de chargement. -->
+<meta name="theme-color" content="#F4F6F8">
 
 <meta property="og:type" content="website">
 <meta property="og:title" content="Aventure des 4 Nations — Salta → Cusco à moto">

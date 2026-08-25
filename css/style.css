@@ -711,11 +711,21 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
 .navigation__texte { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .navigation span span { display: block; color: var(--poussiere); font-size: .625rem; }
 
-/* Le chevron porte la couleur d'accent : c'est lui qu'on vise du pouce. */
+/* Le chevron devient une pastille pleine : c'est lui qu'on vise du pouce, et
+   une flèche de la taille d'une lettre n'était qu'un signe de ponctuation de
+   plus dans une ligne déjà écrite en capitales. Pleine plutôt que cerclée —
+   le cadre du bouton fait déjà un contour, un second à l'intérieur aurait
+   sonné creux. */
 .navigation button b {
+  display: grid;
+  place-items: center;
   flex: 0 0 auto;
-  color: var(--soufre);
-  font-size: 1.25rem;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  background: var(--soufre);
+  color: var(--sur-accent);
+  font-size: .8125rem;
   font-weight: 400;
   line-height: 1;
 }

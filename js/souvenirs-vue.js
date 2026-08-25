@@ -274,7 +274,14 @@ function gabaritEnAttente(entree, progression) {
   // l'avancement des yeux.
   const enVol = Boolean(progression && progression.idLocal === entree.idLocal);
   const classes = `souvenir est-en-attente${entree.refusMotDePasse ? ' est-refusee' : ''}${enVol ? ' est-en-vol' : ''}`;
-  return `<article class="${classes}" data-local="${echapper(entree.idLocal)}">
+  // Le mot de passe de groupe n'autorise QUE la création de la contribution.
+  // Une entrée qui a déjà la sienne — une photo ajoutée à un souvenir publié,
+  // ou un envoi repris après que la note est passée — s'autorise avec le jeton
+  // d'auteur et n'a plus rien à en faire. Sans ce drapeau, « Réessayer »
+  // réclamait un mot de passe qui ne servait à rien, et refusait de repartir
+  // tant qu'on ne l'avait pas tapé.
+  const besoinMotDePasse = entree.contributionId ? '0' : '1';
+  return `<article class="${classes}" data-local="${echapper(entree.idLocal)}" data-besoin-mdp="${besoinMotDePasse}">
     <p class="souvenir__entete"><b>${echapper(entree.auteur)}</b> <time>${motif}</time></p>
     ${entree.texte ? `<p class="souvenir__texte">${echapper(entree.texte)}</p>` : ''}
     ${jointe}
@@ -939,7 +946,11 @@ export function monterSouvenirs(conteneur, jour, { surDecompte = null } = {}) {
       const motDePasseCourant = (champCarte && champCarte.value.trim())
         || (champFormulaire && !champFormulaire.hidden && champFormulaire.value.trim())
         || localStorage.getItem(CLE_MOT_DE_PASSE) || '';
-      if (!motDePasseCourant) {
+      // Une entrée qui a déjà sa contribution n'envoie plus que des fichiers,
+      // autorisés par le jeton d'auteur : lui réclamer le mot de passe du
+      // groupe reviendrait à refuser de repartir pour un secret dont elle ne
+      // fera rien — le cas exact d'une photo ajoutée à un souvenir publié.
+      if (!motDePasseCourant && carte.dataset.besoinMdp !== '0') {
         // Le message du formulaire s'affiche sous le bouton Publier, très loin
         // du « Réessayer » qu'on vient de cliquer et hors de l'écran sur un
         // téléphone. Quand la carte a son propre champ, on parle donc dans la
@@ -959,7 +970,7 @@ export function monterSouvenirs(conteneur, jour, { surDecompte = null } = {}) {
         }
         return;
       }
-      localStorage.setItem(CLE_MOT_DE_PASSE, motDePasseCourant);
+      if (motDePasseCourant) localStorage.setItem(CLE_MOT_DE_PASSE, motDePasseCourant);
       await reprendreEntree(carte.dataset.local, motDePasseCourant);
       renvoyerMaintenant();
       await rafraichir();

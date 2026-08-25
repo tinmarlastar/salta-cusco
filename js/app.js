@@ -388,15 +388,31 @@ function gabaritDuree(etape, kmRoute) {
 }
 
 /* Ce que vise une moitié de la barre de navigation : la valeur à poser dans
-   `data-jour`, ce qui s'écrit dessous, et de quoi remplacer l'intitulé du
-   côté — une cible peut porter le sien. `null` — pas de cible — laisse la
-   moitié vide.
+   `data-jour`, ce qui s'écrit dessous, et de quoi remplacer l'intitulé comme
+   le chevron du côté — une cible peut porter les siens. `null` — pas de
+   cible — laisse la moitié vide.
 
    L'accueil en profite : « Précédent » l'annoncerait comme la journée d'avant
    J1, alors que c'est la fiche du voyage entier. Il reprend donc mot pour mot
    ce qu'en dit déjà le bouton du bandeau, « Tout le parcours » — deux noms
    pour un même endroit se seraient contredits à l'écran. */
-const CIBLE_ACCUEIL = { cle: 'accueil', sens: 'Accueil', libelle: 'Tout le parcours' };
+/* Une maison dessinée ici plutôt qu'un caractère « ⌂ » ou un émoji : le
+   premier manque à beaucoup de polices et tomberait sur un rectangle vide,
+   le second arrive avec ses propres couleurs et ne prendrait pas celle de la
+   pastille. `currentColor` la lui donne, comme au chevron qu'elle remplace.
+
+   Toit, murs, porte : trois traits, pas un de plus. À quatorze points de côté,
+   une fenêtre ou une cheminée se refermeraient en pâté. */
+const ICONE_MAISON = `<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false"
+     fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M1.9 7.7 8 2.4l6.1 5.3"/>
+  <path d="M3.4 8.6v5h9.2v-5"/>
+  <path d="M6.6 13.6v-3.1h2.8v3.1"/>
+</svg>`;
+
+const CIBLE_ACCUEIL = {
+  cle: 'accueil', sens: 'Accueil', libelle: 'Tout le parcours', icone: ICONE_MAISON,
+};
 const cibleEtape = (etape) =>
   (etape ? { cle: etape.jour, libelle: `J${etape.jour} ${etape.arrivee.nom}` } : null);
 
@@ -423,8 +439,8 @@ function gabaritNavigation(precedent, suivant) {
   const ouvrir = (cible) => `<button type="button" data-jour="${echapper(cible.cle)}">`;
 
   return `<div class="navigation">
-    ${precedent ? `${ouvrir(precedent)}<b aria-hidden="true">←</b>${texte(precedent, 'Précédent')}</button>` : vide}
-    ${suivant ? `${ouvrir(suivant)}${texte(suivant, 'Suivant')}<b aria-hidden="true">→</b></button>` : vide}
+    ${precedent ? `${ouvrir(precedent)}<b aria-hidden="true">${precedent.icone || '←'}</b>${texte(precedent, 'Précédent')}</button>` : vide}
+    ${suivant ? `${ouvrir(suivant)}${texte(suivant, 'Suivant')}<b aria-hidden="true">${suivant.icone || '→'}</b></button>` : vide}
   </div>`;
 }
 

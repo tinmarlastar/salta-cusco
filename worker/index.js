@@ -607,19 +607,34 @@ const CLES_POSITION = {
   jour: 'position_jour',
   depart: 'position_depart',
   decalage: 'position_decalage',
+  // Les deux dates annoncées à la main, aux bouts du voyage. Elles ne disent
+  // pas OÙ sont les motos : elles complètent le mode manuel, qui ne connaît
+  // aucun calendrier, là où le mode automatique déduit les siennes de la date
+  // de départ. D'où des clés à part, qu'un retour à « pas encore partis »
+  // n'efface pas — la date du départ prévu vaut justement pour cet état-là.
+  departPrevu: 'position_depart_prevu',
+  arrivee: 'position_arrivee',
 };
+
+const DATE_ISO = /^\d{4}-\d{2}-\d{2}$/;
 
 /** Position des motos, journée déjà calculée. Ouverte en lecture, comme les
     souvenirs : c'est ce que les proches viennent voir. `mode`, `depart` et
     `decalage` accompagnent la réponse pour la modération, qui en a besoin
     pour réafficher le formulaire tel qu'il a été laissé — rien de sensible,
     le site public les ignore (voir `lirePosition` dans souvenirs.js, qui n'en
-    garde rien). `departPrevuLe` et `arriveeLe`, eux, s'adressent au site
-    public : c'est ce qu'il écrit sur la frise aux deux bouts du voyage. */
+    garde rien) — `departPrevuPose` et `arriveePosee`, les deux dates saisies
+    à la main, sont là pour la même raison : réafficher les champs tels quels,
+    même quand le moment de les annoncer n'est pas venu. `departPrevuLe` et
+    `arriveeLe`, eux, s'adressent au site public : c'est ce qu'il écrit sur la
+    frise aux deux bouts du voyage, et rien d'autre. */
 async function lirePosition(env, cors) {
   const { results } = await env.DB
-    .prepare('SELECT cle, valeur, maj_le FROM reglages WHERE cle IN (?1, ?2, ?3, ?4)')
-    .bind(CLES_POSITION.mode, CLES_POSITION.jour, CLES_POSITION.depart, CLES_POSITION.decalage)
+    .prepare('SELECT cle, valeur, maj_le FROM reglages WHERE cle IN (?1, ?2, ?3, ?4, ?5, ?6)')
+    .bind(
+      CLES_POSITION.mode, CLES_POSITION.jour, CLES_POSITION.depart, CLES_POSITION.decalage,
+      CLES_POSITION.departPrevu, CLES_POSITION.arrivee,
+    )
     .all();
   const parCle = new Map(results.map((l) => [l.cle, l]));
 
@@ -632,6 +647,8 @@ async function lirePosition(env, cors) {
   const jourManuel = Number(parCle.get(CLES_POSITION.jour)?.valeur);
   const depart = parCle.get(CLES_POSITION.depart)?.valeur ?? null;
   const decalage = Number(parCle.get(CLES_POSITION.decalage)?.valeur ?? 0);
+  const departPrevuPose = parCle.get(CLES_POSITION.departPrevu)?.valeur ?? null;
+  const arriveePosee = parCle.get(CLES_POSITION.arrivee)?.valeur ?? null;
 
   let jour = null;
   if (mode === 'manuel' && Number.isInteger(jourManuel)) jour = jourManuel;
@@ -642,22 +659,33 @@ async function lirePosition(env, cors) {
   // voyage est l'affaire du service, le site public n'a jamais eu à savoir
   // qu'un mode automatique existe (il reçoit une journée toute faite).
   //
-  // Jamais plus d'une des deux à la fois, et seulement en automatique : en
-  // manuel aucune date n'est connue, et en cours de route il n'y a rien à
+  // Jamais plus d'une des deux à la fois : en cours de route il n'y a rien à
   // annoncer — « Nous sommes ici ! » suffit.
+  //
+  // L'automatique les calcule depuis la date de départ ; le manuel, qui
+  // n'a pas de calendrier à dérouler, reprend telles quelles les dates que
+  // la modération a saisies — et n'en annonce, aux mêmes moments, jamais
+  // plus d'une. Une date posée alors qu'on est en chemin attend sans rien
+  // dire : elle ressortira au bout du voyage.
   let departPrevuLe = null;
   let arriveeLe = null;
   if (mode === 'auto' && depart) {
     jour = calculerPositionAuto({ depart, decalage });
     if (jour === null) departPrevuLe = dateDuJourVoyage({ depart, decalage, jour: 1 });
     if (jour === JOURS) arriveeLe = dateDuJourVoyage({ depart, decalage, jour: JOURS });
+  } else {
+    if (jour === null) departPrevuLe = departPrevuPose;
+    if (jour === JOURS) arriveeLe = arriveePosee;
   }
 
   const majLe = parCle.get(CLES_POSITION.mode)?.maj_le
     ?? parCle.get(CLES_POSITION.jour)?.maj_le
     ?? null;
 
-  return repondre({ jour, majLe, mode, depart, decalage, departPrevuLe, arriveeLe }, { cors });
+  return repondre({
+    jour, majLe, mode, depart, decalage,
+    departPrevuLe, arriveeLe, departPrevuPose, arriveePosee,
+  }, { cors });
 }
 
 async function poserReglage(env, cle, valeur, majLe) {
@@ -667,48 +695,75 @@ async function poserReglage(env, cle, valeur, majLe) {
   ).bind(cle, valeur, majLe).run();
 }
 
+async function effacerReglage(env, cle) {
+  await env.DB.prepare('DELETE FROM reglages WHERE cle = ?1').bind(cle).run();
+}
+
 async function ecrirePosition(requete, env, cors) {
   if (!await adminAutorise(requete, env)) return erreur('Mot de passe incorrect', 401, cors);
 
   const corps = await requete.json().catch(() => ({}));
   const majLe = new Date().toISOString();
 
-  // `mode: null` efface tout : retour à « pas encore partis ». C'est un état
-  // légitime, pas une donnée manquante, d'où la suppression des lignes
-  // plutôt qu'une valeur convenue qu'il faudrait ensuite reconnaître partout.
-  if (corps.mode === null) {
-    await env.DB.prepare('DELETE FROM reglages WHERE cle IN (?1, ?2, ?3, ?4)').bind(
-      CLES_POSITION.mode, CLES_POSITION.jour, CLES_POSITION.depart, CLES_POSITION.decalage,
-    ).run();
-    return lirePosition(env, cors);
+  // Tout est vérifié avant qu'une seule ligne ne bouge : une requête qui
+  // porte à la fois un mode et une date annoncée ne doit pas poser l'une
+  // puis refuser l'autre, laissant la modération devant un réglage à
+  // moitié écrit qu'elle n'a pas demandé.
+  const aPoser = [];
+  const aEffacer = [];
+
+  // Les dates annoncées ne sont touchées que si la requête les porte : le
+  // menu des journées et les champs de date s'enregistrent séparément, et
+  // changer de journée ne doit pas emporter une date saisie plus tôt.
+  for (const [champ, cle] of [
+    ['departPrevuLe', CLES_POSITION.departPrevu],
+    ['arriveeLe', CLES_POSITION.arrivee],
+  ]) {
+    if (!(champ in corps)) continue;
+    const valeur = corps[champ] || null; // champ vidé (null ou '') : la date s'efface
+    if (valeur === null) { aEffacer.push(cle); continue; }
+    if (typeof valeur !== 'string' || !DATE_ISO.test(valeur)) {
+      return erreur('Date annoncée attendue au format AAAA-MM-JJ', 400, cors);
+    }
+    aPoser.push([cle, valeur]);
   }
 
-  if (corps.mode === 'manuel') {
+  // `mode: null` efface la position : retour à « pas encore partis ». C'est
+  // un état légitime, pas une donnée manquante, d'où la suppression des
+  // lignes plutôt qu'une valeur convenue qu'il faudrait ensuite reconnaître
+  // partout. Les dates annoncées, elles, ne sont pas des positions : elles
+  // survivent, sinon la date du départ prévu disparaîtrait au moment précis
+  // où elle sert.
+  if (corps.mode === null) {
+    aEffacer.push(
+      CLES_POSITION.mode, CLES_POSITION.jour, CLES_POSITION.depart, CLES_POSITION.decalage,
+    );
+  } else if (corps.mode === 'manuel') {
     const jour = Number(corps.jour);
     if (!Number.isInteger(jour) || jour < 1 || jour > JOURS) {
       return erreur(`Journée attendue entre 1 et ${JOURS}`, 400, cors);
     }
-    await poserReglage(env, CLES_POSITION.mode, 'manuel', majLe);
-    await poserReglage(env, CLES_POSITION.jour, String(jour), majLe);
-    return lirePosition(env, cors);
-  }
-
-  if (corps.mode === 'auto') {
+    aPoser.push([CLES_POSITION.mode, 'manuel'], [CLES_POSITION.jour, String(jour)]);
+  } else if (corps.mode === 'auto') {
     const depart = corps.depart;
-    if (typeof depart !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(depart)) {
+    if (typeof depart !== 'string' || !DATE_ISO.test(depart)) {
       return erreur('Date de départ attendue au format AAAA-MM-JJ', 400, cors);
     }
     const decalage = corps.decalage === undefined ? 0 : Number(corps.decalage);
     if (!Number.isInteger(decalage) || decalage < -30 || decalage > 30) {
       return erreur('Décalage attendu entre -30 et 30 jours', 400, cors);
     }
-    await poserReglage(env, CLES_POSITION.mode, 'auto', majLe);
-    await poserReglage(env, CLES_POSITION.depart, depart, majLe);
-    await poserReglage(env, CLES_POSITION.decalage, String(decalage), majLe);
-    return lirePosition(env, cors);
+    aPoser.push(
+      [CLES_POSITION.mode, 'auto'], [CLES_POSITION.depart, depart],
+      [CLES_POSITION.decalage, String(decalage)],
+    );
+  } else {
+    return erreur('Réglage de position invalide', 400, cors);
   }
 
-  return erreur('Réglage de position invalide', 400, cors);
+  for (const cle of aEffacer) await effacerReglage(env, cle);
+  for (const [cle, valeur] of aPoser) await poserReglage(env, cle, valeur, majLe);
+  return lirePosition(env, cors);
 }
 
 /** Liste toutes les contributions, pour la page de modération. */

@@ -234,10 +234,15 @@ export async function lirePosition() {
   };
 }
 
-/** Réglages complets de la position — mode, date de départ, décalage — en
-    plus de la journée déjà calculée. Réservée à la modération : le site
-    public n'a besoin que de `lirePosition`, ci-dessus, qui ne garde que
-    `jour` et `majLe`. */
+/** Réglages complets de la position — mode, date de départ, décalage, et les
+    deux dates annoncées à la main — en plus de la journée déjà calculée.
+    Réservée à la modération : le site public n'a besoin que de
+    `lirePosition`, ci-dessus, qui ne garde que `jour` et `majLe`.
+
+    `departPrevuPose` et `arriveePosee` sont les dates SAISIES, à distinguer
+    des `departPrevuLe`/`arriveeLe` du site public, qui ne valent qu'au
+    moment de les annoncer : le formulaire, lui, doit réafficher ce qui a été
+    tapé même quand le voyage n'en est pas encore là. */
 export async function lireReglagesPosition() {
   const donnees = await appeler('/api/position');
   return {
@@ -246,6 +251,10 @@ export async function lireReglagesPosition() {
     mode: donnees.mode ?? null,
     depart: donnees.depart ?? null,
     decalage: donnees.decalage ?? 0,
+    departPrevuPose: donnees.departPrevuPose ?? null,
+    arriveePosee: donnees.arriveePosee ?? null,
+    departPrevuLe: donnees.departPrevuLe ?? null,
+    arriveeLe: donnees.arriveeLe ?? null,
   };
 }
 
@@ -253,15 +262,26 @@ export async function lireReglagesPosition() {
 
     `mode: 'manuel'` pose une journée choisie à la main ; `mode: 'auto'` pose
     une date de départ et un décalage, et laisse le service recalculer la
-    journée à chaque lecture ; `mode: null` efface tout, retour à « pas
+    journée à chaque lecture ; `mode: null` efface la position, retour à « pas
     encore partis ». Réservée à l'administration : la position parle au nom
-    du groupe, elle n'est pas une contribution parmi d'autres. */
-export async function ecrirePosition({ mode, jour, depart, decalage, motDePasse }) {
+    du groupe, elle n'est pas une contribution parmi d'autres.
+
+    `departPrevuLe` et `arriveeLe` accompagnent le mode manuel, qui ne
+    connaît aucun calendrier : ce sont les dates à annoncer avant J1 et une
+    fois J15 atteint. Omises, elles restent telles quelles au service ;
+    passées à `null`, elles s'effacent. D'où le `undefined` filtré ici plutôt
+    qu'un champ toujours envoyé : ne rien dire et dire « efface » sont deux
+    demandes différentes. */
+export async function ecrirePosition({
+  mode, jour, depart, decalage, departPrevuLe, arriveeLe, motDePasse,
+}) {
   let corps;
   if (mode === 'manuel') corps = { mode, jour };
   else if (mode === 'auto') corps = { mode, depart, decalage };
   else if (mode === null) corps = { mode: null };
   else throw new Error(`mode de position inconnu : ${mode}`);
+  if (departPrevuLe !== undefined) corps.departPrevuLe = departPrevuLe;
+  if (arriveeLe !== undefined) corps.arriveeLe = arriveeLe;
   return appeler('/api/position', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', 'X-Mot-De-Passe': motDePasse },

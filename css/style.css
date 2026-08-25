@@ -305,6 +305,26 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 .bouton-accueil { letter-spacing: .06em; text-transform: uppercase; font-size: .6875rem; }
 .bouton-accueil[hidden] { display: none; }
 
+/* Sur la page de modération, ce même bouton est un lien vers le site, hors du
+   bandeau de navigation : il ne recevait donc aucune des règles ci-dessus et
+   retombait sur le bleu-violet du navigateur, illisible sur le bleu nuit. Il
+   reprend ici l'habit des boutons du bandeau — même surface, même survol :
+   c'est le même geste, revenir en arrière. */
+a.bouton-accueil {
+  display: inline-flex;
+  align-items: center;
+  gap: .375rem;
+  padding: .3125rem .625rem;
+  border: 1px solid var(--nuit-3);
+  background: var(--nuit-2);
+  color: var(--sel);
+  font-family: var(--mono);
+  line-height: 1;
+  text-decoration: none;
+  transition: color var(--transition), background var(--transition);
+}
+a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
+
 /* Les chiffres vivent désormais sur la fiche du voyage, dans le panneau : ils
    s'y répartissent en grille plutôt que d'être poussés au bout d'un entête. */
 .chiffres {

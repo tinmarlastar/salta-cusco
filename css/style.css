@@ -950,7 +950,13 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
   transition: transform var(--transition), background var(--transition), color var(--transition);
 }
 .jalon:hover { transform: translate(-50%, -50%) scale(1.15); }
-.jalon.est-actif {
+/* Allumée : la journée choisie, ou les deux bouts de celle qu'on survole sur
+   la frise. Même surbrillance pour les deux — c'est le même fait, cette
+   pastille est celle dont on parle en ce moment. Deux nuances pour cela
+   auraient demandé au lecteur de les distinguer sans jamais les voir côte à
+   côte : le survol n'a lieu qu'en vue d'ensemble, où rien n'est choisi. */
+.jalon.est-actif,
+.jalon.est-survol {
   background: var(--soufre);
   border-color: var(--soufre);
   color: var(--sur-accent);

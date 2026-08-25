@@ -140,6 +140,9 @@ function motDeLaFrise({ positionJour, departPrevuLe, arriveeLe }) {
 export function dessinerFrise(svg, {
   voyage, etapes, jourActif, surChoixEtape, decomptes = {},
   positionJour = null, departPrevuLe = null, arriveeLe = null,
+  // Survoler une journée la désigne sur la carte sans rien choisir. Facultatif
+  // — la frise se dessine aussi bien sans carte en face d'elle.
+  surSurvolEtape = () => {}, surSortieEtape = () => {},
 }) {
   const largeur = svg.clientWidth || svg.parentElement.clientWidth;
   const hauteur = svg.clientHeight || 100;
@@ -217,6 +220,19 @@ export function dessinerFrise(svg, {
         surChoixEtape(segment.jour);
       }
     });
+
+    // Le survol désigne la journée sur la carte. `pointerenter` plutôt que
+    // `pointerover` : la zone n'a pas d'enfants, mais le second se rejouerait
+    // à chaque frémissement du curseur à l'intérieur.
+    //
+    // Le focus fait le même travail que le survol : ces zones sont déjà des
+    // boutons au clavier, et le voile qui les souligne répond lui aussi aux
+    // deux. Ce serait un tour de clavier pour rien si la carte, elle, ne
+    // suivait qu'à la souris.
+    zone.addEventListener('pointerenter', () => surSurvolEtape(segment.jour));
+    zone.addEventListener('pointerleave', () => surSortieEtape());
+    zone.addEventListener('focus', () => surSurvolEtape(segment.jour));
+    zone.addEventListener('blur', () => surSortieEtape());
 
     const voile = creer('rect', {
       class: `frise__voile${segment.jour === jourActif ? ' est-actif' : ''}`,

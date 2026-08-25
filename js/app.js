@@ -179,6 +179,8 @@ function redessinerFrise() {
     etapes: etat.etapes,
     jourActif: etat.jour,
     surChoixEtape: (jour) => choisir(jour),
+    surSurvolEtape: (jour) => etat.carte?.survolerEtape(jour),
+    surSortieEtape: () => etat.carte?.finSurvol(),
     decomptes: etat.decomptes,
     positionJour: etat.position.jour,
     departPrevuLe: etat.position.departPrevuLe,

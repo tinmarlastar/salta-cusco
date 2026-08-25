@@ -79,6 +79,12 @@ export function creerCarte(conteneur, { etapes, traces, surChoixEtape }) {
     parLieu.get(cle).jours.push(etape.jour);
   }
 
+  // Indexées aussi par lieu : le survol d'une journée doit retrouver la
+  // pastille de son départ comme celle de son arrivée, et le départ d'une
+  // journée est l'arrivée de la veille — c'est la même pastille, pas une
+  // seconde à poser par-dessus.
+  const pastillesParLieu = new Map();
+
   for (const { lat, lon, nom, jours } of parLieu.values()) {
     const etiquette = jours.join('-');
     const pastille = L.marker([lat, lon], {
@@ -93,6 +99,7 @@ export function creerCarte(conteneur, { etapes, traces, surChoixEtape }) {
     pastille.on('click', () => surChoixEtape(jours[0]));
     pastille.bindTooltip(nom, { className: 'infobulle', direction: 'top', offset: [0, -12] });
     pastille.addTo(carte);
+    pastillesParLieu.set(`${lat},${lon}`, pastille);
     for (const jour of jours) jalons.set(jour, pastille);
   }
 
@@ -135,20 +142,82 @@ export function creerCarte(conteneur, { etapes, traces, surChoixEtape }) {
     if (curseur) { carte.removeLayer(curseur); curseur = null; }
   }
 
+  // --- Survol depuis la frise -----------------------------------------------
+
+  /* Passer le curseur sur une journée de la frise la montre ici : sa trace
+     ressort du parcours, et les deux pastilles qu'elle relie s'allument. Rien
+     ne s'ajoute à la carte — ce sont les repères déjà posés qui répondent, le
+     survol ne fait que désigner ce qui est là.
+
+     En vue d'ensemble seulement : une journée déjà ouverte a sa trace en
+     avant et sa pastille allumée, un second surlignage y ferait deux journées
+     actives à la fois. */
+  let jourSurvole = null;
+  let pastillesAllumees = [];
+
+  function allumerPastille({ lat, lon }) {
+    const element = pastillesParLieu.get(`${lat},${lon}`)?.getElement()?.querySelector('.jalon');
+    if (!element) return;
+    element.classList.add('est-survol');
+    pastillesAllumees.push(element);
+  }
+
+  function eteindrePastilles() {
+    for (const element of pastillesAllumees) element.classList.remove('est-survol');
+    pastillesAllumees = [];
+  }
+
+  function finSurvol() {
+    eteindrePastilles();
+    if (jourSurvole === null) return;
+    const ligne = lignes.get(jourSurvole);
+    if (ligne) ligne.setStyle(etapeCourante ? TRAIT_DORMANT : TRAIT_ENSEMBLE);
+    jourSurvole = null;
+  }
+
+  function survolerEtape(jour) {
+    if (etapeCourante || jour === jourSurvole) return;
+    finSurvol();
+
+    const ligne = lignes.get(jour);
+    const etape = etapes.find((e) => e.jour === jour);
+    if (!ligne || !etape) return;
+
+    jourSurvole = jour;
+    ligne.setStyle(TRAIT_ACTIF);
+    ligne.bringToFront();
+    allumerPastille(etape.depart);
+    allumerPastille(etape.arrivee);
+  }
+
   // --- Sélection ------------------------------------------------------------
 
   let etapeCourante = null;
 
   function montrerEtape(etape, { recentrer = true } = {}) {
     etapeCourante = etape;
+
+    // Un survol en cours n'a plus lieu d'être : la boucle ci-dessous redonne
+    // à chaque trace le style que mérite la nouvelle sélection, il suffit
+    // d'oublier le survol sans lui laisser restaurer un style périmé.
+    eteindrePastilles();
+    jourSurvole = null;
     for (const [jour, ligne] of lignes) {
       const actif = etape && jour === etape.jour;
       ligne.setStyle(actif ? TRAIT_ACTIF : etape ? TRAIT_DORMANT : TRAIT_ENSEMBLE);
       if (actif) ligne.bringToFront();
     }
-    for (const [jour, pastille] of jalons) {
+    // Une pastille peut valoir pour deux jours — « 9-10 » à Copacabana,
+    // « 14-15 » à Cusco. La parcourir par JOUR l'allumait puis l'éteignait
+    // dans la foulée : à J9, le tour du jour 9 posait la marque et celui du
+    // jour 10, sur la même pastille, la retirait. Les deux journées de repos
+    // ouvraient donc sur une carte sans repère allumé, et elles seules.
+    // C'est l'élément qu'on marque, une fois, d'où le passage par les
+    // pastilles distinctes.
+    const allumee = etape ? jalons.get(etape.jour)?.getElement()?.querySelector('.jalon') : null;
+    for (const pastille of new Set(jalons.values())) {
       const element = pastille.getElement()?.querySelector('.jalon');
-      if (element) element.classList.toggle('est-actif', Boolean(etape) && jour === etape.jour);
+      if (element) element.classList.toggle('est-actif', element === allumee);
     }
     montrerPoints(etape);
     masquerCurseur();
@@ -186,5 +255,8 @@ export function creerCarte(conteneur, { etapes, traces, surChoixEtape }) {
     attente = setTimeout(() => carte.invalidateSize({ animate: false }), 120);
   }).observe(conteneur);
 
-  return { carte, changerFond, montrerEtape, voirTout, recadrer, placerCurseur, masquerCurseur };
+  return {
+    carte, changerFond, montrerEtape, voirTout, recadrer,
+    placerCurseur, masquerCurseur, survolerEtape, finSurvol,
+  };
 }

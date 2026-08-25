@@ -1322,8 +1322,6 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
   .visionneuse__fleche.est-avant { left: 1.5rem; }
   .visionneuse__fleche.est-apres { right: 1.5rem; }
   .visionneuse__compteur { bottom: .5rem; }
-
-  .admin-mise-en-page { flex-direction: column; gap: 1rem; }
 }
 
 /* Photo comme vidéo s'ouvrent du même geste : le curseur le dit pour les
@@ -1399,6 +1397,7 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
    égale (un seul sélecteur de classe des deux côtés), c'est l'ordre dans la
    feuille qui tranche la cascade, pas la position de la media query. */
 @media (max-width: 40rem) {
+  .admin-mise-en-page { flex-direction: column; gap: 1rem; }
   .admin-nav {
     flex-direction: row;
     gap: 0;

@@ -5,6 +5,8 @@ import { dateParisDuJour, joursEntre, calculerPositionAuto } from '../lib/positi
 
 test('dateParisDuJour formate en AAAA-MM-JJ', () => {
   assert.match(dateParisDuJour(new Date('2026-09-01T10:00:00Z')), /^\d{4}-\d{2}-\d{2}$/);
+  assert.equal(dateParisDuJour(new Date('2026-09-01T21:59:00Z')), '2026-09-01'); // 23:59 Paris (CEST, UTC+2)
+  assert.equal(dateParisDuJour(new Date('2026-09-01T22:00:00Z')), '2026-09-02'); // 00:00 Paris (CEST, UTC+2)
 });
 
 test('joursEntre compte les jours calendaires entre deux dates', () => {

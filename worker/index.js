@@ -648,7 +648,7 @@ async function ecrirePosition(requete, env, cors) {
     await env.DB.prepare('DELETE FROM reglages WHERE cle IN (?1, ?2, ?3, ?4)').bind(
       CLES_POSITION.mode, CLES_POSITION.jour, CLES_POSITION.depart, CLES_POSITION.decalage,
     ).run();
-    return repondre({ jour: null, majLe: null, mode: null, depart: null, decalage: 0 }, { cors });
+    return lirePosition(env, cors);
   }
 
   if (corps.mode === 'manuel') {
@@ -658,7 +658,7 @@ async function ecrirePosition(requete, env, cors) {
     }
     await poserReglage(env, CLES_POSITION.mode, 'manuel', majLe);
     await poserReglage(env, CLES_POSITION.jour, String(jour), majLe);
-    return repondre({ jour, majLe, mode: 'manuel', depart: null, decalage: 0 }, { cors });
+    return lirePosition(env, cors);
   }
 
   if (corps.mode === 'auto') {
@@ -673,8 +673,7 @@ async function ecrirePosition(requete, env, cors) {
     await poserReglage(env, CLES_POSITION.mode, 'auto', majLe);
     await poserReglage(env, CLES_POSITION.depart, depart, majLe);
     await poserReglage(env, CLES_POSITION.decalage, String(decalage), majLe);
-    const jour = calculerPositionAuto({ depart, decalage });
-    return repondre({ jour, majLe, mode: 'auto', depart, decalage }, { cors });
+    return lirePosition(env, cors);
   }
 
   return erreur('Réglage de position invalide', 400, cors);

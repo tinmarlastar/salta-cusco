@@ -1337,19 +1337,6 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
   .visionneuse__compteur { bottom: .5rem; }
 
   .admin-mise-en-page { flex-direction: column; gap: 1rem; }
-  .admin-nav {
-    flex-direction: row;
-    gap: 0;
-    position: static;
-    border-bottom: 1px solid var(--nuit-3);
-  }
-  .admin-nav__bouton {
-    flex: 1 1 0;
-    border-left: 0;
-    border-bottom: 2px solid transparent;
-    text-align: center;
-  }
-  .admin-nav__bouton[aria-pressed="true"] { border-left-color: transparent; border-bottom-color: var(--soufre); }
 }
 
 /* Photo comme vidéo s'ouvrent du même geste : le curseur le dit pour les
@@ -1418,6 +1405,27 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 }
 .admin-nav__bouton:hover { color: var(--sel); }
 .admin-nav__bouton[aria-pressed="true"] { color: var(--soufre); border-left-color: var(--soufre); }
+
+/* Sur téléphone, le menu passe de colonne verticale à barre d'onglets
+   horizontale sous l'en-tête — même patron que .onglets sur le site public.
+   Doit rester APRÈS les règles inconditionnelles ci-dessus : à spécificité
+   égale (un seul sélecteur de classe des deux côtés), c'est l'ordre dans la
+   feuille qui tranche la cascade, pas la position de la media query. */
+@media (max-width: 40rem) {
+  .admin-nav {
+    flex-direction: row;
+    gap: 0;
+    position: static;
+    border-bottom: 1px solid var(--nuit-3);
+  }
+  .admin-nav__bouton {
+    flex: 1 1 0;
+    border-left: 0;
+    border-bottom: 2px solid transparent;
+    text-align: center;
+  }
+  .admin-nav__bouton[aria-pressed="true"] { border-left-color: transparent; border-bottom-color: var(--soufre); }
+}
 
 .admin-contenu { flex: 1 1 0; min-width: 0; }
 

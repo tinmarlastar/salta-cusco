@@ -859,26 +859,6 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
    fixes, qui supposaient une largeur connue d'avance. Conséquence : chaque
    règle qui agrandit la pastille doit répéter la translation, faute de quoi
    elle la remplacerait et la pastille sauterait au survol. */
-/* Le repère des motos sur la carte. Un fond clair et une ombre portée : posé
-   sur une image satellite, un émoji seul se perd dans le relief. Décalé de sa
-   moitié pour que son centre tombe sur le point, Leaflet ancrant ses icônes
-   sans dimensions par le coin haut gauche. */
-.motos {
-  position: absolute;
-  transform: translate(-50%, -50%);
-  display: grid;
-  place-items: center;
-  width: 2rem;
-  height: 2rem;
-  font-size: 1.125rem;
-  line-height: 1;
-  background: var(--nuit);
-  border: 2px solid var(--soufre);
-  border-radius: 50%;
-  box-shadow: 0 2px 6px var(--ombre);
-  cursor: pointer;
-}
-
 .jalon {
   display: grid;
   place-items: center;

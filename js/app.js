@@ -5,7 +5,7 @@
    vers un jour précis du voyage. */
 
 import { creerCarte } from './carte.js';
-import { assemblerVoyage, dessinerFrise, dessinerProfilEtape, kmDeLaJournee, releveAuKm } from './profil.js';
+import { assemblerVoyage, dessinerFrise, dessinerProfilEtape } from './profil.js';
 import { monterSouvenirs, brancherVisionneuse } from './souvenirs-vue.js';
 import { listerDecomptes, lirePosition } from './souvenirs.js';
 
@@ -81,9 +81,6 @@ async function demarrer() {
   reglerFeuille('fermee');
   choisir(jourDepuisAdresse(), { recentrer: false });
   redessinerFrise();
-  // Posées dès le premier rendu, avant même de savoir où elles en sont : sans
-  // réponse du service, les motos attendent à Salta, et c'est déjà une réponse.
-  poserMotosSurLaCarte();
 
   // Les pastilles arrivent après coup : le bandeau est utilisable sans elles,
   // et un service injoignable ne doit pas retarder l'affichage du parcours.
@@ -104,7 +101,6 @@ async function demarrer() {
     .then((position) => {
       etat.position = position;
       redessinerFrise();
-      poserMotosSurLaCarte();
     })
     .catch(() => {});
 
@@ -173,26 +169,6 @@ function decaler(pas) {
   const index = jours.indexOf(etat.jour);
   const cible = index === -1 ? (pas > 0 ? jours[0] : null) : jours[index + pas];
   if (cible !== undefined && cible !== null) choisir(cible);
-}
-
-const dateLisible = (iso) => new Date(iso).toLocaleDateString('fr-FR', {
-  day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit',
-});
-
-/** Pose le repère des motos sur la carte, à l'endroit du tracé où elles en sont.
-
-    L'infobulle porte la date de mise à jour : une position d'il y a trois jours
-    ne dit pas la même chose que celle de ce matin, et rien à l'écran ne
-    distingue les deux. */
-function poserMotosSurLaCarte() {
-  if (!etat.carte || !etat.voyage) return;
-  const releve = releveAuKm(kmDeLaJournee(etat.position.jour, etat.voyage), etat.voyage);
-  if (!releve) return;
-
-  const etape = etat.etapes.find((e) => e.jour === etat.position.jour);
-  const ou = etape ? `Jour ${etape.jour} — ${etape.arrivee.nom}` : 'Pas encore partis de Salta';
-  const quand = etat.position.majLe ? `<br>Mis à jour le ${dateLisible(etat.position.majLe)}` : '';
-  etat.carte.placerMotos(releve.lat, releve.lon, `${ou}${quand}`);
 }
 
 function redessinerFrise() {

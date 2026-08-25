@@ -3,6 +3,7 @@
    Le site reste statique ; seul le bloc « souvenirs » appelle ce service. */
 
 import { creerId, creerJeton, hacherJeton, memeSecret } from './lib/securite.js';
+import { calculerPositionAuto } from './lib/position.js';
 
 const TEXTE_MAX = 5000; // de quoi raconter une journée entière, pas seulement une légende
 const AUTEUR_MAX = 40;
@@ -586,48 +587,97 @@ async function compter(env, cors) {
   return repondre({ decomptes }, { cors });
 }
 
-const CLE_POSITION = 'position_jour';
+const CLES_POSITION = {
+  mode: 'position_mode',
+  jour: 'position_jour',
+  depart: 'position_depart',
+  decalage: 'position_decalage',
+};
 
-/** Journée où en sont les motos, ou `null` si personne ne l'a encore dite.
-
-    Ouverte en lecture, comme les souvenirs : c'est ce que les proches viennent
-    voir. L'écriture, elle, demande le mot de passe d'administration — la
-    position parle au nom du groupe, elle n'est pas une contribution parmi
-    d'autres. */
+/** Position des motos, journée déjà calculée. Ouverte en lecture, comme les
+    souvenirs : c'est ce que les proches viennent voir. `mode`, `depart` et
+    `decalage` accompagnent la réponse pour la modération, qui en a besoin
+    pour réafficher le formulaire tel qu'il a été laissé — rien de sensible,
+    le site public les ignore (voir `lirePosition` dans souvenirs.js, qui ne
+    garde que `jour` et `majLe`). */
 async function lirePosition(env, cors) {
-  const ligne = await env.DB
-    .prepare('SELECT valeur, maj_le FROM reglages WHERE cle = ?1').bind(CLE_POSITION).first();
-  const jour = ligne ? Number(ligne.valeur) : NaN;
-  return repondre({
-    jour: Number.isInteger(jour) ? jour : null,
-    majLe: ligne ? ligne.maj_le : null,
-  }, { cors });
+  const { results } = await env.DB
+    .prepare('SELECT cle, valeur, maj_le FROM reglages WHERE cle IN (?1, ?2, ?3, ?4)')
+    .bind(CLES_POSITION.mode, CLES_POSITION.jour, CLES_POSITION.depart, CLES_POSITION.decalage)
+    .all();
+  const parCle = new Map(results.map((l) => [l.cle, l]));
+
+  // Une base d'avant ce réglage n'a que `position_jour`, jamais
+  // `position_mode` : un mode absent avec une journée posée se lit comme
+  // manuel, sans migration à écrire.
+  const mode = parCle.get(CLES_POSITION.mode)?.valeur
+    ?? (parCle.get(CLES_POSITION.jour) ? 'manuel' : null);
+
+  const jourManuel = Number(parCle.get(CLES_POSITION.jour)?.valeur);
+  const depart = parCle.get(CLES_POSITION.depart)?.valeur ?? null;
+  const decalage = Number(parCle.get(CLES_POSITION.decalage)?.valeur ?? 0);
+
+  let jour = null;
+  if (mode === 'manuel' && Number.isInteger(jourManuel)) jour = jourManuel;
+  if (mode === 'auto' && depart) jour = calculerPositionAuto({ depart, decalage });
+
+  const majLe = parCle.get(CLES_POSITION.mode)?.maj_le
+    ?? parCle.get(CLES_POSITION.jour)?.maj_le
+    ?? null;
+
+  return repondre({ jour, majLe, mode, depart, decalage }, { cors });
+}
+
+async function poserReglage(env, cle, valeur, majLe) {
+  await env.DB.prepare(
+    `INSERT INTO reglages (cle, valeur, maj_le) VALUES (?1, ?2, ?3)
+       ON CONFLICT(cle) DO UPDATE SET valeur = ?2, maj_le = ?3`,
+  ).bind(cle, valeur, majLe).run();
 }
 
 async function ecrirePosition(requete, env, cors) {
   if (!await adminAutorise(requete, env)) return erreur('Mot de passe incorrect', 401, cors);
 
   const corps = await requete.json().catch(() => ({}));
-  // `null` efface : le voyage n'a pas commencé, ou il est fini. C'est un état
-  // légitime, pas une donnée manquante, d'où la suppression de la ligne plutôt
-  // qu'une valeur convenue qu'il faudrait ensuite reconnaître partout.
-  const efface = corps.jour === null || corps.jour === '';
-  const jour = efface ? null : Number(corps.jour);
-  if (!efface && (!Number.isInteger(jour) || jour < 1 || jour > JOURS)) {
-    return erreur(`Journée attendue entre 1 et ${JOURS}`, 400, cors);
-  }
-
-  if (efface) {
-    await env.DB.prepare('DELETE FROM reglages WHERE cle = ?1').bind(CLE_POSITION).run();
-    return repondre({ jour: null, majLe: null }, { cors });
-  }
-
   const majLe = new Date().toISOString();
-  await env.DB.prepare(
-    `INSERT INTO reglages (cle, valeur, maj_le) VALUES (?1, ?2, ?3)
-       ON CONFLICT(cle) DO UPDATE SET valeur = ?2, maj_le = ?3`,
-  ).bind(CLE_POSITION, String(jour), majLe).run();
-  return repondre({ jour, majLe }, { cors });
+
+  // `mode: null` efface tout : retour à « pas encore partis ». C'est un état
+  // légitime, pas une donnée manquante, d'où la suppression des lignes
+  // plutôt qu'une valeur convenue qu'il faudrait ensuite reconnaître partout.
+  if (corps.mode === null) {
+    await env.DB.prepare('DELETE FROM reglages WHERE cle IN (?1, ?2, ?3, ?4)').bind(
+      CLES_POSITION.mode, CLES_POSITION.jour, CLES_POSITION.depart, CLES_POSITION.decalage,
+    ).run();
+    return repondre({ jour: null, majLe: null, mode: null, depart: null, decalage: 0 }, { cors });
+  }
+
+  if (corps.mode === 'manuel') {
+    const jour = Number(corps.jour);
+    if (!Number.isInteger(jour) || jour < 1 || jour > JOURS) {
+      return erreur(`Journée attendue entre 1 et ${JOURS}`, 400, cors);
+    }
+    await poserReglage(env, CLES_POSITION.mode, 'manuel', majLe);
+    await poserReglage(env, CLES_POSITION.jour, String(jour), majLe);
+    return repondre({ jour, majLe, mode: 'manuel', depart: null, decalage: 0 }, { cors });
+  }
+
+  if (corps.mode === 'auto') {
+    const depart = corps.depart;
+    if (typeof depart !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(depart)) {
+      return erreur('Date de départ attendue au format AAAA-MM-JJ', 400, cors);
+    }
+    const decalage = corps.decalage === undefined ? 0 : Number(corps.decalage);
+    if (!Number.isInteger(decalage) || decalage < -30 || decalage > 30) {
+      return erreur('Décalage attendu entre -30 et 30 jours', 400, cors);
+    }
+    await poserReglage(env, CLES_POSITION.mode, 'auto', majLe);
+    await poserReglage(env, CLES_POSITION.depart, depart, majLe);
+    await poserReglage(env, CLES_POSITION.decalage, String(decalage), majLe);
+    const jour = calculerPositionAuto({ depart, decalage });
+    return repondre({ jour, majLe, mode: 'auto', depart, decalage }, { cors });
+  }
+
+  return erreur('Réglage de position invalide', 400, cors);
 }
 
 /** Liste toutes les contributions, pour la page de modération. */

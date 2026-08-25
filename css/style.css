@@ -53,7 +53,17 @@
 
   --rythme: .5rem;
   --transition: 180ms cubic-bezier(.2, .6, .3, 1);
+
+  /* Ce que le navigateur doit croire de la page pour dessiner ce que la CSS ne
+     dessine pas : l'icône de calendrier d'un `input type=date`, le clavier de
+     dates qu'elle ouvre, les ascenseurs. Sans ce jeton l'icône restait noire
+     sur le bleu nuit — invisible, alors qu'aucune règle ne peut la peindre.
+     Un jeton comme les couleurs, et non `dark` écrit en dur : trois des quatre
+     habillages sont clairs, et l'écrire ici les aurait tous assombris. */
+  --schema: dark;
 }
+
+:root { color-scheme: var(--schema); }
 
 /* ------------------------------------------------------- autres habillages
 
@@ -64,6 +74,7 @@
 /* Sel — le salar : papier chaud, encre bleu nuit, soufre assombri pour rester
    lisible sur clair. Mêmes couleurs qu'à l'origine, rôles inversés. */
 [data-habillage="sel"] {
+  --schema: light;
   --nuit:      #f6f3ec;
   --nuit-2:    #ffffff;
   --nuit-3:    #ddd6c8;
@@ -92,6 +103,7 @@
    agir, rouge de la Colorada pour alerter. Deux accents distincts, là où le
    soufre faisait les deux. */
 [data-habillage="altiplano"] {
+  --schema: light;
   --nuit:      #efe7d9;
   --nuit-2:    #fbf7ee;
   --nuit-3:    #d8c9ad;
@@ -116,6 +128,7 @@
 /* Quatre nations — carte d'état-major : papier froid, bleu d'encre pour agir,
    orange pour ce qui alerte. */
 [data-habillage="nations"] {
+  --schema: light;
   --nuit:      #f4f6f8;
   --nuit-2:    #ffffff;
   --nuit-3:    #cdd6e0;

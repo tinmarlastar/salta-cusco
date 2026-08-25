@@ -146,9 +146,17 @@ export function creerCarte(conteneur, { etapes, traces, surChoixEtape }) {
       ligne.setStyle(actif ? TRAIT_ACTIF : etape ? TRAIT_DORMANT : TRAIT_ENSEMBLE);
       if (actif) ligne.bringToFront();
     }
-    for (const [jour, pastille] of jalons) {
+    // Une pastille peut valoir pour deux jours — « 9-10 » à Copacabana,
+    // « 14-15 » à Cusco. La parcourir par JOUR l'allumait puis l'éteignait
+    // dans la foulée : à J9, le tour du jour 9 posait la marque et celui du
+    // jour 10, sur la même pastille, la retirait. Les deux journées de repos
+    // ouvraient donc sur une carte sans repère allumé, et elles seules.
+    // C'est l'élément qu'on marque, une fois, d'où le passage par les
+    // pastilles distinctes.
+    const allumee = etape ? jalons.get(etape.jour)?.getElement()?.querySelector('.jalon') : null;
+    for (const pastille of new Set(jalons.values())) {
       const element = pastille.getElement()?.querySelector('.jalon');
-      if (element) element.classList.toggle('est-actif', Boolean(etape) && jour === etape.jour);
+      if (element) element.classList.toggle('est-actif', element === allumee);
     }
     montrerPoints(etape);
     masquerCurseur();

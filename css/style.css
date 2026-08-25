@@ -47,7 +47,11 @@
      frise. Elle a sa police à elle parce qu'elle a un statut à elle. */
   --manuscrite: 'Caveat', 'Segoe Script', 'Bradley Hand', cursive;
 
-  --bandeau-h: 4.5rem;
+  /* Plancher de l'entête, serré au plus près de son contenu (surtitre + titre) :
+     tout ce qu'il ne prend pas revient à la carte et au panneau, qui sont, eux,
+     ce qu'on est venu regarder. Descendre plus bas ne gagnerait plus rien —
+     c'est le titre qui commanderait, et le rembourrage tomberait à zéro. */
+  --bandeau-h: 3.5rem;
   --frise-h: 8.125rem;
   --panneau-l: 24rem;      /* plancher du panneau, voir `.panneau` */
 
@@ -201,7 +205,7 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
   flex-wrap: wrap;
   gap: .5rem 1.5rem;
   min-height: var(--bandeau-h);
-  padding: .625rem 1.25rem;
+  padding: .375rem 1.25rem;
   border-bottom: 1px solid var(--nuit-3);
   background: var(--nuit);
 }
@@ -1575,7 +1579,7 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
 }
 
 @media (max-width: 48rem) {
-  .bandeau { flex-wrap: wrap; gap: .5rem 1rem; padding: .625rem 1rem; }
+  .bandeau { flex-wrap: wrap; gap: .5rem 1rem; padding: .375rem 1rem; }
   /* Sur un écran étroit, la navigation reprend toute une ligne : côte à côte
      avec le titre, « Tout le parcours » n'y tiendrait pas. */
   .bandeau__navigation { flex: 1 1 100%; margin-left: 0; }

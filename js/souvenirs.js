@@ -101,9 +101,20 @@ async function appeler(chemin, options = {}, delaiMs = DELAI_RESEAU_MS) {
     // comme un refus du service, pour qu'un renvoi ultérieur ait un sens.
     throw new ErreurReseau(souci.message);
   }
-  // 5xx : le service est mal en point, un renvoi plus tard peut passer.
-  if (reponse.status >= 500) throw new ErreurReseau(`Service en erreur (${reponse.status})`);
   const donnees = await reponse.json().catch(() => ({}));
+  // 5xx : le service est mal en point, un renvoi plus tard peut passer. On lit
+  // quand même ce qu'il a dit avant de conclure : « Envoi illisible, réessayez »
+  // (multipart tronqué) et « Erreur du service » (exception côté Worker) sont
+  // deux pannes très différentes à corriger, et le seul numéro 500 ne les
+  // distingue pas. Sans ce message, un envoi qui échoue à chaque fois ne laisse
+  // aucune trace exploitable côté participant — c'est précisément le cas qu'on
+  // ne savait pas diagnostiquer. Le corps peut n'être pas du JSON du tout (page
+  // d'erreur HTML de la plateforme) : `catch` le ramène alors à `{}`.
+  if (reponse.status >= 500) {
+    throw new ErreurReseau(
+      donnees.erreur ? `${donnees.erreur} (${reponse.status})` : `Service en erreur (${reponse.status})`,
+    );
+  }
   if (!reponse.ok) {
     throw new ErreurService(donnees.erreur || `Erreur ${reponse.status}`, reponse.status);
   }

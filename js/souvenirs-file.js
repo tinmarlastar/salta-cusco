@@ -336,7 +336,12 @@ export async function reprendreEntree(idLocal, motDePasse) {
       existe = true;
       magasin.put({
         ...actuelle,
-        motDePasse,
+        // Un mot de passe vide n'en est pas un : une entrée qui n'en a plus
+        // besoin — sa contribution existe, ses fichiers s'autorisent au jeton
+        // d'auteur — repart sans que « Réessayer » en fournisse aucun, et
+        // l'écrire tel quel effacerait celui qu'elle garde pour rien mais que
+        // l'auteur, lui, n'a plus sous la main.
+        motDePasse: motDePasse || actuelle.motDePasse,
         bloque: false,
         prochaineTentative: 0,
         refusMotDePasse: false,

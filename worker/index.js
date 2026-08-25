@@ -165,6 +165,26 @@ function jetonFourniParClient(requete) {
   return assainir(requete.headers.get('X-Jeton'), 128) || null;
 }
 
+/** Vrai si l'échec d'un `INSERT` est un rejeu — la clé d'idempotence a déjà
+    servi — et non un problème de base.
+
+    Les deux moitiés du test comptent. La clé d'idempotence seule ne suffit
+    pas : « table medias has no column named cle_idempotence » la contient
+    aussi, et une base au mauvais schéma (reprise jamais appliquée à distance,
+    table créée à la main) était alors prise pour un renvoi. Le rattrapage
+    allait chercher une ligne par une colonne inexistante, échouait à son
+    tour, et la vraie cause disparaissait derrière une « erreur du service »
+    que le client retente indéfiniment — un envoi de photo qui ne part jamais,
+    sans que rien ne dise pourquoi.
+    La violation d'unicité seule ne suffit pas non plus : la table porte aussi
+    une clé primaire sur `id`, dont la violation produit le même « UNIQUE
+    constraint failed » et désignerait, elle, une vraie collision
+    d'identifiant. */
+function estRejeu(souci) {
+  const message = String(souci);
+  return message.includes('UNIQUE constraint failed') && message.includes('cle_idempotence');
+}
+
 /** Insère une contribution ; renvoie l'existante si la clé a déjà servi. */
 async function enregistrer(ligne, env) {
   try {
@@ -180,12 +200,7 @@ async function enregistrer(ligne, env) {
     ).run();
     return { ligne, deja: false };
   } catch (souci) {
-    // On vise précisément la contrainte `cle_idempotence`, pas le mot « UNIQUE »
-    // seul : la table porte aussi une clé primaire sur `id`, dont la violation
-    // produit elle aussi « UNIQUE » dans le message SQLite. Un test trop large
-    // confondrait une vraie collision d'identifiant avec un rejeu, et irait
-    // chercher une clé d'idempotence qui n'a jamais été insérée.
-    if (!String(souci).includes('cle_idempotence')) throw souci;
+    if (!estRejeu(souci)) throw souci;
     // Clé d'idempotence déjà vue : un renvoi après une réponse perdue en route.
     // On rend l'existante plutôt que de créer un doublon.
     const existante = await env.DB
@@ -311,7 +326,7 @@ async function enregistrerMedia(media, contributionId, env) {
     ).run();
     return { deja: false };
   } catch (souci) {
-    if (!String(souci).includes('cle_idempotence')) throw souci;
+    if (!estRejeu(souci)) throw souci;
     const existante = await env.DB
       .prepare('SELECT * FROM medias WHERE cle_idempotence = ?')
       .bind(media.cle_idempotence)

@@ -187,35 +187,10 @@ export function dessinerFrise(svg, { voyage, etapes, jourActif, surChoixEtape, d
     poserDecompte(svg, creer, (gauche + droite) / 2 + 16, hauteur - 12.5, decomptes[segment.jour]);
   }
 
-  // Où en sont les motos, posées sur la crête au bout de la journée dite.
-  // Rendues transparentes au clic (CSS) : elles indiquent, elles ne commandent
-  // pas — un clic à cet endroit doit choisir la journée qui est dessous, comme
-  // partout ailleurs sur la frise.
-  //
-  // Posées ici, avant les étiquettes de journée, uniquement pour être mesurées
-  // à temps : ce qui suit a besoin de leur encombrement réel, celui que leur
-  // donne la feuille de style. Elles repasseront en dernier dans le dessin, à
-  // la fin, pour rester par-dessus tout le reste.
+  // Où en sont les motos. Le repère de la frise n'est pas une image mais une
+  // phrase : « Nous sommes ici ! » et sa flèche, plus bas. Le pictogramme moto,
+  // lui, est resté sur la carte, où il a de la place pour se faire voir.
   const releveMotos = releveAuKm(kmDeLaJournee(positionJour, voyage), voyage);
-  let motos = null;
-  let boiteMotos = null;
-  if (releveMotos) {
-    motos = creer('text', {
-      class: 'frise__motos',
-      x: x(releveMotos.km),
-      // -5 : le repère descend un peu sous sa ligne de base. C'est ce qui lui
-      // fait poser ses roues sur la crête au lieu de flotter au-dessus.
-      y: y(releveMotos.altitude) - 5,
-      role: 'img',
-      'aria-label': positionJour
-        ? `Les motos en sont au jour ${positionJour}`
-        : 'Les motos n\'ont pas encore quitté Salta',
-    });
-    motos.textContent = '\u{1F3CD}\u{FE0F}';
-    svg.append(motos);
-    boiteMotos = motos.getBBox();
-    if (!boiteMotos.height) boiteMotos = null;
-  }
 
   // Les jours sans ride : un point posé sur la crête, cliquable lui aussi.
   for (const etape of etapes.filter((e) => !e.ride)) {
@@ -237,50 +212,48 @@ export function dessinerFrise(svg, { voyage, etapes, jourActif, surChoixEtape, d
     });
     svg.append(pastille);
 
-    // L'étiquette se pose au-dessus de la pastille — sauf si les motos sont
-    // justement là : elle passe alors dessous. Le cas n'a rien d'un hasard, il
-    // arrive aux deux bouts du voyage, où la fin d'une étape et une journée
-    // sans ride tombent au même endroit : Salta au départ, Cusco à l'arrivée.
-    // Sans ça le repère avalait le numéro du jour.
-    //
-    // Dessous et non dessus : au-dessus, l'étiquette se serait fait traverser
-    // par la flèche, qui descend justement dans cette colonne-là.
-    const surLesMotos = boiteMotos
-      && Math.abs(x(km) - (boiteMotos.x + boiteMotos.width / 2)) < boiteMotos.width;
-    const yEtiquette = y(releve.altitude) + (surLesMotos ? 17 : -10);
-
+    let yEtiquette = y(releve.altitude) - 10;
     const etiquette = creer('text', {
       class: `frise__jour${etape.jour === jourActif ? ' est-actif' : ''}`,
       x: x(km), y: yEtiquette,
     });
     etiquette.textContent = `J${etape.jour}`;
     svg.append(etiquette);
+
+    // Sauf si la flèche vient justement se poser sur ce numéro-là : il descend
+    // alors sous la pastille et lui laisse la place. Le cas se mesure plutôt
+    // qu'il ne se devine — seule une journée de repos perchée assez haut voit
+    // son étiquette monter jusqu'au plafond du tracé, là où la flèche s'arrête.
+    if (releveMotos && Math.abs(x(km) - x(releveMotos.km)) < 14
+        && etiquette.getBBox().y < marge.haut + 1) {
+      yEtiquette = y(releve.altitude) + 17;
+      etiquette.setAttribute('y', yEtiquette);
+    }
     poserDecompte(svg, creer, x(km) + 16, yEtiquette - 3.5, decomptes[etape.jour]);
   }
 
-  // « Nous sommes ici ! » : ce que dit déjà le repère, mais dit d'une voix.
-  // Le mot se range du côté où il reste de la place, et sa flèche va chercher
-  // les motos.
+  // « Nous sommes ici ! » : où en sont les motos, dit d'une voix plutôt que
+  // marqué d'un signe. Le mot se range du côté où il reste de la place, et sa
+  // flèche va montrer la journée.
   //
-  // Sa hauteur ne suit pas le repère : elle est fixe, dans le ciel, au-dessus
-  // de la courbe quelle que soit la journée. Écrit à la hauteur des motos, il
-  // se posait à même le relief, illisible dès qu'elles roulaient haut ; posé
-  // dans le ciel, il a toujours le fond uni derrière lui. Le calcul tient parce
-  // que `altitudeMax` garde 300 m de réserve au-dessus du sommet : la crête ne
-  // monte jamais jusqu'à `marge.haut`, et le mot passe dessus.
-  if (motos && boiteMotos) {
+  // La hauteur du mot est fixe, dans le ciel, au-dessus de la courbe quelle que
+  // soit la journée : posé plus bas il se serait écrit à même le relief,
+  // illisible dès que les motos roulent haut. Le calcul tient parce que
+  // `altitudeMax` garde 300 m de réserve au-dessus du sommet : la crête ne monte
+  // jamais jusqu'à `marge.haut`, et le mot passe dessus.
+  if (releveMotos) {
     const xMotos = x(releveMotos.km);
     const cote = xMotos > largeur / 2 ? -1 : 1;
     const yMot = marge.haut - 14;
 
-    // La flèche file d'abord à l'horizontale dans le ciel, puis tombe à la
-    // verticale sur le repère. C'est la seule route qui ne traverse jamais la
-    // montagne : le ciel est libre par construction, et la colonne juste
-    // au-dessus des motos l'est aussi, puisqu'elles sont posées sur la crête.
-    // En diagonale directe elle passait devant le relief dès qu'une journée
-    // s'achevait au pied d'une montée — le jour 4, au pied du col qui mène au
-    // sommet du voyage, en était l'exemple criant.
-    const pointe = { x: xMotos, y: boiteMotos.y - 3 };
+    // La flèche file à l'horizontale dans le ciel, puis tombe à la verticale sur
+    // le haut de la barre qui sépare les journées. Ce point-là est le seul que
+    // rien n'occupe jamais : le plafond du tracé est au-dessus de toute la
+    // montagne, et au-dessus des numéros posés sur la crête. Visant les motos
+    // elles-mêmes, plus bas sur la courbe, elle passait devant le relief dès
+    // qu'une journée s'achevait au pied d'une montée — le jour 4, au pied du col
+    // qui mène au sommet du voyage, en était l'exemple criant.
+    const pointe = { x: xMotos, y: marge.haut };
     const depart = { x: xMotos + cote * 30, y: yMot + 3 };
     const fleche = creer('path', {
       class: 'frise__ici-fleche',
@@ -290,29 +263,28 @@ export function dessinerFrise(svg, { voyage, etapes, jourActif, surChoixEtape, d
       // s'écrire une fois pour toutes plutôt que se déduire d'une tangente.
       d: `M${depart.x.toFixed(1)} ${depart.y.toFixed(1)}`
         + ` C${(xMotos + cote * 11).toFixed(1)} ${(yMot + 1).toFixed(1)}`
-        + ` ${xMotos.toFixed(1)} ${(pointe.y - 12).toFixed(1)}`
+        + ` ${xMotos.toFixed(1)} ${(pointe.y - 9).toFixed(1)}`
         + ` ${pointe.x.toFixed(1)} ${pointe.y.toFixed(1)}`
         + ` M${(pointe.x - 3.5).toFixed(1)} ${(pointe.y - 7).toFixed(1)} L${pointe.x.toFixed(1)} ${pointe.y.toFixed(1)}`
         + ` L${(pointe.x + 3.5).toFixed(1)} ${(pointe.y - 7).toFixed(1)}`,
     });
 
-    // `aria-hidden` sur le mot comme sur la flèche : le repère dit déjà la même
-    // chose en toutes lettres, et le répéter ne ferait qu'allonger la lecture à
-    // voix haute.
+    // Le mot porte seul l'information, maintenant que le pictogramme a quitté la
+    // frise : lu à voix haute, « Nous sommes ici ! » ne dirait pas où. La flèche
+    // reste muette, elle ne fait que désigner.
     const mot = creer('text', {
       class: 'frise__ici',
       x: xMotos + cote * 40, y: yMot,
       'text-anchor': cote > 0 ? 'start' : 'end',
-      'aria-hidden': 'true',
+      role: 'img',
+      'aria-label': positionJour
+        ? `Nous sommes ici : les motos en sont au jour ${positionJour}`
+        : 'Nous sommes ici : les motos n\'ont pas encore quitté Salta',
     });
     mot.textContent = 'Nous sommes ici !';
 
     svg.append(mot, fleche);
   }
-
-  // Le repère repasse en dernier : il doit rester par-dessus les voiles, les
-  // séparations et sa propre flèche.
-  if (motos) svg.append(motos);
 }
 
 // -------------------------------------------------------- profil d'une étape

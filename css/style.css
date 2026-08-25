@@ -809,14 +809,6 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 .frise__pause { fill: var(--nuit); stroke: var(--poussiere); stroke-width: 1.5; cursor: pointer; }
 .frise__pause.est-actif { fill: var(--soufre); stroke: var(--soufre); }
 
-/* Où en sont les motos. Transparent au clic : le repère indique, il ne commande
-   pas — un clic à cet endroit doit choisir la journée qui est dessous. */
-.frise__motos {
-  font-size: 1.25rem;
-  text-anchor: middle;
-  pointer-events: none;
-}
-
 /* « Nous sommes ici ! » et sa flèche. Manuscrites : partout ailleurs la frise
    mesure, ici quelqu'un parle. Transparentes au clic comme le repère, et
    posées avant lui dans le dessin pour qu'il reste au-dessus.

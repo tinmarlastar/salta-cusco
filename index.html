@@ -29,9 +29,10 @@
   </div>
 
   <!-- La navigation est à droite du titre : elle commande, elle ne nomme pas.
-       Une seule commande à trois volets : d'où l'on vient, le parcours entier,
-       où l'on va. Le retour au tout est au centre parce qu'il est le point
-       d'où partent les deux autres. -->
+       Un seul bouton : le retour au parcours entier. Les étapes se choisissent
+       sur la frise et au bas du panneau, où elles sont nommées ; le pas-à-pas
+       de l'entête refaisait une troisième fois le même geste. Les flèches du
+       clavier, elles, continuent d'avancer d'une étape. -->
   <!-- Choix de l'habillage : quatre jeux de couleurs, à comparer sur le site
        plutôt que sur une maquette. -->
   <div class="habillages" role="group" aria-label="Habillage du site">
@@ -41,10 +42,8 @@
     <button type="button" data-habillage="nations" aria-pressed="true" title="Nations" aria-label="Habillage Nations"></button>
   </div>
 
-  <div class="bandeau__navigation" role="group" aria-label="Naviguer dans le voyage">
-    <button type="button" id="etape-precedente" aria-label="Étape précédente"></button>
+  <div class="bandeau__navigation">
     <button type="button" class="bouton-accueil" id="bouton-accueil" hidden>Tout le parcours</button>
-    <button type="button" id="etape-suivante" aria-label="Étape suivante"></button>
   </div>
 
 </header>

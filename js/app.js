@@ -37,8 +37,6 @@ const elements = {
   poigneeTexte: document.getElementById('poignee-texte'),
   boutonAccueil: document.getElementById('bouton-accueil'),
   identite: document.querySelector('.bandeau__identite'),
-  etapePrecedente: document.getElementById('etape-precedente'),
-  etapeSuivante: document.getElementById('etape-suivante'),
 };
 
 // ------------------------------------------------------------------ données
@@ -166,45 +164,6 @@ function choisir(jour, { recentrer = true, majAdresse = true } = {}) {
   // aller : une invitation sans destination se remarque tout de suite.
   elements.identite.classList.toggle('est-cliquable', Boolean(etape));
   elements.identite.title = etape ? 'Revenir au parcours entier' : '';
-  majPasAPas(etape);
-}
-
-/** Le pas-à-pas reste visible partout : depuis l'accueil, « suivant » ouvre J1. */
-function majPasAPas(etape) {
-  const jours = etat.etapes.map((e) => e.jour);
-  const index = etape ? jours.indexOf(etape.jour) : -1;
-
-  // Les flèches nomment leur destination, comme la barre du bas de panneau.
-  // Une flèche seule oblige à cliquer pour savoir où elle mène ; avec le nom,
-  // on sait avant de partir. Depuis l'accueil, « suivant » ouvre la première
-  // étape : c'est elle qu'il annonce.
-  const precedente = index > 0 ? etat.etapes[index - 1] : null;
-  const suivante = index === -1 ? etat.etapes[0] : etat.etapes[index + 1];
-  nommerFleche(elements.etapePrecedente, '←', precedente, 'Étape précédente');
-  nommerFleche(elements.etapeSuivante, '→', suivante, 'Étape suivante');
-
-  // `disabled` n'a plus grand-chose à désactiver puisque le volet est masqué
-  // quand il n'a pas de destination ; on le garde par sûreté, au cas où un
-  // rendu laisserait le bouton visible.
-  elements.etapePrecedente.disabled = !precedente;
-  elements.etapeSuivante.disabled = !suivante;
-}
-
-/** Écrit une flèche du pas-à-pas : le chevron, puis la destination. */
-function nommerFleche(bouton, chevron, cible, intitule) {
-  // Sans destination — avant J1, après J15 — le volet disparaît au lieu de
-  // rester en place, éteint : un bloc gris collé à « Tout le parcours » se lit
-  // comme une commande en panne plutôt que comme une extrémité du voyage.
-  bouton.hidden = !cible;
-  if (!cible) return;
-
-  const nom = `J${cible.jour} ${cible.arrivee.nom}`;
-  const marque = `<span aria-hidden="true">${chevron}</span>`;
-  const texte = `<span class="pas-a-pas__nom">${echapper(nom)}</span>`;
-  // Le chevron précède le nom à gauche, le suit à droite : chacun pointe vers
-  // l'extérieur du bloc, donc vers le sens du déplacement.
-  bouton.innerHTML = chevron === '←' ? marque + texte : texte + marque;
-  bouton.setAttribute('aria-label', `${intitule} : ${nom}`);
 }
 
 /** Déplace la sélection d'un cran ; depuis l'accueil, avance sur la première étape. */
@@ -604,8 +563,6 @@ function brancherInterface() {
   elements.identite.addEventListener('click', () => {
     if (etat.jour !== null) choisir(null);
   });
-  elements.etapePrecedente.addEventListener('click', () => decaler(-1));
-  elements.etapeSuivante.addEventListener('click', () => decaler(1));
 
   for (const bouton of document.querySelectorAll('.fonds__bouton[data-fond]')) {
     bouton.addEventListener('click', () => {

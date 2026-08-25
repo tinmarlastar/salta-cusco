@@ -262,14 +262,11 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 .habillages [data-habillage="altiplano"] { background: linear-gradient(135deg, #efe7d9 50%, #1c7a72 50%); }
 .habillages [data-habillage="nations"]   { background: linear-gradient(135deg, #f4f6f8 50%, #1f5fa8 50%); }
 
-/* Une commande à trois volets, d'un seul tenant : étape précédente, retour au
-   parcours entier, étape suivante. Les filets de 1 px sont le fond qui
-   transparaît entre les boutons. */
+/* La commande n'a plus qu'un volet : le retour au parcours entier. Le cadre de
+   1 px lui reste, c'est lui qui la pose dans l'entête. */
 .bandeau__navigation {
   display: flex;
   flex-shrink: 0;
-  gap: 1px;
-  background: var(--nuit-3);
   border: 1px solid var(--nuit-3);
 }
 
@@ -288,25 +285,10 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
   cursor: pointer;
   transition: color var(--transition), background var(--transition);
 }
-.bandeau__navigation button:hover:not(:disabled) { background: var(--soufre); color: var(--sur-accent); }
-.bandeau__navigation button:disabled { color: var(--nuit-3); cursor: default; }
+.bandeau__navigation button:hover { background: var(--soufre); color: var(--sur-accent); }
 .bandeau__navigation button[hidden] { display: none; }
 
-/* Le nom de la destination, à côté du chevron. Borné et coupé : « San Pedro
-   de Atacama » ne doit pas repousser le titre du voyage hors de l'entête. */
-.pas-a-pas__nom {
-  max-width: 10rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--poussiere);
-}
-.bandeau__navigation button:hover:not(:disabled) .pas-a-pas__nom { color: inherit; }
-
 /* Retour à la vue d'ensemble, visible uniquement quand une étape est ouverte. */
-
-/* Le retour au parcours entier partage l'habillage de ses voisins : c'est le
-   volet central de la même commande, pas un bouton séparé. */
 .bouton-accueil { letter-spacing: .06em; text-transform: uppercase; font-size: .6875rem; }
 .bouton-accueil[hidden] { display: none; }
 
@@ -1437,13 +1419,6 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 }
 
 /* --------------------------------------------------------------- mobile */
-
-/* Sous 60 rem, la commande à trois volets et le titre ne tiennent plus côte à
-   côte : les noms des destinations s'effacent, les chevrons et « Tout le
-   parcours » restent. */
-@media (max-width: 60rem) {
-  .pas-a-pas__nom { display: none; }
-}
 
 @media (max-width: 60rem) {
   /* La variable n'a plus d'effet sur la largeur, désormais à 50 % ; elle reste

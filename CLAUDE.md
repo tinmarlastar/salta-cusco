@@ -7,11 +7,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 A static site (French) for a motorcycle trip: an interactive map plus a day-by-day
 itinerary for a 15-day, 4-country Andes raid. No build step, no bundler, no
 frontend framework — plain ES modules loaded directly by the browser. A small
-Cloudflare Worker (`worker/`) backs an optional "souvenirs" feature (participants
+Cloudflare Worker (`worker/`) backs an optional "carnet de route" feature (participants
 post notes/photos/videos); the site itself works without it.
 
 Read [README.md](README.md) first — it documents the data model (`data/etapes.json`),
-the four color "habillages", the souvenirs feature's offline-queue UX, and the
+the four color "habillages", the carnet feature's offline-queue UX, and the
 full worker deployment sequence in more depth than is repeated here.
 
 ## Commands
@@ -85,10 +85,16 @@ under `js/vendor/` and `css/vendor/`:
   merged: `souvenirs.js` talks to the Worker and never touches the DOM;
   `souvenirs-file.js` is an IndexedDB-backed retry queue for posts that fail
   (built for the Andes' unreliable network — nothing is lost, it retries on
-  its own); `souvenirs-vue.js` owns the DOM for the "Souvenirs" tab and is the
+  its own); `souvenirs-vue.js` owns the DOM for the "Carnet de route" tab and is the
   only one of the three allowed to read/write `localStorage`.
 - `admin.js` — separate moderation page (`admin.html`, `noindex`), gated by its
   own session-only password, can list/delete any contribution across all days.
+
+**Vocabulary**: on screen the feature is the *carnet de route*, and one entry
+is a *note* — the trip is read as it happens, "souvenir" placed it in a distant
+past. The code kept the old name everywhere (`souvenirs*.js`, the D1 database,
+the API routes): renaming the plumbing would have meant a migration for a
+change that only concerns the copy. Expect the two vocabularies side by side.
 
 **Data**: `data/etapes.json` is the trip's entire editorial content (day
 narratives, photo lists, waypoints) — edit this for content changes, never

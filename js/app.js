@@ -495,7 +495,7 @@ function gabaritFiche(etape) {
       <button type="button" class="onglets__bouton" role="tab" data-onglet="etape"
               id="onglet-etape" aria-controls="volet-etape">Étape</button>
       <button type="button" class="onglets__bouton" role="tab" data-onglet="souvenirs"
-              id="onglet-souvenirs" aria-controls="volet-souvenirs">Souvenirs<span
+              id="onglet-souvenirs" aria-controls="volet-souvenirs">Carnet de route<span
               class="onglets__compte" hidden></span></button>
     </div>
 

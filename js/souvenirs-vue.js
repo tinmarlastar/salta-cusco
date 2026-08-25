@@ -343,7 +343,7 @@ function gabaritFormulaire() {
     <input class="souvenir-form__champ" name="motDePasse" type="password"
            placeholder="Mot de passe du groupe" ${connue ? 'hidden' : ''}>
     <textarea class="souvenir-form__champ" name="texte" rows="4" maxlength="5000"
-              placeholder="Une note, un souvenir…"></textarea>
+              placeholder="Un mot, une photo…"></textarea>
     <ul class="souvenir-form__fichiers" hidden></ul>
     <p class="souvenir-form__pied">
       <label class="souvenir-form__fichier">
@@ -382,7 +382,7 @@ function construireVisionneuse() {
   visionneuse.hidden = true;
   visionneuse.setAttribute('role', 'dialog');
   visionneuse.setAttribute('aria-modal', 'true');
-  visionneuse.setAttribute('aria-label', 'Souvenir en grand');
+  visionneuse.setAttribute('aria-label', 'Photo ou vidéo en grand');
   visionneuse.innerHTML = `
     <button type="button" class="visionneuse__fermer" data-vis="fermer" aria-label="Fermer">×</button>
     <button type="button" class="visionneuse__fleche est-avant" data-vis="avant" aria-label="Précédent">‹</button>
@@ -496,7 +496,7 @@ export function monterSouvenirs(conteneur, jour, { surDecompte = null } = {}) {
   // Pas de titre au-dessus de la liste : l'onglet « Souvenirs » le dit déjà,
   // juste au-dessus, et le répéter volait une ligne au premier souvenir.
   conteneur.innerHTML = `<div class="souvenirs__liste">Chargement…</div>
-    <p class="souvenir-form__titre">Ajouter un souvenir</p>
+    <p class="souvenir-form__titre">Ajouter une note</p>
     ${gabaritFormulaire()}`;
 
   const liste = conteneur.querySelector('.souvenirs__liste');
@@ -589,14 +589,14 @@ export function monterSouvenirs(conteneur, jour, { surDecompte = null } = {}) {
       if (mienne !== generation) return; // un appel plus récent a pris le dessus
       liste.innerHTML = attente.length
         ? attente.map((e) => gabaritEnAttente(e, progressionEnvoi())).join('')
-        : '<p class="souvenirs__vide">Les souvenirs ne se chargent pas pour le moment.</p>';
+        : '<p class="souvenirs__vide">Le carnet ne se charge pas pour le moment.</p>';
       return;
     }
     if (mienne !== generation) return; // un appel plus récent a pris le dessus
     liste.innerHTML = publiees.length || attente.length
       ? publiees.map(gabaritContribution).join('')
         + attente.map((e) => gabaritEnAttente(e, progressionEnvoi())).join('')
-      : '<p class="souvenirs__vide">Aucun souvenir pour cette étape. Soyez le premier.</p>';
+      : '<p class="souvenirs__vide">Aucune note pour cette étape. Soyez le premier.</p>';
 
     // Le décompte sort du MÊME chargement que la liste : le recalculer ailleurs
     // demanderait une seconde requête pour les mêmes données.
@@ -992,7 +992,7 @@ export function monterSouvenirs(conteneur, jour, { surDecompte = null } = {}) {
     }
 
     if (action === 'retirer-media') {
-      if (!confirm('Retirer ce fichier du souvenir ?')) return;
+      if (!confirm('Retirer ce fichier de la note ?')) return;
       try {
         await supprimerFichier({ idMedia: bouton.dataset.media, jeton });
       } catch (probleme) {
@@ -1003,7 +1003,7 @@ export function monterSouvenirs(conteneur, jour, { surDecompte = null } = {}) {
     }
 
     if (action === 'supprimer') {
-      if (!confirm('Supprimer ce souvenir ?')) return;
+      if (!confirm('Supprimer cette note ?')) return;
       try {
         await supprimerContribution({ id, jeton });
         oublierJeton(id);

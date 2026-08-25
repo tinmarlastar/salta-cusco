@@ -599,7 +599,8 @@ function brancherInterface() {
   // geste est celui qu'on attend d'un titre de site. Il reste un raccourci à
   // la souris : le bouton « Tout le parcours », lui, est atteignable au
   // clavier, et lui ajouter un second point d'arrêt pour la même action
-  // encombrerait la tabulation sans rien apporter.
+  // encombrerait la tabulation sans rien apporter. Sur écran étroit, où ce
+  // bouton est masqué faute de place, c'est « Échap » qui tient le rôle.
   elements.identite.addEventListener('click', () => {
     if (etat.jour !== null) choisir(null);
   });

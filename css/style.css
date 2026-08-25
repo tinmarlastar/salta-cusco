@@ -1580,11 +1580,16 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
 
 @media (max-width: 48rem) {
   .bandeau { flex-wrap: wrap; gap: .5rem 1rem; padding: .375rem 1rem; }
-  /* Sur un écran étroit, la navigation reprend toute une ligne : côte à côte
-     avec le titre, « Tout le parcours » n'y tiendrait pas. */
-  .bandeau__navigation { flex: 1 1 100%; margin-left: 0; }
-  .bandeau__navigation button { flex: 1 1 auto; }
-  .bouton-accueil { flex: 1; justify-content: center; }
+  /* « Tout le parcours » s'en va. Sur un écran étroit il ne tenait pas à côté
+     du titre et reprenait toute une ligne pour lui seul : un tiers de
+     l'entête, pris sur la carte, pour un geste que le titre fait déjà — le
+     cliquer ramène au parcours entier, comme on l'attend d'un titre de site.
+     Le masquer plutôt que de le rétrécir : serré contre les pastilles
+     d'habillage, il n'aurait plus rien annoncé.
+
+     Il reste en grand écran, où la place ne manque pas et où il porte le seul
+     libellé qui nomme la destination. */
+  .bandeau__navigation { display: none; }
   .bandeau__identite { flex: 1 1 100%; min-width: 0; }
   .bandeau__titre { font-size: 1.0625rem; font-stretch: 100%; }
   .bandeau__titre span { display: block; font-size: .9375rem; }

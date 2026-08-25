@@ -521,11 +521,10 @@ function gabaritFiche(etape) {
 
 // ------------------------------------------------------- feuille (téléphone)
 
-const LIBELLES_FEUILLE = { fermee: 'Voir le détail', mi: 'Tout voir', pleine: 'Replier' };
+const LIBELLES_FEUILLE = { fermee: 'Voir le détail', pleine: 'Replier' };
 
 function reglerFeuille(hauteur) {
   etat.feuille = hauteur;
-  elements.panneau.classList.toggle('est-mi', hauteur === 'mi');
   elements.panneau.classList.toggle('est-ouvert', hauteur === 'pleine');
   elements.poignee.dataset.hauteur = hauteur;
   elements.poignee.setAttribute('aria-expanded', String(hauteur !== 'fermee'));
@@ -614,12 +613,15 @@ function brancherInterface() {
     });
   }
 
-  // Trois hauteurs plutôt que deux. La position intermédiaire est la plus
-  // utile : elle laisse voir les chiffres et la mosaïque du jour sans masquer
-  // la carte, ce qui était impossible avec un simple ouvert/fermé où tout
-  // consultait plein écran.
+  // Deux hauteurs, et non plus trois. La position intermédiaire gardait la
+  // carte visible, mais au prix du seul geste qui compte sur un téléphone :
+  // lire la journée. Elle coupait la fiche en deux — les chiffres au-dessus du
+  // bord, le récit derrière un second appui — et demandait deux fois plus de
+  // défilement pour arriver au bout. « Voir le détail » ouvre donc directement
+  // la feuille pleine ; la carte est à un repli de distance, et la frise, qui
+  // reste seule au-dessus, permet de changer de journée sans rien replier.
   elements.poignee.addEventListener('click', () => reglerFeuille(
-    { fermee: 'mi', mi: 'pleine', pleine: 'fermee' }[etat.feuille || 'fermee'],
+    etat.feuille === 'pleine' ? 'fermee' : 'pleine',
   ));
 
   document.addEventListener('keydown', (evenement) => {

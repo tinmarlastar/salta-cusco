@@ -1597,32 +1597,39 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
   .scene { display: block; overflow: hidden; }
   .carte { position: absolute; inset: 0; }
 
-  /* Trois hauteurs. On anime `height` plutôt que d'empiler des translations :
-     la feuille reste ancrée en bas, et son contenu ne glisse pas sous le bord
-     de l'écran pendant le mouvement. */
+  /* Le panneau devient une feuille tirée depuis le bas, et elle monte d'un
+     seul tenant jusque sous la frise : toute la scène, la carte recouverte.
+     Les hauteurs partielles d'avant (62 %, puis 88 %) donnaient une lucarne où
+     la fiche du jour se lisait par tiers ; sur un écran de téléphone, garder
+     la carte visible pendant qu'on lit le récit coûte plus qu'elle ne
+     rapporte. La frise, elle, reste au-dessus : c'est la seule navigation du
+     site, la couvrir enfermerait la lecture dans la journée affichée.
+
+     La hauteur ne varie plus, seule la translation joue — le contenu ne se
+     recompose donc pas pendant le mouvement, et la feuille reste ancrée en
+     bas d'où elle vient. */
   .panneau {
     position: absolute;
     left: 0;
     right: 0;
     bottom: 0;
     z-index: 1000;
-    height: 62%;
+    height: 100%;
     border-right: 0;
     border-top: 1px solid var(--nuit-3);
     background: var(--nuit-voile);
     backdrop-filter: blur(12px);
     transform: translateY(100%);
-    transition: transform var(--transition), height var(--transition);
+    transition: transform var(--transition);
   }
-  /* Hauteur intermédiaire : les chiffres et la mosaïque du jour sont lisibles
-     sans que la carte disparaisse. C'est la position par défaut à l'ouverture. */
-  /* 62 % et non la moitié : c'est la hauteur qu'il faut pour que la première
-     rangée de la mosaïque passe au-dessus du bord, sous les chiffres. En
-     dessous, la feuille s'arrête pile avant les photos — et ne tient donc pas
-     sa promesse. */
-  .panneau.est-mi { transform: translateY(0); height: 62%; }
-  .panneau.est-ouvert { transform: translateY(0); height: 88%; }
+  .panneau.est-ouvert { transform: translateY(0); }
 
+  /* La poignée ne grimpe plus avec le bord de la feuille : ce bord est
+     maintenant tout en haut, sous la frise, où le bouton n'aurait plus de
+     place. Elle garde donc la même position dans les deux états — en bas, sous
+     le pouce, posée sur la feuille quand elle est ouverte. C'est aussi ce qui
+     rend le va-et-vient lisible : seul le libellé change, et le geste de
+     retour se fait là où on vient d'appuyer. */
   .panneau__poignee {
     position: absolute;
     left: 50%;
@@ -1643,15 +1650,19 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
     text-transform: uppercase;
     cursor: pointer;
     transform: translateX(-50%);
-    transition: bottom var(--transition);
   }
   .panneau__poignee-barre {
     width: 2rem;
     height: 2px;
     background: var(--poussiere);
   }
-  .panneau__poignee[data-hauteur="mi"] { bottom: calc(62% + .75rem); }
-  .panneau__poignee[data-hauteur="pleine"] { bottom: calc(88% + .75rem); }
+  /* La bande de navigation est collée au même bord bas que la poignée : elle
+     lui creuse la place sous ses deux boutons, pour que la poignée se pose
+     dans son fond opaque et que les trois commandes du bas se lisent
+     ensemble. Réserver plutôt un rembourrage en pied de panneau ne servait à
+     rien — la bande est collée, elle ne descend pas avec le contenu, et
+     « Replier » se retrouvait à cheval sur le récit qui défile dessous. */
+  .navigation { padding-bottom: 3.75rem; }
 
   /* Les onglets restent visibles quand on fait défiler la fiche : ils sont le
      seul moyen d'atteindre les souvenirs, les enterrer les rendrait aussi

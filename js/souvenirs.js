@@ -210,15 +210,36 @@ export async function lirePosition() {
   return { jour: donnees.jour ?? null, majLe: donnees.majLe ?? null };
 }
 
-/** Dit où en sont les motos. `jour: null` efface la position.
+/** Réglages complets de la position — mode, date de départ, décalage — en
+    plus de la journée déjà calculée. Réservée à la modération : le site
+    public n'a besoin que de `lirePosition`, ci-dessus, qui ne garde que
+    `jour` et `majLe`. */
+export async function lireReglagesPosition() {
+  const donnees = await appeler('/api/position');
+  return {
+    jour: donnees.jour ?? null,
+    majLe: donnees.majLe ?? null,
+    mode: donnees.mode ?? null,
+    depart: donnees.depart ?? null,
+    decalage: donnees.decalage ?? 0,
+  };
+}
 
-    Réservée à l'administration : elle parle au nom du groupe, elle n'est pas
-    une contribution parmi d'autres. */
-export async function ecrirePosition({ jour, motDePasse }) {
+/** Dit où en sont les motos.
+
+    `mode: 'manuel'` pose une journée choisie à la main ; `mode: 'auto'` pose
+    une date de départ et un décalage, et laisse le service recalculer la
+    journée à chaque lecture ; `mode: null` efface tout, retour à « pas
+    encore partis ». Réservée à l'administration : la position parle au nom
+    du groupe, elle n'est pas une contribution parmi d'autres. */
+export async function ecrirePosition({ mode, jour, depart, decalage, motDePasse }) {
+  const corps = mode === 'manuel' ? { mode, jour }
+    : mode === 'auto' ? { mode, depart, decalage }
+    : { mode: null };
   return appeler('/api/position', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', 'X-Mot-De-Passe': motDePasse },
-    body: JSON.stringify({ jour }),
+    body: JSON.stringify(corps),
   });
 }
 

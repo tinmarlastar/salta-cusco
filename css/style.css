@@ -421,11 +421,13 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
 /* ---------------------------------------------------------------- panneau */
 
 .panneau {
-  /* Moitié-moitié avec la carte. La largeur fixe d'avant (24 rem) tenait de
-     l'époque où le panneau n'était qu'une fiche de lecture ; il porte
-     maintenant les photos et les souvenirs, qui méritent autant de place que
-     le terrain. */
-  flex: 0 0 50%;
+  /* Trois cinquièmes pour le panneau, deux pour la carte. Moitié-moitié
+     laissait les mesures de l'étape se casser sur deux rangées, et le récit
+     comme les photos à l'étroit ; la carte, elle, garde de quoi lire les noms
+     de lieux autour de la trace du jour — c'est ce qu'un tiers ne donnait
+     plus. La largeur fixe d'avant (24 rem) tenait de l'époque où le panneau
+     n'était qu'une fiche de lecture. */
+  flex: 0 0 60%;
   overflow-y: auto;
   overscroll-behavior: contain;
   border-right: 1px solid var(--nuit-3);

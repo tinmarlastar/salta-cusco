@@ -233,9 +233,11 @@ export async function lireReglagesPosition() {
     encore partis ». Réservée à l'administration : la position parle au nom
     du groupe, elle n'est pas une contribution parmi d'autres. */
 export async function ecrirePosition({ mode, jour, depart, decalage, motDePasse }) {
-  const corps = mode === 'manuel' ? { mode, jour }
-    : mode === 'auto' ? { mode, depart, decalage }
-    : { mode: null };
+  let corps;
+  if (mode === 'manuel') corps = { mode, jour };
+  else if (mode === 'auto') corps = { mode, depart, decalage };
+  else if (mode === null) corps = { mode: null };
+  else throw new Error(`mode de position inconnu : ${mode}`);
   return appeler('/api/position', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', 'X-Mot-De-Passe': motDePasse },

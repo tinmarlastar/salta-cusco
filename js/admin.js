@@ -289,9 +289,11 @@ racine.addEventListener('click', async (evenement) => {
       // que l'automatique montre déjà, ou J1 si les motos n'étaient encore
       // nulle part.
       await enregistrerPosition({ mode: 'manuel', jour: position.jour ?? 1 });
+    } else if (position.depart) {
+      await enregistrerPosition({ mode: 'auto', depart: position.depart, decalage: position.decalage ?? 0 });
     } else {
       // Rien à enregistrer avant qu'une date ne soit choisie : on affiche
-      // juste le formulaire, vide.
+      // juste le formulaire, à remplir.
       modeAffiche = 'auto';
       const contenu = racine.querySelector('.admin-contenu');
       if (contenu) contenu.innerHTML = gabaritModulePosition();

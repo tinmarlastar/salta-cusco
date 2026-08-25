@@ -242,7 +242,11 @@ function afficherPanneau(etape) {
   }
 
   for (const bouton of elements.panneau.querySelectorAll('[data-jour]')) {
-    bouton.addEventListener('click', () => choisir(Number(bouton.dataset.jour)));
+    // « accueil » plutôt qu'un numéro convenu : la vue d'ensemble n'est pas
+    // une journée, et un 0 posé là aurait fini par se glisser dans une
+    // comparaison de jours, où il aurait passé pour une étape.
+    const cible = bouton.dataset.jour === 'accueil' ? null : Number(bouton.dataset.jour);
+    bouton.addEventListener('click', () => choisir(cible));
   }
   for (const bouton of elements.panneau.querySelectorAll('[data-lat]')) {
     bouton.addEventListener('click', () => {
@@ -343,6 +347,8 @@ function gabaritAccueil(voyage) {
       ${voyage.hebergements.map((photo) =>
         `<img src="${photo}" alt="" loading="lazy" tabindex="0">`).join('')}
     </div>
+
+    ${gabaritNavigation(null, cibleEtape(etat.etapes[0]))}
   </div>`;
 }
 
@@ -379,6 +385,63 @@ function gabaritDuree(etape, kmRoute) {
   // l'intitulé se saute d'un coup d'œil.
   const intitule = reelle ? 'Temps de trajet' : 'Durée estimée';
   return `<div><dt>${intitule}</dt><dd>${reelle ? '' : '≈ '}${valeur}</dd></div>`;
+}
+
+/* Ce que vise une moitié de la barre de navigation : la valeur à poser dans
+   `data-jour`, ce qui s'écrit dessous, et de quoi remplacer l'intitulé comme
+   le chevron du côté — une cible peut porter les siens. `null` — pas de
+   cible — laisse la moitié vide.
+
+   L'accueil en profite : « Précédent » l'annoncerait comme la journée d'avant
+   J1, alors que c'est la fiche du voyage entier. Il reprend donc mot pour mot
+   ce qu'en dit déjà le bouton du bandeau, « Tout le parcours » — deux noms
+   pour un même endroit se seraient contredits à l'écran. */
+/* Une maison dessinée ici plutôt qu'un caractère « ⌂ » ou un émoji : le
+   premier manque à beaucoup de polices et tomberait sur un rectangle vide,
+   le second arrive avec ses propres couleurs et ne prendrait pas celle de la
+   pastille. `currentColor` la lui donne, comme au chevron qu'elle remplace.
+
+   Toit, murs, porte : trois traits, pas un de plus. À quatorze points de côté,
+   une fenêtre ou une cheminée se refermeraient en pâté. */
+const ICONE_MAISON = `<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false"
+     fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M1.9 7.7 8 2.4l6.1 5.3"/>
+  <path d="M3.4 8.6v5h9.2v-5"/>
+  <path d="M6.6 13.6v-3.1h2.8v3.1"/>
+</svg>`;
+
+const CIBLE_ACCUEIL = {
+  cle: 'accueil', sens: 'Accueil', libelle: 'Tout le parcours', icone: ICONE_MAISON,
+};
+const cibleEtape = (etape) =>
+  (etape ? { cle: etape.jour, libelle: `J${etape.jour} ${etape.arrivee.nom}` } : null);
+
+/** La barre « précédent / suivant », en pied de panneau.
+
+    La même sur l'accueil et sur une journée : c'est le seul chemin qui mène
+    d'un bout à l'autre du voyage sans passer par la frise, et il n'aurait pas
+    de sens qu'il change de forme en route. Depuis l'accueil il n'y a que la
+    suite, depuis J1 le retour ramène au parcours entier, depuis J15 il n'y a
+    plus rien devant.
+
+    Une moitié sans destination garde sa place — la barre reste coupée en deux,
+    de largeur constante — mais reste vide : ni intitulé, ni chevron, ni tiret.
+    Un « Suivant — » grisé annonçait une suite qui n'existe pas ; le vide, lui,
+    ne promet rien. */
+function gabaritNavigation(precedent, suivant) {
+  // `aria-hidden` en plus de `disabled` : sans nom, ce bouton se serait
+  // annoncé comme « bouton » et rien d'autre. Il ne porte aucune information,
+  // il tient la moitié de la barre — les lecteurs d'écran n'ont rien à en
+  // dire.
+  const vide = '<button type="button" disabled aria-hidden="true"></button>';
+  const texte = (cible, sens) =>
+    `<span class="navigation__texte"><span>${cible.sens || sens}</span>${echapper(cible.libelle)}</span>`;
+  const ouvrir = (cible) => `<button type="button" data-jour="${echapper(cible.cle)}">`;
+
+  return `<div class="navigation">
+    ${precedent ? `${ouvrir(precedent)}<b aria-hidden="true">${precedent.icone || '←'}</b>${texte(precedent, 'Précédent')}</button>` : vide}
+    ${suivant ? `${ouvrir(suivant)}${texte(suivant, 'Suivant')}<b aria-hidden="true">${suivant.icone || '→'}</b></button>` : vide}
+  </div>`;
 }
 
 function gabaritFiche(etape) {
@@ -450,14 +513,7 @@ function gabaritFiche(etape) {
       <div class="souvenirs" id="souvenirs-etape"></div>
     </div>
 
-    <div class="navigation">
-      <button type="button" ${precedente ? `data-jour="${precedente.jour}"` : 'disabled'}>
-        <b aria-hidden="true">←</b>
-        <span class="navigation__texte"><span>Précédent</span>${precedente ? `J${precedente.jour} ${echapper(precedente.arrivee.nom)}` : '—'}</span></button>
-      <button type="button" ${suivante ? `data-jour="${suivante.jour}"` : 'disabled'}>
-        <span class="navigation__texte"><span>Suivant</span>${suivante ? `J${suivante.jour} ${echapper(suivante.arrivee.nom)}` : '—'}</span>
-        <b aria-hidden="true">→</b></button>
-    </div>
+    ${gabaritNavigation(precedente ? cibleEtape(precedente) : CIBLE_ACCUEIL, cibleEtape(suivante))}
   </div>`;
 }
 

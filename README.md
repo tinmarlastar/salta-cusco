@@ -128,7 +128,15 @@ souvenirs quand la journée en a reçu, sur l'étape sinon — c'est ce qu'on vi
 chercher. Un clic sur un onglet tient jusqu'au changement de journée. La barre
 « journée précédente / suivante » est collée au bas du panneau, donc toujours
 atteignable : elle vivait auparavant après le récit et tous les souvenirs,
-c'est-à-dire une page entière de défilement plus bas. L'onglet *Étape* garde ce qui décrit la
+c'est-à-dire une page entière de défilement plus bas.
+
+La même barre ferme aussi la fiche d'accueil, où elle n'a qu'une moitié —
+« Suivant · J1 Salta » — et depuis J1 le retour ramène à l'accueil, sous le
+nom que lui donne déjà le bandeau : « Accueil · Tout le parcours ». On
+parcourt ainsi le voyage entier d'un bout à l'autre sans jamais quitter la
+barre. Une moitié sans destination garde sa place mais reste vide, sans
+intitulé ni chevron : un « Suivant — » grisé annonçait une suite qui n'existe
+pas. L'onglet *Étape* garde ce qui décrit la
 journée — chiffres, profil, récit, points — et laisse les souvenirs au sien.
 
 **Sur téléphone**, la fiche est une feuille à trois hauteurs, que la poignée

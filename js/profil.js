@@ -429,101 +429,12 @@ export function dessinerFrise(svg, {
     });
     mot.textContent = phrase;
 
-    // Le mot, sa flèche et la moto voyagent ensemble : ils apparaissent et
-    // disparaissent d'un bloc, une flèche seule ne désignant plus rien.
+    // Le mot et sa flèche voyagent ensemble : ils apparaissent et disparaissent
+    // d'un bloc, une flèche seule ne désignant plus rien.
     const groupe = creer('g', { class: 'frise__ici-groupe' });
     groupe.append(mot, fleche);
     svg.append(groupe);
-    poserMoto(creer, groupe, mot, cote);
   }
-}
-
-/** Une moto de profil, dessinée devant la phrase de la frise.
-
-    Deux roues et trois traits : à la taille d'un mot, tout détail de plus
-    devient une tache. Le pictogramme avait quitté la frise quand le repère est
-    devenu une phrase — il disputait alors la place au relief. Devant les mots,
-    dans le ciel, il ne gêne plus rien et dit d'un coup d'œil de qui l'on parle.
-
-    Le dessin vit dans une boîte de 24 × 14, mise à l'échelle de la hauteur
-    d'encre du texte : la moto suit donc la taille de la phrase sans qu'aucune
-    mesure ne soit écrite deux fois. Posée APRÈS le texte, une fois celui-ci
-    dans le document : sa largeur ne se connaît qu'une fois mesurée, et c'est
-    elle qui dit où commence le mot quand la phrase est calée par la droite. */
-function poserMoto(creer, groupe, mot, cote) {
-  const boite = mot.getBBox();
-  if (!boite.width) return;
-
-  // 0,58 et non 1 : `getBBox` d'un texte rend la hauteur de ligne complète,
-  // hampes et jambages compris, quand l'œil ne compare que la hauteur des
-  // capitales — une moto haute comme la ligne écraserait la phrase.
-  const hauteur = boite.height * 0.58;
-
-  const moto = creer('g', { class: 'frise__moto', 'aria-hidden': 'true' });
-  // Le dessin est réduit à ce qui survit à douze pixels de haut : deux roues,
-  // la ligne du réservoir, la fourche et le guidon. Un moteur, des rayons ou un
-  // garde-boue s'y empâtaient en une tache — essayés, retirés.
-  const rayon = 3.2;
-  moto.append(
-    creer('circle', { cx: 5.2, cy: 10.4, r: rayon }),
-    creer('circle', { cx: 19, cy: 10.4, r: rayon }),
-    // Le corps est PLEIN, et c'est tout ce qui sépare une moto d'un vélo à
-    // cette taille : en traits seuls, le cadre triangulaire et la selle fine
-    // donnaient une bicyclette — essayé, et reconnu comme tel. La masse du
-    // réservoir et du moteur, elle, ne trompe pas.
-    creer('path', {
-      class: 'frise__moto-corps',
-      d: 'M5.6 7.6 L8.4 6.1 L11.8 4.9 L14.8 5.3 L17.6 4.8 L18.4 6 L15.6 7'
-        + ' L14.2 9.4 L10.6 9.4 L8.6 8 Z',
-    }),
-    // La fourche descend du guidon à la roue avant, le guidon la traverse.
-    creer('path', { d: 'M17.8 5.4 L19 10.4' }),
-    creer('path', { d: 'M16.2 3.8 L19.4 4.5' }),
-    // Le bras oscillant rejoint l'axe arrière.
-    creer('path', { d: 'M7.6 8.6 L5.2 10.4' }),
-  );
-  groupe.append(moto);
-
-  // L'échelle se calcule sur le dessin réellement encré, mesuré une fois posé,
-  // et non sur la boîte où il a été tracé : les roues et le guidon n'en
-  // occupent pas toute la hauteur, et rapporter la moto à sa boîte l'aurait
-  // rendue d'un tiers trop petite. Mesurer plutôt que compter sur les
-  // coordonnées écrites plus haut évite aussi qu'une retouche du dessin change
-  // sa taille à l'écran sans qu'on l'ait voulu.
-  const encre = moto.getBBox();
-  if (!encre.height) return;
-  const echelle = hauteur / encre.height;
-  const largeur = encre.width * echelle;
-  // L'écart au mot vaut le quart de la hauteur : le même rapport qu'entre deux
-  // mots de la phrase, si bien que la moto se lit comme le premier d'entre eux.
-  const ecart = hauteur * 0.25;
-
-  // De quel côté la moto se pose, et qui recule pour lui faire la place.
-  //
-  // Quand la phrase s'écrit à DROITE des motos, la flèche part elle aussi par
-  // la gauche du mot : la moto, posée en retrait du premier mot, venait alors
-  // s'appuyer sur la courbe de la flèche — elles se touchaient. C'est donc la
-  // phrase qui recule, pas la moto : le dessin ouvre la ligne à l'endroit
-  // exact où le premier mot commençait, et les mots se décalent d'autant. La
-  // flèche, elle, ne bouge pas — elle vise toujours le même kilomètre — et se
-  // retrouve dégagée.
-  //
-  // De l'autre côté, la phrase est calée par la droite et s'étend vers la
-  // gauche : sa gauche s'éloigne de la flèche au lieu d'aller vers elle, et la
-  // moto peut se poser devant le premier mot sans rien déranger.
-  let x;
-  if (cote > 0) {
-    x = boite.x;
-    mot.setAttribute('x', (Number(mot.getAttribute('x')) + largeur + ecart).toFixed(1));
-  } else {
-    x = boite.x - largeur - ecart;
-  }
-  const y = boite.y + (boite.height - hauteur) / 2 - hauteur * 0.1;
-  moto.setAttribute(
-    'transform',
-    `translate(${(x - encre.x * echelle).toFixed(1)} ${(y - encre.y * echelle).toFixed(1)})`
-      + ` scale(${echelle.toFixed(3)})`,
-  );
 }
 
 /** Montre ou cache « Nous sommes ici ! » selon qu'il tient dans la fenêtre.

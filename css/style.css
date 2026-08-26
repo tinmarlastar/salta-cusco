@@ -1007,20 +1007,6 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
   pointer-events: none;
 }
 
-/* La moto de la phrase : même encre et même trait que la flèche, dont elle est
-   le pendant — l'une montre, l'autre nomme. Le trait suit la mise à l'échelle
-   du groupe, comme le reste du dessin. */
-.frise__moto {
-  fill: none;
-  stroke: var(--soufre);
-  stroke-width: 1.4;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  pointer-events: none;
-}
-/* Le corps est le seul morceau plein : voir le commentaire de `poserMoto`. */
-.frise__moto-corps { fill: var(--soufre); stroke: none; }
-
 .frise__ici-fleche {
   fill: none;
   stroke: var(--soufre);

@@ -1849,6 +1849,49 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
   }
 }
 
+/* L'écran couché.
+
+   La bascule vers la feuille se joue sur la LARGEUR (48 rem plus haut) — et un
+   téléphone couché fait 844 points de large. Il recevait donc la mise en page
+   de bureau dans une fenêtre haute de 390 : l'entête et la frise en prenaient
+   186, soit 48 % de l'écran, et le panneau, réduit à ce qui restait, affichait
+   le titre de la journée, les onglets, et pas une ligne de récit — sans même
+   une barre de défilement pour dire qu'il y avait une suite.
+
+   Plutôt que de basculer en feuille — la fiche prendrait alors 844 points de
+   large, et le récit s'y lirait sur des lignes de cent-dix caractères —, on
+   garde les deux colonnes et on rend au panneau la hauteur que l'entête et la
+   frise lui prenaient. Tout ce qui est ici est une question de hauteur : rien
+   n'y touche à la largeur, et le bureau, qui a de la place en haut, n'en voit
+   rien. */
+@media (max-height: 30rem) {
+  :root {
+    --bandeau-h: 2.25rem;
+    /* La frise garde son tracé à taille réelle : ce sont ses marges qui se
+       resserrent (voir `dessinerFrise`), pas le relief qui s'aplatit. Une
+       frise plate ne dirait plus rien d'un voyage qui monte à 5 000 mètres. */
+    --frise-h: 6.5rem;
+  }
+  .frise__svg { height: 5.75rem; }
+
+  /* Le sur-titre s'en va. Trois lignes d'entête sur un écran haut de 390
+     points, c'en est une de trop, et c'est celle qui en dit le moins : la
+     durée et l'opérateur se retrouvent dans la fiche d'accueil. */
+  .eyebrow { display: none; }
+  .bandeau { gap: .25rem 1rem; }
+  .bandeau__titre { font-size: 1.0625rem; }
+
+  /* L'entête de la fiche se resserre : sur un écran court, chaque ligne rendue
+     au récit compte double. Le numéro de journée et le titre restent les deux
+     plus gros caractères du panneau — c'est leur écart au reste qui compte,
+     pas leur taille absolue. */
+  .fiche { padding-top: .5rem; }
+  .fiche__numero { font-size: 1.25rem; }
+  .fiche__titre { margin: .125rem 0 .5rem; font-size: 1.25rem; }
+  .onglets { margin-top: .5rem; }
+  .mesures, .chiffres { gap: .5rem 1rem; margin-bottom: .75rem; padding-bottom: .75rem; }
+}
+
 @media (max-width: 30rem) {
 
   /* Sur un écran étroit, les chiffres occupent déjà toute la ligne : les fonds

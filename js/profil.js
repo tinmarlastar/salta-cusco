@@ -159,7 +159,19 @@ export function dessinerFrise(svg, {
   // ici ! ». Il lui faut la hauteur du mot, et rien de plus — au-delà, le vide
   // se voit entre le filet de l'entête et le dessin. Le dessin est agrandi
   // d'autant (CSS) pour que le relief garde son amplitude.
-  const marge = { haut: 32, bas: 26, gauche: 20, droite: 20 };
+  //
+  // Sur un écran couché, la frise est raccourcie pour ne pas prendre la moitié
+  // de la page (voir `max-height: 30rem` dans la CSS). Le ciel n'y tient plus,
+  // et le lui garder écraserait le relief à une vingtaine de points : les deux
+  // marges se resserrent donc avec elle, et le tracé retrouve la hauteur qu'il
+  // a debout. C'est le mot qui s'efface, pas la montagne.
+  const cielRogne = hauteur < 100;
+  const marge = {
+    haut: cielRogne ? 14 : 32,
+    bas: cielRogne ? 20 : 26,
+    gauche: 20,
+    droite: 20,
+  };
   const l = largeur - marge.gauche - marge.droite;
   const h = hauteur - marge.haut - marge.bas;
 
@@ -326,7 +338,10 @@ export function dessinerFrise(svg, {
   // illisible dès que les motos roulent haut. Le calcul tient parce que
   // `altitudeMax` garde 300 m de réserve au-dessus du sommet : la crête ne monte
   // jamais jusqu'à `marge.haut`, et le mot passe dessus.
-  if (releveMotos) {
+  // `!cielRogne` : sans ciel, le mot s'écrirait par-dessus la crête, et sa
+  // flèche n'aurait plus la place de s'incurver. Le repère de position reste,
+  // lui, posé sur la courbe — on perd la phrase, pas l'information.
+  if (releveMotos && !cielRogne) {
     const xMotos = x(releveMotos.km);
     const cote = xMotos > largeur / 2 ? -1 : 1;
     const yMot = marge.haut - 12;

@@ -1727,6 +1727,22 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
      porte la réserve que la valeur ne dit pas. On ne défait pas une décision
      de langue pour une raison de gabarit. */
   .mesures dt { font-size: .625rem; }
+
+  /* La croix qui referme la feuille : 50 × 31 points, une seule ligne de
+     rembourrage autour d'un caractère. C'est la sortie de la fiche, on la vise
+     souvent, et elle est posée dans un coin — l'endroit de l'écran où le pouce
+     est le moins précis. */
+  .panneau__poignee[data-hauteur="pleine"] {
+    align-items: center;
+    justify-content: center;
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+    padding: 0;
+  }
+
+  /* Précédent / Suivant tombaient à 43 points : la bande qui les porte en fait
+     62, il n'y avait qu'à le leur dire. */
+  .navigation button { min-height: 2.75rem; }
 }
 
 @media (max-width: 60rem) {
@@ -1835,10 +1851,10 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
      posé dessus se lisait à cheval sur le récit qui défile dessous. La poignée
      devient donc une croix dans le coin haut droit du cadre, à l'endroit où
      l'on ferme une fiche, et rend au passage sa hauteur pleine à la bande de
-     navigation. La barre à saisir s'en va avec le geste qu'elle annonçait. */
-     La croix est opaque pour la même raison que les onglets qu'elle côtoie :
-     posée en haut de la feuille, elle a le récit qui défile dessous, pas la
-     carte. */
+     navigation. La barre à saisir s'en va avec le geste qu'elle annonçait.
+
+     Elle est opaque pour la même raison que les onglets qu'elle côtoie : posée
+     en haut de la feuille, elle a le récit qui défile dessous, pas la carte. */
   .panneau__poignee[data-hauteur="pleine"] {
     top: .5rem;
     right: .5rem;

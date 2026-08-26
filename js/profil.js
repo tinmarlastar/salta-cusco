@@ -434,7 +434,7 @@ export function dessinerFrise(svg, {
     const groupe = creer('g', { class: 'frise__ici-groupe' });
     groupe.append(mot, fleche);
     svg.append(groupe);
-    poserMoto(creer, groupe, mot);
+    poserMoto(creer, groupe, mot, cote);
   }
 }
 
@@ -450,7 +450,7 @@ export function dessinerFrise(svg, {
     mesure ne soit écrite deux fois. Posée APRÈS le texte, une fois celui-ci
     dans le document : sa largeur ne se connaît qu'une fois mesurée, et c'est
     elle qui dit où commence le mot quand la phrase est calée par la droite. */
-function poserMoto(creer, groupe, mot) {
+function poserMoto(creer, groupe, mot, cote) {
   const boite = mot.getBBox();
   if (!boite.width) return;
 
@@ -496,7 +496,28 @@ function poserMoto(creer, groupe, mot) {
   const largeur = encre.width * echelle;
   // L'écart au mot vaut le quart de la hauteur : le même rapport qu'entre deux
   // mots de la phrase, si bien que la moto se lit comme le premier d'entre eux.
-  const x = boite.x - largeur - hauteur * 0.25;
+  const ecart = hauteur * 0.25;
+
+  // De quel côté la moto se pose, et qui recule pour lui faire la place.
+  //
+  // Quand la phrase s'écrit à DROITE des motos, la flèche part elle aussi par
+  // la gauche du mot : la moto, posée en retrait du premier mot, venait alors
+  // s'appuyer sur la courbe de la flèche — elles se touchaient. C'est donc la
+  // phrase qui recule, pas la moto : le dessin ouvre la ligne à l'endroit
+  // exact où le premier mot commençait, et les mots se décalent d'autant. La
+  // flèche, elle, ne bouge pas — elle vise toujours le même kilomètre — et se
+  // retrouve dégagée.
+  //
+  // De l'autre côté, la phrase est calée par la droite et s'étend vers la
+  // gauche : sa gauche s'éloigne de la flèche au lieu d'aller vers elle, et la
+  // moto peut se poser devant le premier mot sans rien déranger.
+  let x;
+  if (cote > 0) {
+    x = boite.x;
+    mot.setAttribute('x', (Number(mot.getAttribute('x')) + largeur + ecart).toFixed(1));
+  } else {
+    x = boite.x - largeur - ecart;
+  }
   const y = boite.y + (boite.height - hauteur) / 2 - hauteur * 0.1;
   moto.setAttribute(
     'transform',

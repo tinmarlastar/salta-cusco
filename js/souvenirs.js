@@ -156,6 +156,32 @@ export async function envoyerNote({ jour, auteur, texte, motDePasse, idempotence
   });
 }
 
+/** Recharge le fichier en mémoire avant de le confier à un `FormData`.
+
+    WebKit — Safari, et donc TOUT navigateur sur iPhone, Chrome compris —
+    envoie un corps entièrement vide (`Content-Length: 0`) quand le fichier
+    glissé dans un `FormData` a été relu depuis IndexedDB. Or c'est exactement
+    ce que fait la file d'attente : elle range le fichier dans IndexedDB à la
+    mise en file, puis le ressort à chaque tentative. Le service recevait donc
+    un multipart sans contenu, répondait « Envoi illisible » (503, un motif
+    renvoyable), et la file recommençait à l'identique — indéfiniment, sur un
+    téléphone au réseau parfait.
+
+    Les octets ne sont pas perdus pour autant : seule leur mise en multipart
+    les égare. Mesuré contre le service, sur le même fichier de 1,1 Mo relu
+    d'IndexedDB : 0 octet reçu via un `FormData`, 1 126 589 une fois le fichier
+    reconstruit ici. Le fichier tout juste créé en mémoire, lui, est toujours
+    parti entier — d'où un défaut invisible tant qu'on ne testait pas depuis un
+    téléphone.
+
+    Le prix est de tenir la photo ou la vidéo en mémoire le temps de l'envoi.
+    C'est un fichier à la fois (la file les traite en série), et sans cela rien
+    ne part d'un iPhone : le marché est vite conclu. */
+async function relireEnMemoire(fichier) {
+  const octets = await fichier.arrayBuffer();
+  return new File([octets], fichier.name || 'souvenir', { type: fichier.type });
+}
+
 /** Attache un fichier à une contribution déjà créée.
 
     Une requête par fichier, et non un seul envoi groupé : sur un lien qui
@@ -167,7 +193,8 @@ export async function envoyerNote({ jour, auteur, texte, motDePasse, idempotence
     autorise, comme pour modifier ou supprimer. */
 export async function envoyerFichier({ contributionId, fichier, idempotence, jeton }) {
   const formulaire = new FormData();
-  formulaire.set('fichier', fichier, fichier.name || 'souvenir');
+  const aEnvoyer = await relireEnMemoire(fichier);
+  formulaire.set('fichier', aEnvoyer, aEnvoyer.name);
   return appeler(`/api/contribution/${contributionId}/media`, {
     method: 'POST',
     headers: { 'X-Jeton': jeton, 'X-Idempotence': idempotence },
@@ -188,7 +215,8 @@ export async function envoyerMedia({
   const formulaire = new FormData();
   formulaire.set('auteur', auteur);
   formulaire.set('texte', texte || '');
-  formulaire.set('fichier', fichier, fichier.name || 'souvenir');
+  const aEnvoyer = await relireEnMemoire(fichier);
+  formulaire.set('fichier', aEnvoyer, aEnvoyer.name);
   const entetes = { 'X-Mot-De-Passe': motDePasse, 'X-Idempotence': idempotence };
   if (jeton) entetes['X-Jeton'] = jeton; // I3, même raisonnement que pour envoyerNote
   return appeler(`/api/etape/${jour}/media`, {

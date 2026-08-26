@@ -1629,12 +1629,8 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
   }
   .panneau.est-ouvert { transform: translateY(0); }
 
-  /* La poignée ne grimpe plus avec le bord de la feuille : ce bord est
-     maintenant tout en haut, sous la frise, où le bouton n'aurait plus de
-     place. Elle garde donc la même position dans les deux états — en bas, sous
-     le pouce, posée sur la feuille quand elle est ouverte. C'est aussi ce qui
-     rend le va-et-vient lisible : seul le libellé change, et le geste de
-     retour se fait là où on vient d'appuyer. */
+  /* Fermée, la poignée est une pastille au bas de l'écran — sous le pouce, sa
+     barre à saisir au-dessus du mot : elle annonce une feuille qui monte. */
   .panneau__poignee {
     position: absolute;
     left: 50%;
@@ -1661,13 +1657,25 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
     height: 2px;
     background: var(--poussiere);
   }
-  /* La bande de navigation est collée au même bord bas que la poignée : elle
-     lui creuse la place sous ses deux boutons, pour que la poignée se pose
-     dans son fond opaque et que les trois commandes du bas se lisent
-     ensemble. Réserver plutôt un rembourrage en pied de panneau ne servait à
-     rien — la bande est collée, elle ne descend pas avec le contenu, et
-     « Replier » se retrouvait à cheval sur le récit qui défile dessous. */
-  .navigation { padding-bottom: 3.75rem; }
+
+  /* Ouverte, la feuille couvre tout l'écran : il n'y a plus de bord à tirer,
+     et le bas lui est refusé — la bande de navigation y est collée, un mot
+     posé dessus se lisait à cheval sur le récit qui défile dessous. La poignée
+     devient donc une croix dans le coin haut droit du cadre, à l'endroit où
+     l'on ferme une fiche, et rend au passage sa hauteur pleine à la bande de
+     navigation. La barre à saisir s'en va avec le geste qu'elle annonçait. */
+  .panneau__poignee[data-hauteur="pleine"] {
+    top: .5rem;
+    right: .5rem;
+    bottom: auto;
+    left: auto;
+    gap: 0;
+    padding: .1875rem .5rem .3125rem;
+    font-size: 1.25rem;
+    line-height: 1;
+    transform: none;
+  }
+  .panneau__poignee[data-hauteur="pleine"] .panneau__poignee-barre { display: none; }
 
   /* Les onglets restent visibles quand on fait défiler la fiche : ils sont le
      seul moyen d'atteindre les souvenirs, les enterrer les rendrait aussi

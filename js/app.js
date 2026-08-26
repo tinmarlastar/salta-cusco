@@ -521,17 +521,27 @@ function gabaritFiche(etape) {
 
 // ------------------------------------------------------- feuille (téléphone)
 
-const LIBELLES_FEUILLE = { fermee: 'Voir le détail', pleine: 'Replier' };
+// Le bouton annonce ce qu'il fera, pas l'état où l'on est : « Replier » sur une
+// feuille déjà pleine se comprend, « Plein écran » sur la même feuille
+// laisserait croire qu'il ne s'est rien passé au clic précédent.
+//
+// Ouverte, la feuille tient tout l'écran : le repli s'y dit par une croix dans
+// le coin, comme sur toute fiche qu'on ferme, et non plus par un mot au bas
+// d'une page dont le bas est déjà pris par la navigation. Le signe seul ne
+// nommant rien, la phrase reste — en `aria-label`, pour qui n'a que la voix.
+const LIBELLES_FEUILLE = {
+  fermee: { texte: 'Voir le détail', enonce: 'Voir le détail de la journée' },
+  pleine: { texte: '×', enonce: 'Replier le détail' },
+};
 
 function reglerFeuille(hauteur) {
   etat.feuille = hauteur;
   elements.panneau.classList.toggle('est-ouvert', hauteur === 'pleine');
   elements.poignee.dataset.hauteur = hauteur;
   elements.poignee.setAttribute('aria-expanded', String(hauteur !== 'fermee'));
-  // Le bouton annonce ce qu'il fera, pas l'état où l'on est : « Replier » sur
-  // une feuille déjà pleine se comprend, « Plein écran » sur la même feuille
-  // laisserait croire qu'il ne s'est rien passé au clic précédent.
-  elements.poigneeTexte.textContent = LIBELLES_FEUILLE[hauteur];
+  const libelle = LIBELLES_FEUILLE[hauteur];
+  elements.poigneeTexte.textContent = libelle.texte;
+  elements.poignee.setAttribute('aria-label', libelle.enonce);
   if (hauteur !== 'fermee') elements.panneau.focus();
 }
 

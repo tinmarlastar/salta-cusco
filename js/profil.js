@@ -338,20 +338,15 @@ export function dessinerFrise(svg, {
   // illisible dès que les motos roulent haut. Le calcul tient parce que
   // `altitudeMax` garde 300 m de réserve au-dessus du sommet : la crête ne monte
   // jamais jusqu'à `marge.haut`, et le mot passe dessus.
-  // Deux conditions pour que le mot s'écrive.
+  // Une condition pour que le mot s'écrive : `!cielRogne`. Sans ciel, il
+  // s'écrirait par-dessus la crête, et sa flèche n'aurait plus la place de
+  // s'incurver.
   //
-  // `!cielRogne` : sans ciel, il s'écrirait par-dessus la crête, et sa flèche
-  // n'aurait plus la place de s'incurver.
-  //
-  // `jourActif === null` : le mot est ancré au kilomètre des motos, dans une
-  // frise qui défile. Dès qu'on ouvre une journée, la frise se recentre dessus
-  // et le mot sort par le côté — il se lisait alors « sommes ici ! », un bout
-  // de phrase suspendu au bord de l'écran, sur toutes les fiches sauf les
-  // premières. Il a de toute façon fini son travail : il sert à situer les
-  // motos quand on arrive sur le parcours entier, pas à commenter la journée
-  // qu'on est en train de lire. Le repère de position, lui, reste posé sur la
-  // courbe dans les deux cas — on perd la phrase, jamais l'information.
-  if (releveMotos && !cielRogne && jourActif === null) {
+  // Qu'il tienne ou non dans la fenêtre est une autre question, et elle ne se
+  // tranche pas ici : la frise défile, et c'est seulement une fois qu'elle
+  // s'est recentrée sur la journée choisie qu'on sait si le mot est resté en
+  // vue. Voir `ajusterMotDeLaFrise`, appelée après ce recentrage.
+  if (releveMotos && !cielRogne) {
     const xMotos = x(releveMotos.km);
     const cote = xMotos > largeur / 2 ? -1 : 1;
     const yMot = marge.haut - 12;
@@ -417,8 +412,39 @@ export function dessinerFrise(svg, {
     });
     mot.textContent = phrase;
 
-    svg.append(mot, fleche);
+    // Le mot et sa flèche voyagent ensemble : ils apparaissent et disparaissent
+    // d'un bloc, une flèche seule ne désignant plus rien.
+    const groupe = creer('g', { class: 'frise__ici-groupe' });
+    groupe.append(mot, fleche);
+    svg.append(groupe);
   }
+}
+
+/** Montre ou cache « Nous sommes ici ! » selon qu'il tient dans la fenêtre.
+
+    Le mot est ancré au kilomètre des motos, dans une frise deux fois plus large
+    que l'écran d'un téléphone. Ouvrir une journée lointaine recentre la frise
+    dessus et emmène le mot hors champ : il se lisait alors « sommes ici ! », un
+    bout de phrase suspendu au bord de l'écran.
+
+    L'effacer dès qu'une journée est choisie coûtait trop cher : sur un
+    téléphone on lit surtout des journées, et la date du départ quittait la
+    frise pour tout le voyage. On ne l'efface donc que quand il ne tient
+    réellement pas — ce qui n'arrive jamais sur un grand écran, où la frise
+    entière est visible, ni sur les journées voisines des motos, les seules où
+    l'on regarde encore où elles en sont.
+
+    Appelée après chaque dessin (le recentrage a déjà eu lieu) et à chaque
+    défilement de la frise, y compris celui du doigt. */
+export function ajusterMotDeLaFrise(svg) {
+  const groupe = svg.querySelector('.frise__ici-groupe');
+  if (!groupe) return;
+  const boite = groupe.getBoundingClientRect();
+  const fenetre = svg.parentElement.getBoundingClientRect();
+  // Un demi-point de tolérance : les deux boîtes se comparent en pixels
+  // fractionnaires, et un mot pile au bord clignoterait d'un dessin à l'autre.
+  const tient = boite.left >= fenetre.left - .5 && boite.right <= fenetre.right + .5;
+  groupe.classList.toggle('est-hors-champ', !tient);
 }
 
 // -------------------------------------------------------- profil d'une étape

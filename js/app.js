@@ -5,7 +5,7 @@
    vers un jour précis du voyage. */
 
 import { creerCarte } from './carte.js';
-import { assemblerVoyage, dessinerFrise, dessinerProfilEtape } from './profil.js';
+import { ajusterMotDeLaFrise, assemblerVoyage, dessinerFrise, dessinerProfilEtape } from './profil.js';
 import { monterSouvenirs, brancherVisionneuse } from './souvenirs-vue.js';
 import { listerDecomptes, lirePosition } from './souvenirs.js';
 
@@ -206,6 +206,9 @@ function redessinerFrise() {
   });
   amenerEtapeEnVue();
   majBordsFrise();
+  // Après le recentrage, jamais avant : c'est lui qui décide si « Nous sommes
+  // ici ! » est resté dans la fenêtre.
+  ajusterMotDeLaFrise(elements.frise);
 }
 
 /** Marque lequel des deux bords de la frise cache une suite.
@@ -794,7 +797,12 @@ function brancherInterface() {
 
   // Le dégradé des bords suit le doigt : `passive`, parce qu'on ne fait que
   // lire une position — rien à annuler, et le défilement ne doit pas attendre.
-  elements.frise.parentElement.addEventListener('scroll', majBordsFrise, { passive: true });
+  elements.frise.parentElement.addEventListener('scroll', () => {
+    majBordsFrise();
+    // Le mot des motos suit le même sort que les bords : ce qui sort de la
+    // fenêtre au doigt en sort tout autant que ce qui en sort au recentrage.
+    ajusterMotDeLaFrise(elements.frise);
+  }, { passive: true });
 
   let attente;
   new ResizeObserver(() => {

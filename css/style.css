@@ -880,6 +880,10 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
 
 /* Pastille de décompte sur la frise : même rouge que partout, posée contre
    l'étiquette du jour. */
+/* Le mot des motos hors de la fenêtre : effacé plutôt que coupé au bord (voir
+   `ajusterMotDeLaFrise`). */
+.frise__ici-groupe.est-hors-champ { display: none; }
+
 .frise__pastille { fill: var(--colorada); }
 .frise__pastille-texte {
   fill: var(--sur-alerte);

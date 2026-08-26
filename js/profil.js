@@ -125,7 +125,7 @@ function motDeLaFrise({ positionJour, departPrevuLe, arriveeLe }) {
   }
   if (!positionJour && departPrevuLe) {
     return {
-      phrase: `Départ prévu le ${dateCourte(departPrevuLe)}`,
+      phrase: `Départ prévu le ${dateCourte(departPrevuLe)} !`,
       description: `Départ prévu le ${dateEnToutesLettres(departPrevuLe)}, de Salta`,
     };
   }

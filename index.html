@@ -20,17 +20,24 @@
 <meta property="og:description" content="3 036 km, 875 km de piste, quatre pays andins. Le parcours jour par jour.">
 <meta property="og:image" content="img/etapes/hero-piste-andes.jpg">
 
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&family=Caveat:wght@400..700&family=Spline+Sans+Mono:wght@400;500&display=swap">
+<!-- Les polices sont servies par le dépôt, comme Leaflet : le site n'appelle
+     aucun tiers. Voir css/vendor/polices.css. -->
+<link rel="stylesheet" href="css/vendor/polices.css">
 <link rel="stylesheet" href="css/vendor/leaflet.css">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
-<a class="saut-contenu" href="#panneau">Aller au détail de l'étape</a>
-
 <header class="bandeau">
+  <!-- Le lien d'évitement vit DANS le bandeau, et non en tête de `body` : c'est
+       ce qui lui permet de se poser sous l'entête plutôt que par-dessus le
+       titre (voir `.saut-contenu`). Il reste le tout premier élément de la
+       page, donc la première tabulation le trouve toujours.
+       « au contenu » et non « au détail de l'étape » : la même cible dit le
+       voyage entier sur la page de garde et une journée quand elle est
+       ouverte — le mot devait être vrai dans les deux cas. -->
+  <a class="saut-contenu" href="#panneau">Aller au contenu</a>
+
   <div class="bandeau__identite">
     <p class="eyebrow" id="eyebrow-voyage"></p>
     <h1 class="bandeau__titre" id="titre-voyage"></h1>

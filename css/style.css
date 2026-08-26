@@ -217,19 +217,34 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
    de deux pixels : un second cadre flottant autour du premier, séparé de lui
    par un liseré de page. On lisait un défaut d'affichage, pas un bouton.
    Il se peint donc comme les boutons du site, et sans anneau : surgir est déjà
-   son signal de focus, il n'en a pas besoin d'un deuxième. */
+   son signal de focus, il n'en a pas besoin d'un deuxième.
+
+   Il se pose SOUS le bandeau et non par-dessus : un pavé pleine taille qui
+   efface le titre du site à la première tabulation se lit comme un accident,
+   pas comme une aide. Le repère est `top: 100%` depuis le bandeau, d'où sa
+   place dans le HTML — la hauteur de l'entête n'est pas fixe, elle passe à
+   deux lignes quand le titre se replie, et un décalage écrit en dur l'aurait
+   mordu sur les écrans étroits ou laissé un trou sur les larges.
+
+   `left: auto` au focus, et non la réserve latérale du bandeau recopiée : le
+   lien reprend alors sa position STATIQUE, c'est-à-dire le début du contenu de
+   l'entête — exactement là où commence le titre. La réserve change avec la
+   largeur d'écran (1 rem sur téléphone, 1,25 rem plus l'encoche au-delà) : une
+   valeur écrite ici l'aurait suivie de travers dès la première retouche. */
 .saut-contenu {
   position: absolute;
   left: -9999px;
   z-index: 1200;
-  padding: .625rem 1rem;
+  padding: .375rem .75rem;
   border-radius: 2px;
   background: var(--soufre);
   color: var(--sur-accent);
+  font-size: .8125rem;
   font-weight: 700;
+  white-space: nowrap;
   text-decoration: none;
 }
-.saut-contenu:focus { left: .5rem; top: .5rem; }
+.saut-contenu:focus { left: auto; top: calc(100% + .375rem); }
 .saut-contenu:focus-visible { outline: none; }
 
 :where(a, button, [tabindex]):focus-visible {
@@ -240,6 +255,8 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 /* ---------------------------------------------------------------- bandeau */
 
 .bandeau {
+  /* Repère du lien d'évitement, qui se pose juste sous lui. */
+  position: relative;
   display: flex;
   align-items: center;
   flex-wrap: wrap;

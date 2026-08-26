@@ -71,6 +71,10 @@
      dessus, remontent avec elle : sinon la bande grandissait et venait
      recouvrir la fin du récit. Vaut zéro partout où il n'y a rien à réserver. */
   --barre-h: calc(3.875rem + env(safe-area-inset-bottom, 0px));
+  /* Hauteur de la poignée du téléphone, posée sur le filet de cette bande. La
+     mention des fournisseurs de tuiles s'en sert pour passer au-dessus d'elle :
+     le chevron de 24 points, son rembourrage et le filet du cadre. */
+  --poignee-h: 2.375rem;
 
   --rythme: .5rem;
   --transition: 180ms cubic-bezier(.2, .6, .3, 1);
@@ -1787,6 +1791,18 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
      l'écran entier. */
   .navigation { width: 100%; }
 
+  /* La mention de Leaflet et des fournisseurs de tuiles remonte d'une poignée.
+     Elle vit dans ce coin bas — c'est pour elle que la carte s'arrête au-dessus
+     de la bande —, et la poignée vient de s'y poser : à gauche et à même le
+     filet, elle en recouvrait la moitié. Une mention à demi lisible ne vaut
+     rien : c'est la contrepartie qu'on doit à Esri et à Maxar pour leur
+     imagerie, pas une signature qu'on peut rogner.
+
+     Elle passe donc au-dessus, sur sa propre ligne, où elle tient encore d'un
+     seul tenant. La remonter coûte moins que de la couper : elle n'occupe
+     qu'une quinzaine de points, sur un bord de carte où il ne se passe rien. */
+  .leaflet-control-attribution { margin-bottom: var(--poignee-h) !important; }
+
   /* Le panneau devient une feuille tirée depuis le bas, et elle monte d'un
      seul tenant jusque sous la frise : toute la scène, la carte recouverte.
      Les hauteurs partielles d'avant (62 %, puis 88 %) donnaient une lucarne où
@@ -1828,9 +1844,23 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
      ligne du texte qu'il commande. */
   .panneau__poignee {
     position: absolute;
-    left: 50%;
-    bottom: calc(var(--barre-h) + .75rem);
+    /* Posée à gauche et à même le filet, plutôt que centrée et flottant douze
+       points au-dessus. Elle s'aligne alors sur le bord gauche du bouton
+       « Précédent » qui la suit immédiatement, et son bord bas se pose sur le
+       filet coloré qui ouvre la bande : les trois commandes forment un bloc au
+       pied de l'écran au lieu d'une pastille en suspens sur la carte.
+
+       Ce qu'elle rend à la carte n'est pas rien : centrée, elle se posait en
+       plein milieu du tracé, là où l'œil suit la route. Dans le coin, elle
+       laisse le trajet tranquille. */
+    left: calc(1.375rem + env(safe-area-inset-left, 0px));
+    bottom: var(--barre-h);
     z-index: 1001;
+    /* Hauteur fixée, et nommée : la mention des fournisseurs de tuiles doit
+       remonter d'exactement autant pour ne pas passer dessous (voir plus bas).
+       Deux règles qui doivent connaître le même chiffre valent mieux qu'un
+       nombre recopié deux fois. */
+    height: var(--poignee-h);
     display: flex;
     flex-direction: row;
     align-items: center;
@@ -1852,7 +1882,6 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
        recentre ensuite sur l'écran entier, ce qu'on veut de toute façon. */
     white-space: nowrap;
     cursor: pointer;
-    transform: translateX(-50%);
   }
   /* Le chevron porte le même aplat coloré dans les deux états : c'est ce qui
      fait reconnaître, sur la poignée fermée, le signe qui refermera la feuille

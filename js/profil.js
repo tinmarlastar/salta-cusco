@@ -338,10 +338,20 @@ export function dessinerFrise(svg, {
   // illisible dès que les motos roulent haut. Le calcul tient parce que
   // `altitudeMax` garde 300 m de réserve au-dessus du sommet : la crête ne monte
   // jamais jusqu'à `marge.haut`, et le mot passe dessus.
-  // `!cielRogne` : sans ciel, le mot s'écrirait par-dessus la crête, et sa
-  // flèche n'aurait plus la place de s'incurver. Le repère de position reste,
-  // lui, posé sur la courbe — on perd la phrase, pas l'information.
-  if (releveMotos && !cielRogne) {
+  // Deux conditions pour que le mot s'écrive.
+  //
+  // `!cielRogne` : sans ciel, il s'écrirait par-dessus la crête, et sa flèche
+  // n'aurait plus la place de s'incurver.
+  //
+  // `jourActif === null` : le mot est ancré au kilomètre des motos, dans une
+  // frise qui défile. Dès qu'on ouvre une journée, la frise se recentre dessus
+  // et le mot sort par le côté — il se lisait alors « sommes ici ! », un bout
+  // de phrase suspendu au bord de l'écran, sur toutes les fiches sauf les
+  // premières. Il a de toute façon fini son travail : il sert à situer les
+  // motos quand on arrive sur le parcours entier, pas à commenter la journée
+  // qu'on est en train de lire. Le repère de position, lui, reste posé sur la
+  // courbe dans les deux cas — on perd la phrase, jamais l'information.
+  if (releveMotos && !cielRogne && jourActif === null) {
     const xMotos = x(releveMotos.km);
     const cote = xMotos > largeur / 2 ? -1 : 1;
     const yMot = marge.haut - 12;

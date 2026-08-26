@@ -1856,19 +1856,44 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
      Elle est opaque pour la même raison que les onglets qu'elle côtoie : posée
      en haut de la feuille, elle a le récit qui défile dessous, pas la carte. */
   .panneau__poignee[data-hauteur="pleine"] {
-    top: .5rem;
-    right: .5rem;
+    /* Calée en haut à droite de la feuille, elle ne défile pas : le panneau
+       est son bloc conteneur. Une fois le récit lancé, la barre d'onglets
+       vient se coller au même bord — les deux occupent alors la même bande, et
+       il faut qu'elles s'y superposent exactement. À `.5rem` du haut, la croix
+       dépassait de sept points sous la barre et s'imprimait sur la première
+       ligne du texte. */
+    top: 0;
+    right: env(safe-area-inset-right, 0px);
     bottom: auto;
     left: auto;
     gap: 0;
-    padding: .1875rem .5rem .3125rem;
+    padding: 0;
     font-size: 1.25rem;
     line-height: 1;
-    background: var(--nuit);
+    /* Ni cadre ni fond : la bande derrière elle est déjà opaque et pleine
+       largeur, et le cadre la détachait en vignette posée sur la fiche au lieu
+       de la ranger dans l'en-tête avec les onglets. Reste le signe seul, au
+       bout de la ligne qu'il ferme. */
+    border: 0;
+    background: none;
     backdrop-filter: none;
     transform: none;
   }
   .panneau__poignee[data-hauteur="pleine"] .panneau__poignee-barre { display: none; }
+
+  /* La croix est calée dans le coin, et la première ligne de la fiche passe
+     juste dessous : sur J4, « ARGENTINE · CHILI » venait finir à six points
+     d'elle. Elle lui rend donc sa place — mais tout juste.
+
+     Le pavé de la croix mord de 22 points dans la colonne de texte : c'est
+     tout ce qu'il faut lui céder. À 50, la réserve était si large que « 🇨🇱
+     CHILI » passait à la ligne suivante, séparé de son drapeau — un défaut pire
+     que celui qu'on corrigeait. Le signe lui-même étant centré dans son pavé,
+     ces 24 points laissent une vingtaine de blanc à l'œil. Une journée à trois
+     pays repliera sa liste sur deux lignes, ce qui est le comportement voulu :
+     la ligne cède, jamais la croix. Le titre, lui, commence assez bas pour
+     n'avoir rien à céder. */
+  .fiche__jour { padding-right: 1.5rem; }
 
   /* Les deux moitiés de la barre peuvent enfin se serrer. Sans `min-width: 0`,
      un bouton refusait de descendre sous la largeur de son libellé : « Tout le
@@ -1900,8 +1925,20 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
     position: sticky;
     top: 0;
     z-index: 1;
-    margin-top: 1rem;
     background: var(--nuit);
+    /* La bande file d'un bord à l'autre de la feuille. Bornée à la colonne de
+       texte, elle laissait deux gouttières de 22 points par où le récit
+       continuait de défiler à découvert — et la croix, posée dans celle de
+       droite, flottait alors au-dessus du texte comme une vignette détachée.
+       Les marges négatives annulent le rembourrage de la fiche, que le
+       rembourrage intérieur rend aussitôt au contenu : les onglets ne bougent
+       pas d'un pixel, c'est le fond qui s'étend sous eux. */
+    margin: 1rem calc(-1 * (1.375rem + env(safe-area-inset-right, 0px)))
+            1.125rem calc(-1 * (1.375rem + env(safe-area-inset-left, 0px)));
+    padding-left: calc(1.375rem + env(safe-area-inset-left, 0px));
+    /* À droite, la place de la croix : sans elle, un onglet un peu long — ou
+       sa pastille de décompte — passerait dessous. */
+    padding-right: calc(3.125rem + env(safe-area-inset-right, 0px));
   }
 }
 
@@ -1944,7 +1981,7 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
   .fiche { padding-top: .5rem; }
   .fiche__numero { font-size: 1.25rem; }
   .fiche__titre { margin: .125rem 0 .5rem; font-size: 1.25rem; }
-  .onglets { margin-top: .5rem; }
+  .onglets { margin-top: .5rem; margin-bottom: .625rem; }
   .mesures, .chiffres { gap: .5rem 1rem; margin-bottom: .75rem; padding-bottom: .75rem; }
 }
 

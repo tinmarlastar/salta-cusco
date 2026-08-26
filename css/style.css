@@ -1886,17 +1886,22 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
   }
   .panneau__poignee[data-hauteur="pleine"] .panneau__poignee-barre { display: none; }
 
-  /* Le signe devient une pastille pleine, sur le patron des chevrons de la
-     bande du bas (`.navigation button b`) : c'est déjà, sur ce site, la forme
-     de « le rond qu'on presse du pouce ». Les trois commandes de la feuille se
-     répondent alors — précédent, suivant, fermer.
+  /* Le signe se pose sur un carré plein de la couleur d'accent : seul au bout
+     d'une ligne de texte, il ne se lisait pas comme une commande.
 
-     Deux points plus large que ces chevrons (32 contre 24) : ils voyagent
-     accompagnés d'un libellé qui les annonce, elle est seule dans son coin et
-     doit se signaler toute seule.
+     Carré, et au rayon de 2 points des pastilles d'habillage de l'entête
+     (`.habillages button`) — l'autre petit carré plein du site. Le reste de la
+     page est à angle vif : les cases des mesures, les fonds de carte, la bande
+     du bas. Un rond aurait fait de cette croix la seule forme courbe d'un
+     écran qui n'en a pas, et 2 points suffisent à ne pas donner un angle à 90°
+     à un aplat de 32.
 
-     La pastille se dessine sur le libellé, pas sur le bouton : le bouton garde
-     ses 44 points de zone sensible, et le rond visible se centre dedans sans
+     Trente-deux points : plus large que les chevrons de la bande du bas, qui
+     voyagent accompagnés d'un libellé les annonçant, là où elle est seule dans
+     son coin et doit se signaler toute seule.
+
+     Le carré se dessine sur le libellé, pas sur le bouton : le bouton garde
+     ses 44 points de zone sensible, et l'aplat visible se centre dedans sans
      l'enfler. La couleur d'accent, jamais une valeur en dur — sur les quatre
      habillages, `--sur-accent` est ce qui se pose dessus. */
   .panneau__poignee[data-hauteur="pleine"] .panneau__poignee-texte {
@@ -1904,7 +1909,7 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
     place-items: center;
     width: 2rem;
     height: 2rem;
-    border-radius: 50%;
+    border-radius: 2px;
     background: var(--soufre);
     color: var(--sur-accent);
     font-size: 1.0625rem;

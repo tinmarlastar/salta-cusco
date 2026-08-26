@@ -165,6 +165,22 @@ function choisir(jour, { recentrer = true, majAdresse = true } = {}) {
   elements.identite.title = etape ? 'Revenir au parcours entier' : '';
 }
 
+/** Revient au parcours entier : la carte, et rien qui la couvre.
+
+    Sur téléphone, `choisir(null)` seul laissait la feuille ouverte : on
+    demandait « tout le parcours » et on obtenait la présentation du voyage,
+    un texte à lire posé par-dessus la carte qu'on venait justement chercher.
+    Le parcours entier EST la carte — c'est ce que le titre promet quand on le
+    touche. La feuille se replie donc avec la sélection.
+
+    Sur grand écran, où le panneau est une colonne et non une feuille,
+    `reglerFeuille` n'a rien à replier : l'appel y reste sans effet visible, et
+    les deux tailles d'écran gardent un seul chemin de retour. */
+function revenirAuParcours() {
+  choisir(null);
+  reglerFeuille('fermee');
+}
+
 /** Déplace la sélection d'un cran ; depuis l'accueil, avance sur la première étape. */
 function decaler(pas) {
   const jours = etat.etapes.map((e) => e.jour);
@@ -218,13 +234,22 @@ function majBordsFrise() {
       : droite ? 'droite' : 'aucun';
 }
 
-/** Sur un écran étroit la frise déborde : on l'amène sur l'étape choisie. */
+/** Sur un écran étroit la frise déborde : on l'amène sur l'étape choisie, ou
+    sur son début quand il n'y a plus d'étape choisie. */
 function amenerEtapeEnVue() {
   const defilement = elements.frise.parentElement;
   if (defilement.scrollWidth <= defilement.clientWidth) return;
 
   const marque = elements.frise.querySelector('.est-actif');
-  if (!marque) return;
+  // Retour au parcours entier : la frise revient au premier jour. Elle restait
+  // sinon calée où la dernière journée consultée l'avait laissée — et
+  // « Nous sommes ici ! », ancré au kilomètre des motos, se relisait alors
+  // tronqué par le bord gauche, la phrase que le retour vient justement de
+  // faire réapparaître. Le parcours entier se regarde depuis son début.
+  if (!marque) {
+    defilement.scrollLeft = 0;
+    return;
+  }
 
   const boite = marque.getBBox ? marque.getBBox() : null;
   if (!boite) return;
@@ -722,7 +747,7 @@ function brancherInterface() {
     groupe: '.vignettes, .galerie',
   });
 
-  elements.boutonAccueil.addEventListener('click', () => choisir(null));
+  elements.boutonAccueil.addEventListener('click', revenirAuParcours);
 
   // Le titre du voyage ramène au parcours entier, comme le bouton voisin. Le
   // geste est celui qu'on attend d'un titre de site. Il reste un raccourci à
@@ -731,7 +756,7 @@ function brancherInterface() {
   // encombrerait la tabulation sans rien apporter. Sur écran étroit, où ce
   // bouton est masqué faute de place, c'est « Échap » qui tient le rôle.
   elements.identite.addEventListener('click', () => {
-    if (etat.jour !== null) choisir(null);
+    if (etat.jour !== null) revenirAuParcours();
   });
 
   for (const bouton of document.querySelectorAll('.fonds__bouton[data-fond]')) {
@@ -762,7 +787,7 @@ function brancherInterface() {
       evenement.preventDefault();
       decaler(evenement.key === 'ArrowRight' ? 1 : -1);
     }
-    if (evenement.key === 'Escape' && etat.jour !== null) choisir(null);
+    if (evenement.key === 'Escape' && etat.jour !== null) revenirAuParcours();
   });
 
   window.addEventListener('hashchange', () => choisir(jourDepuisAdresse(), { majAdresse: false }));

@@ -71,19 +71,6 @@
      dessus, remontent avec elle : sinon la bande grandissait et venait
      recouvrir la fin du récit. Vaut zéro partout où il n'y a rien à réserver. */
   --barre-h: calc(3.875rem + env(safe-area-inset-bottom, 0px));
-  /* Hauteur des deux commandes posées sur la carte du téléphone : le choix du
-     fond en haut, la poignée du détail en bas. Elles se font face aux deux
-     coins d'une même colonne, et deux boîtes qui se répondent doivent faire la
-     même taille.
-
-     C'est la hauteur propre de la poignée qui donne la mesure : son chevron de
-     24 points, son rembourrage et le filet de son cadre. C'est donc le choix
-     du fond qui se resserre — et ses trois boutons descendent avec lui à 36
-     points, sous les 44 que demande le pouce. Le confort de visée est ici
-     échangé contre l'accord des deux boîtes ; le choix du fond reste la
-     commande la moins pressée de l'écran, et ses boutons gardent toute leur
-     largeur. */
-  --commande-h: 2.375rem;
 
   --rythme: .5rem;
   --transition: 180ms cubic-bezier(.2, .6, .3, 1);
@@ -1750,11 +1737,6 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
     justify-content: center;
     min-width: 2.75rem;
     min-height: 2.75rem;
-    /* Retour au pavé de 44 : c'est lui qui donne au carré de 32 ses six points
-       de marge de chaque côté, en haut comme à droite. Les 46 de la poignée
-       fermée valent pour la colonne de la carte, dont il n'est plus question
-       une fois la feuille montée. */
-    height: 2.75rem;
     padding: 0;
   }
 
@@ -1807,13 +1789,19 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
      cette colonne, et les deux commandes de la carte se répondaient de travers
      d'un coin à l'autre. Le zoom de Leaflet, en face, prend le même retrait :
      déplacer un seul des deux aurait déséquilibré le haut de la carte. */
-  .fonds {
-    left: calc(1.375rem + env(safe-area-inset-left, 0px));
-    height: var(--commande-h);
-  }
-  /* Les boutons suivent la boîte qui les tient : sans cette remise à zéro, le
-     plancher de 44 points posé plus haut pour le pouce (voir `pointer: coarse`)
-     les faisait déborder d'un cadre désormais plus court qu'eux. */
+  .fonds { left: calc(1.375rem + env(safe-area-inset-left, 0px)); }
+
+  /* Le choix du fond reprend sa hauteur propre — celle qu'il a en grand écran,
+     réglée par son texte et son rembourrage, et rien d'autre. Le plancher de 44
+     points posé pour le pouce (voir `pointer: coarse`) l'enflait à 46, à quoi
+     s'ajoutait un temps la hauteur de la poignée, à 38 : deux fois trop pour un
+     bandeau posé sur la carte, qu'on règle une fois et qu'on ne revisite pas.
+
+     Ses boutons redescendent donc à 23 points de haut. C'est sous le seuil du
+     pouce, et c'est assumé ici seulement : ils gardent toute leur largeur — de
+     43 à 77 points —, ils sont trois côte à côte sans rien autour à toucher par
+     erreur, et ils commandent la seule chose de l'écran qu'on ne change jamais
+     deux fois. Rien d'autre sur le téléphone ne repasse sous le seuil. */
   .fonds__bouton { min-height: 0; }
   .leaflet-right .leaflet-control { margin-right: 1.375rem; }
 
@@ -1875,9 +1863,6 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
     left: calc(1.375rem + env(safe-area-inset-left, 0px));
     bottom: var(--barre-h);
     z-index: 1001;
-    /* La même hauteur que le choix du fond, en haut de la carte : les deux
-       coins d'une colonne se répondent. */
-    height: var(--commande-h);
     display: flex;
     flex-direction: row;
     align-items: center;

@@ -71,6 +71,12 @@
      dessus, remontent avec elle : sinon la bande grandissait et venait
      recouvrir la fin du récit. Vaut zéro partout où il n'y a rien à réserver. */
   --barre-h: calc(3.875rem + env(safe-area-inset-bottom, 0px));
+  /* Hauteur des deux commandes posées sur la carte du téléphone : le choix du
+     fond en haut, la poignée du détail en bas. Elles se font face aux deux
+     coins d'une même colonne, et deux boîtes qui se répondent doivent faire la
+     même taille. 46 et non 44 : à l'intérieur, les boutons du fond gardent
+     ainsi les 44 points qu'il faut au pouce, le filet du cadre pris en plus. */
+  --commande-h: 2.875rem;
 
   --rythme: .5rem;
   --transition: 180ms cubic-bezier(.2, .6, .3, 1);
@@ -1737,6 +1743,11 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
     justify-content: center;
     min-width: 2.75rem;
     min-height: 2.75rem;
+    /* Retour au pavé de 44 : c'est lui qui donne au carré de 32 ses six points
+       de marge de chaque côté, en haut comme à droite. Les 46 de la poignée
+       fermée valent pour la colonne de la carte, dont il n'est plus question
+       une fois la feuille montée. */
+    height: 2.75rem;
     padding: 0;
   }
 
@@ -1782,6 +1793,18 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
      dessous : la mention de Leaflet et des fournisseurs de tuiles vit dans ce
      coin, et une bande posée par-dessus l'aurait effacée. */
   .carte { position: absolute; inset: 0 0 var(--barre-h); }
+
+  /* Le choix du fond descend sur la colonne du site — les 22 points où
+     s'alignent déjà la poignée du détail, sous lui, et le bouton « Précédent »
+     sous elle. À dix, il était le seul élément du bord gauche à ne pas suivre
+     cette colonne, et les deux commandes de la carte se répondaient de travers
+     d'un coin à l'autre. Le zoom de Leaflet, en face, prend le même retrait :
+     déplacer un seul des deux aurait déséquilibré le haut de la carte. */
+  .fonds {
+    left: calc(1.375rem + env(safe-area-inset-left, 0px));
+    height: var(--commande-h);
+  }
+  .leaflet-right .leaflet-control { margin-right: 1.375rem; }
 
   /* Toute la largeur, et plus la part du panneau : ici la feuille couvre
      l'écran entier. */
@@ -1841,6 +1864,9 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
     left: calc(1.375rem + env(safe-area-inset-left, 0px));
     bottom: var(--barre-h);
     z-index: 1001;
+    /* La même hauteur que le choix du fond, en haut de la carte : les deux
+       coins d'une colonne se répondent. */
+    height: var(--commande-h);
     display: flex;
     flex-direction: row;
     align-items: center;

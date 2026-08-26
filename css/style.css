@@ -1930,6 +1930,22 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
      pour n'avoir rien à céder. */
   .fiche__jour { padding-right: 2.5rem; }
 
+  /* Le pays se lit un cran plus petit qu'en grand écran — 14 points contre 16.
+     La croix lui a pris son coin droit, et les deux journées qui traversent une
+     frontière, J4 et J11, n'y tenaient plus qu'en se repliant sur deux lignes.
+     Une ligne de plus dans l'en-tête d'une fiche qu'on lit sur un téléphone
+     coûte plus cher que deux points de corps.
+
+     Quatorze et non quinze : à quinze, J4 tenait sur sa ligne mais finissait à
+     neuf points du rond. Assez pour ne pas le toucher ici, trop peu pour un
+     iPhone, qui ne dessine pas les drapeaux à la même largeur que le
+     navigateur où cette mesure a été prise. À quatorze il reste 25 points de
+     blanc, de quoi absorber l'écart. Le crénage, lui, ne bouge pas : il est
+     hérité en pixels de `.fiche__jour`, et ne suit donc pas le corps.
+
+     En grand écran, rien ne change : il n'y a pas de croix dans ce coin-là. */
+  .fiche__pays { font-size: .875rem; }
+
   /* Les deux moitiés de la barre peuvent enfin se serrer. Sans `min-width: 0`,
      un bouton refusait de descendre sous la largeur de son libellé : « Tout le
      parcours », depuis J1, poussait « Suivant » hors de l'écran sur un

@@ -398,7 +398,7 @@ function gabaritAccueil(voyage) {
       .map(([titre, valeur]) => `<div><dt>${titre}</dt><dd>${valeur}</dd></div>`)
       .join('')}</dl>
 
-    <img class="accueil__photo" src="${voyage.photo}" alt="Le salar d'Uyuni vu du ciel, traversé de traces de roues." loading="lazy">
+    <img class="accueil__photo" src="${voyage.photo}" alt="Un motard seul sur une piste de terre, face à une cordillère enneigée." loading="lazy">
     <p class="accueil__texte">${echapper(voyage.presentation)}</p>
 
     <p class="sous-titre">Quatre pays, quinze jours</p>

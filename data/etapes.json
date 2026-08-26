@@ -12,7 +12,7 @@
     "distanceKm": 3036,
     "pisteKm": 875,
     "altitudeMaxM": 5152,
-    "photo": "img/etapes/hero-salar.jpg",
+    "photo": "img/etapes/hero-piste-andes.jpg",
     "presentation": "Une aventure moto à travers les merveilles andines de l'Amérique du Sud : quatre pays de haute altitude en quinze jours. Au départ de Salta, en Argentine, on traverse les paysages grandioses du nord chilien et du désert d'Atacama, puis le sud de la Bolivie et ses lagunes colorées, jusqu'à l'unique Salar de Uyuni, le plus vaste désert de sel du monde. Le périple continue en Bolivie avant d'atteindre les rives mystiques du lac Titicaca, le plus haut lac navigable de la planète, puis traverse le sud du Pérou pour s'achever à Cusco, porte d'entrée inca du monde andin.",
     "pays": [
       { "code": "AR", "nom": "Argentine", "drapeau": "🇦🇷", "couleur": "#6aa9d8" },

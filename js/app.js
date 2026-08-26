@@ -657,6 +657,21 @@ function appliquerHabillage(nom) {
   for (const bouton of document.querySelectorAll('[data-habillage]')) {
     bouton.setAttribute('aria-pressed', String(bouton.dataset.habillage === nom));
   }
+
+  // La barre du navigateur suit l'habillage. Elle était écrite en dur dans
+  // l'entête HTML, sur la valeur de « Nations » : passer en « Nuit » laissait
+  // donc un bandeau blanc coiffer une page bleu nuit — exactement le défaut
+  // que cette balise était censée éviter, mais dans l'autre sens.
+  //
+  // La couleur se relit sur le document plutôt que d'être recopiée ici :
+  // quatre valeurs de plus à tenir d'accord avec la CSS auraient divergé au
+  // premier habillage retouché. `--nuit` est le fond de la page, c'est-à-dire
+  // ce que la barre doit prolonger.
+  const barre = document.querySelector('meta[name="theme-color"]');
+  if (barre) {
+    const fond = getComputedStyle(document.documentElement).getPropertyValue('--nuit').trim();
+    if (fond) barre.setAttribute('content', fond);
+  }
   try {
     // « Nuit » n'a pas de nom d'attribut — c'est le :root — mais il lui faut un
     // nom en mémoire. Sans lui, le choisir revenait à effacer la clé, donc à

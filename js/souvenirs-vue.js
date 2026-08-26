@@ -325,10 +325,10 @@ function gabaritStatut() {
   const compagnon = Boolean(auteur && localStorage.getItem(CLE_MOT_DE_PASSE));
   if (!compagnon) {
     return `<span class="souvenir-form__badge">Visiteur</span>
-      <span class="souvenir-form__statut-detail">lecture seule — le mot de passe du groupe vous sera demandé pour publier</span>`;
+      <span class="souvenir-form__statut-detail">lecture seule — le mot de passe du groupe te sera demandé pour publier</span>`;
   }
   return `<span class="souvenir-form__badge est-compagnon">Compagnon</span>
-    <span class="souvenir-form__statut-detail">vous publiez en tant que <b>${echapper(auteur)}</b></span>
+    <span class="souvenir-form__statut-detail">tu publies en tant que <b>${echapper(auteur)}</b></span>
     <button type="button" class="souvenir-form__changer" data-action="changer-identite">Changer</button>`;
 }
 
@@ -338,17 +338,17 @@ function gabaritFormulaire() {
   const connue = Boolean(auteur && motDePasse);
   return `<form class="souvenir-form">
     <p class="souvenir-form__statut">${gabaritStatut()}</p>
-    <input class="souvenir-form__champ" name="auteur" placeholder="Votre prénom"
+    <input class="souvenir-form__champ" name="auteur" placeholder="Ton prénom"
            value="${echapper(auteur)}" maxlength="40" ${connue ? 'hidden' : ''}>
     <input class="souvenir-form__champ" name="motDePasse" type="password"
            placeholder="Mot de passe du groupe" ${connue ? 'hidden' : ''}>
     <!-- « Un mot, une photo… » nommait les pièces à fournir, pas ce qu'on
          attend : une consigne de formulaire devant une page blanche. Celui-ci
-         donne le ton du carnet et pousse à écrire. Vouvoyé comme le reste du
-         formulaire — « Votre prénom », « vous publiez en tant que » : le
-         tutoiement d'un seul champ se serait lu comme un oubli. -->
+         donne le ton du carnet et pousse à écrire. Le carnet tutoie d'un bout
+         à l'autre — ce sont quinze personnes qui ont roulé ensemble, et un
+         « Balancez votre prose » les aurait reçues comme des inconnues. -->
     <textarea class="souvenir-form__champ" name="texte" rows="4" maxlength="5000"
-              placeholder="Balancez votre prose par ici…"></textarea>
+              placeholder="Balance ta prose ici…"></textarea>
     <ul class="souvenir-form__fichiers" hidden></ul>
     <p class="souvenir-form__pied">
       <label class="souvenir-form__fichier">
@@ -601,7 +601,7 @@ export function monterSouvenirs(conteneur, jour, { surDecompte = null } = {}) {
     liste.innerHTML = publiees.length || attente.length
       ? publiees.map(gabaritContribution).join('')
         + attente.map((e) => gabaritEnAttente(e, progressionEnvoi())).join('')
-      : '<p class="souvenirs__vide">Aucune note pour cette étape. Soyez le premier.</p>';
+      : '<p class="souvenirs__vide">Aucune note pour cette étape. Sois le premier.</p>';
 
     // Le décompte sort du MÊME chargement que la liste : le recalculer ailleurs
     // demanderait une seconde requête pour les mêmes données.
@@ -809,7 +809,7 @@ export function monterSouvenirs(conteneur, jour, { surDecompte = null } = {}) {
     const choisis = [...fichiersChoisis];
 
     if (!auteur || !motDePasse) {
-      souci.textContent = 'Indiquez votre prénom et le mot de passe du groupe.';
+      souci.textContent = 'Indique ton prénom et le mot de passe du groupe.';
       souci.hidden = false;
       // Les champs d'identité peuvent être repliés parce qu'une carte bloquée
       // se charge du mot de passe (voir `ajusterChampsIdentite`). Publier un
@@ -825,7 +825,7 @@ export function monterSouvenirs(conteneur, jour, { surDecompte = null } = {}) {
       return;
     }
     if (!texte && !choisis.length) {
-      souci.textContent = 'Écrivez une note ou choisissez une photo.';
+      souci.textContent = 'Écris une note ou choisis une photo.';
       souci.hidden = false;
       return;
     }
@@ -884,7 +884,7 @@ export function monterSouvenirs(conteneur, jour, { surDecompte = null } = {}) {
     try {
       await mettreEnFile(entree);
     } catch (probleme) {
-      souci.textContent = `Enregistrement impossible pour le moment (${probleme?.message || 'erreur inconnue'}). Le texte est conservé, réessayez.`;
+      souci.textContent = `Enregistrement impossible pour le moment (${probleme?.message || 'erreur inconnue'}). Le texte est conservé, réessaie.`;
       souci.hidden = false;
       return;
     }
@@ -963,9 +963,9 @@ export function monterSouvenirs(conteneur, jour, { surDecompte = null } = {}) {
         const champ = champCarte || champFormulaire;
         if (champCarte) {
           const consigne = carte.querySelector('.souvenir__consigne');
-          if (consigne) consigne.textContent = 'Tapez le mot de passe du groupe ci-dessous, puis « Réessayer ».';
+          if (consigne) consigne.textContent = 'Tape le mot de passe du groupe ci-dessous, puis « Réessayer ».';
         } else {
-          souci.textContent = 'Indiquez le mot de passe du groupe avant de réessayer.';
+          souci.textContent = 'Indique le mot de passe du groupe avant de réessayer.';
           souci.hidden = false;
         }
         if (champ) {

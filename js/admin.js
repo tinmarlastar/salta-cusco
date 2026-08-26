@@ -369,7 +369,7 @@ racine.addEventListener('click', async (evenement) => {
     try {
       await supprimerContribution({ id, motDePasse });
     } catch (souci) {
-      alert(souci instanceof ErreurService ? souci.message : 'Le service ne répond pas, réessayez plus tard.');
+      alert(souci instanceof ErreurService ? souci.message : 'Le service ne répond pas, réessaie plus tard.');
       return;
     }
     afficher();

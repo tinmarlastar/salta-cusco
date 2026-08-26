@@ -326,7 +326,7 @@ export async function listerTout(motDePasse) {
 export function verifierVideo(fichier) {
   if (fichier.size <= VIDEO_OCTETS_MAX) return null;
   const mo = Math.round(fichier.size / (1024 * 1024));
-  return `Vidéo de ${mo} Mo, maximum 60 Mo. Raccourcissez le clip ou baissez la qualité dans les réglages de la caméra.`;
+  return `Vidéo de ${mo} Mo, maximum 60 Mo. Raccourcis le clip ou baisse la qualité dans les réglages de la caméra.`;
 }
 
 /** Redimensionne et recompresse une photo avant l'envoi.

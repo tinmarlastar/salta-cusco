@@ -262,19 +262,40 @@ export function dessinerFrise(svg, {
     const releve = voyage.releves.reduce((meilleur, r) =>
       Math.abs(r.km - km) < Math.abs(meilleur.km - km) ? r : meilleur, voyage.releves[0]);
 
-    const pastille = creer('circle', {
-      class: `frise__pause${etape.jour === jourActif ? ' est-actif' : ''}`,
-      cx: x(km), cy: y(releve.altitude), r: 4.5,
+    // Le point fait 9 points de diamètre : c'est un repère, pas une cible.
+    // Au doigt, il était le seul endroit de la frise où l'on n'arrivait pas à
+    // appuyer — et il commande trois journées sur quinze, J1, J10 et J15.
+    //
+    // La zone sensible est donc une bande invisible, aussi haute que les
+    // journées de ride voisines et large de 20 points, posée par-dessus elles.
+    // Elle leur prend dix points de chaque côté : la journée de repos passe de
+    // 9 points de large à 20, ses deux voisines en gardent une quinzaine. Un
+    // partage plus juste que l'ancien, où l'une était intouchable et les
+    // autres confortables. Le point, lui, ne bouge pas d'un pixel et cesse
+    // simplement de recevoir les appuis — il n'a jamais été qu'un dessin.
+    const cible = creer('rect', {
+      class: 'frise__pause-cible',
+      x: x(km) - 10, y: marge.haut, width: 20, height: h,
       tabindex: '0', role: 'button', 'aria-label': `Jour ${etape.jour}, ${etape.titre}`,
     });
-    pastille.addEventListener('click', () => surChoixEtape(etape.jour));
-    pastille.addEventListener('keydown', (evenement) => {
+    cible.addEventListener('click', () => surChoixEtape(etape.jour));
+    cible.addEventListener('keydown', (evenement) => {
       if (evenement.key === 'Enter' || evenement.key === ' ') {
         evenement.preventDefault();
         surChoixEtape(etape.jour);
       }
     });
-    svg.append(pastille);
+    // Le survol désigne la journée sur la carte, comme pour les rides.
+    cible.addEventListener('pointerenter', () => surSurvolEtape(etape.jour));
+    cible.addEventListener('pointerleave', () => surSortieEtape());
+    cible.addEventListener('focus', () => surSurvolEtape(etape.jour));
+    cible.addEventListener('blur', () => surSortieEtape());
+
+    const pastille = creer('circle', {
+      class: `frise__pause${etape.jour === jourActif ? ' est-actif' : ''}`,
+      cx: x(km), cy: y(releve.altitude), r: 4.5,
+    });
+    svg.append(cible, pastille);
 
     let yEtiquette = y(releve.altitude) - 10;
     const etiquette = creer('text', {

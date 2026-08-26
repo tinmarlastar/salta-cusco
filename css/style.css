@@ -943,7 +943,13 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
 }
 .frise__jour.est-actif { fill: var(--soufre); }
 
-.frise__pause { fill: var(--nuit); stroke: var(--poussiere); stroke-width: 1.5; cursor: pointer; }
+/* Le point ne reçoit plus les appuis : c'est la bande invisible posée sous lui
+   qui s'en charge (voir `frise__pause-cible` dans js/profil.js). Sans
+   `pointer-events: none`, il aurait continué d'intercepter les siens tout en
+   ayant perdu ses écouteurs — un trou de 9 points au milieu de sa propre
+   cible. */
+.frise__pause { fill: var(--nuit); stroke: var(--poussiere); stroke-width: 1.5; pointer-events: none; }
+.frise__pause-cible { fill: transparent; cursor: pointer; }
 .frise__pause.est-actif { fill: var(--soufre); stroke: var(--soufre); }
 
 /* « Nous sommes ici ! » et sa flèche. Manuscrites : partout ailleurs la frise

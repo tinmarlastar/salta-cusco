@@ -569,7 +569,16 @@ function reglerFeuille(hauteur) {
   const libelle = LIBELLES_FEUILLE[hauteur];
   elements.poigneeTexte.textContent = libelle.texte;
   elements.poignee.setAttribute('aria-label', libelle.enonce);
-  if (hauteur !== 'fermee') elements.panneau.focus();
+  // `preventScroll` : sans lui, donner le focus au panneau demande au
+  // navigateur de l'amener en vue — et à cet instant la feuille est encore
+  // glissée sous le bord bas de la scène, qu'elle déborde donc de sa propre
+  // hauteur. Le navigateur fait défiler la scène pour la rattraper, et rien ne
+  // l'y ramène ensuite : la feuille et la bande précédent/suivant restent
+  // échouées au milieu de l'écran, la moitié basse vide. Le défaut ne se
+  // voyait qu'à la première ouverture après chargement — ensuite le panneau a
+  // déjà le focus et `focus()` ne défile plus, ce qui le faisait passer pour un
+  // caprice de la page d'accueil.
+  if (hauteur !== 'fermee') elements.panneau.focus({ preventScroll: true });
 }
 
 // ------------------------------------------------------------- interactions

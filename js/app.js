@@ -506,6 +506,12 @@ function gabaritNavigation(precedent, suivant) {
 }
 
 function gabaritFiche(etape) {
+  // Espace insécable entre le drapeau et le nom du pays : sur une journée qui
+  // en traverse deux, la ligne peut se replier faute de place — la croix de
+  // fermeture lui prend son coin droit. Qu'elle se replie est très bien, mais
+  // qu'elle sépare « 🇨🇱 » de « Chili » laisserait un drapeau orphelin en bout
+  // de ligne. Elle casse maintenant au point médian, entre deux pays, qui est
+  // le seul endroit où la couper a un sens.
   const drapeaux = etape.pays
     .map((code) => etat.accueil.pays.find((p) => p.code === code))
     .filter(Boolean);
@@ -552,7 +558,7 @@ function gabaritFiche(etape) {
 
   return `<div class="fiche">
     <p class="fiche__jour" data-pays="${etape.pays[etape.pays.length - 1]}"><span class="fiche__numero">J${etape.jour}</span>
-      <span class="fiche__pays">· ${drapeaux.map((p) => `${p.drapeau} ${echapper(p.nom)}`).join(' · ')}</span></p>
+      <span class="fiche__pays">· ${drapeaux.map((p) => `${p.drapeau}&nbsp;${echapper(p.nom)}`).join(' · ')}</span></p>
     <h2 class="fiche__titre">${echapper(etape.titre)}</h2>
     ${etape.ride ? '' : '<p class="fiche__repos">Journée sans moto</p>'}
 

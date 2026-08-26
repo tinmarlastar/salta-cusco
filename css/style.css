@@ -1863,7 +1863,12 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
        dépassait de sept points sous la barre et s'imprimait sur la première
        ligne du texte. */
     top: 0;
-    right: env(safe-area-inset-right, 0px);
+    /* Le bord droit de la pastille tombe sur la gouttière du site — les 22
+       points où s'alignent déjà les onglets au-dessus d'elle et les boutons
+       précédent/suivant en dessous. Collée au bord de l'écran, elle était la
+       seule chose de la feuille à ne pas suivre cette colonne. Un rem : la
+       moitié des 12 points que le pavé de 44 laisse autour du rond de 32. */
+    right: calc(1rem + env(safe-area-inset-right, 0px));
     bottom: auto;
     left: auto;
     gap: 0;
@@ -1881,6 +1886,31 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
   }
   .panneau__poignee[data-hauteur="pleine"] .panneau__poignee-barre { display: none; }
 
+  /* Le signe devient une pastille pleine, sur le patron des chevrons de la
+     bande du bas (`.navigation button b`) : c'est déjà, sur ce site, la forme
+     de « le rond qu'on presse du pouce ». Les trois commandes de la feuille se
+     répondent alors — précédent, suivant, fermer.
+
+     Deux points plus large que ces chevrons (32 contre 24) : ils voyagent
+     accompagnés d'un libellé qui les annonce, elle est seule dans son coin et
+     doit se signaler toute seule.
+
+     La pastille se dessine sur le libellé, pas sur le bouton : le bouton garde
+     ses 44 points de zone sensible, et le rond visible se centre dedans sans
+     l'enfler. La couleur d'accent, jamais une valeur en dur — sur les quatre
+     habillages, `--sur-accent` est ce qui se pose dessus. */
+  .panneau__poignee[data-hauteur="pleine"] .panneau__poignee-texte {
+    display: grid;
+    place-items: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    background: var(--soufre);
+    color: var(--sur-accent);
+    font-size: 1.0625rem;
+    line-height: 1;
+  }
+
   /* La croix est calée dans le coin, et la première ligne de la fiche passe
      juste dessous : sur J4, « ARGENTINE · CHILI » venait finir à six points
      d'elle. Elle lui rend donc sa place — mais tout juste.
@@ -1889,11 +1919,16 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
      tout ce qu'il faut lui céder. À 50, la réserve était si large que « 🇨🇱
      CHILI » passait à la ligne suivante, séparé de son drapeau — un défaut pire
      que celui qu'on corrigeait. Le signe lui-même étant centré dans son pavé,
-     ces 24 points laissent une vingtaine de blanc à l'œil. Une journée à trois
-     pays repliera sa liste sur deux lignes, ce qui est le comportement voulu :
-     la ligne cède, jamais la croix. Le titre, lui, commence assez bas pour
-     n'avoir rien à céder. */
-  .fiche__jour { padding-right: 1.5rem; }
+     ces 40 points laissent une vingtaine de blanc à l'œil jusqu'au rond. Huit
+     de plus que ce que le rond mord dans la colonne, et c'est voulu : à 32, la
+     ligne de J11 finissait à deux points du rond sans se replier — assez pour
+     ne pas le toucher, bien trop peu pour ne pas s'y cogner du regard. La
+     règle est maintenant nette : une journée à deux pays replie sa liste sur
+     deux lignes, ce qui est le comportement voulu : la ligne cède, jamais la croix — et elle casse au
+     point médian, entre deux pays, un espace insécable retenant chaque drapeau
+     contre son nom (voir `gabaritFiche`). Le titre, lui, commence assez bas
+     pour n'avoir rien à céder. */
+  .fiche__jour { padding-right: 2.5rem; }
 
   /* Les deux moitiés de la barre peuvent enfin se serrer. Sans `min-width: 0`,
      un bouton refusait de descendre sous la largeur de son libellé : « Tout le

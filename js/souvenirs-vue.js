@@ -342,8 +342,13 @@ function gabaritFormulaire() {
            value="${echapper(auteur)}" maxlength="40" ${connue ? 'hidden' : ''}>
     <input class="souvenir-form__champ" name="motDePasse" type="password"
            placeholder="Mot de passe du groupe" ${connue ? 'hidden' : ''}>
+    <!-- « Un mot, une photo… » nommait les pièces à fournir, pas ce qu'on
+         attend : une consigne de formulaire devant une page blanche. Celui-ci
+         donne le ton du carnet et pousse à écrire. Vouvoyé comme le reste du
+         formulaire — « Votre prénom », « vous publiez en tant que » : le
+         tutoiement d'un seul champ se serait lu comme un oubli. -->
     <textarea class="souvenir-form__champ" name="texte" rows="4" maxlength="5000"
-              placeholder="Un mot, une photo…"></textarea>
+              placeholder="Balancez votre prose par ici…"></textarea>
     <ul class="souvenir-form__fichiers" hidden></ul>
     <p class="souvenir-form__pied">
       <label class="souvenir-form__fichier">

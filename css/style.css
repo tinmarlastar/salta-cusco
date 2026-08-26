@@ -294,7 +294,10 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
   display: flex;
   flex-shrink: 0;
   align-items: center;
-  gap: .3125rem;
+  /* Un demi-rem, et non cinq points : les zones sensibles débordent chaque
+     carré de trois points (voir `::after` plus bas), et un écart plus serré les
+     ferait se chevaucher — deux voisines qui se disputent le même doigt. */
+  gap: .5rem;
   margin-left: auto;
 }
 
@@ -314,6 +317,18 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
   cursor: pointer;
   transition: transform var(--transition), box-shadow var(--transition);
 }
+/* La zone sensible déborde le carré de trois points sur chaque bord : 18 points
+   de côté, c'est lisible mais c'est deux tiers du minimum qu'on sait viser au
+   pouce (24). Le débord se fait par un pseudo-élément plutôt qu'en rembourrant
+   le bouton : le carré garde sa taille, l'entête sa mise en page, et seule la
+   surface qui répond au doigt grandit. */
+.habillages button { position: relative; }
+.habillages button::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+}
+
 .habillages button:hover { transform: scale(1.15); }
 .habillages button[aria-pressed="true"] {
   border-color: var(--sel);

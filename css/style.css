@@ -495,7 +495,11 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
   background: none;
   color: var(--poussiere);
   font-family: var(--mono);
-  font-size: .6875rem;
+  /* Onglets remontés de 11 à 12 px : ils sont le seul chemin vers le carnet
+     de route, et à 11 px ils se lisaient comme une légende de plus plutôt que
+     comme deux boutons. Un cran de plus (13 px) collait « Carnet de route » au
+     bord du panneau sur un écran de 375 px. */
+  font-size: .75rem;
   letter-spacing: .08em;
   text-transform: uppercase;
   cursor: pointer;
@@ -542,7 +546,10 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
   letter-spacing: 0;
 }
 
-.fiche__pays { font-size: .875rem; }
+/* Le pays se lit à la même échelle que le corps du récit : plus petit, il
+   s'effaçait derrière le grand numéro de journée alors qu'il porte la moitié
+   de ce que dit cette ligne. */
+.fiche__pays { font-size: 1rem; }
 
 .fiche__titre {
   margin: .375rem 0 1rem;

@@ -159,7 +159,19 @@ export function dessinerFrise(svg, {
   // ici ! ». Il lui faut la hauteur du mot, et rien de plus — au-delà, le vide
   // se voit entre le filet de l'entête et le dessin. Le dessin est agrandi
   // d'autant (CSS) pour que le relief garde son amplitude.
-  const marge = { haut: 32, bas: 26, gauche: 20, droite: 20 };
+  //
+  // Sur un écran couché, la frise est raccourcie pour ne pas prendre la moitié
+  // de la page (voir `max-height: 30rem` dans la CSS). Le ciel n'y tient plus,
+  // et le lui garder écraserait le relief à une vingtaine de points : les deux
+  // marges se resserrent donc avec elle, et le tracé retrouve la hauteur qu'il
+  // a debout. C'est le mot qui s'efface, pas la montagne.
+  const cielRogne = hauteur < 100;
+  const marge = {
+    haut: cielRogne ? 14 : 32,
+    bas: cielRogne ? 20 : 26,
+    gauche: 20,
+    droite: 20,
+  };
   const l = largeur - marge.gauche - marge.droite;
   const h = hauteur - marge.haut - marge.bas;
 
@@ -262,19 +274,40 @@ export function dessinerFrise(svg, {
     const releve = voyage.releves.reduce((meilleur, r) =>
       Math.abs(r.km - km) < Math.abs(meilleur.km - km) ? r : meilleur, voyage.releves[0]);
 
-    const pastille = creer('circle', {
-      class: `frise__pause${etape.jour === jourActif ? ' est-actif' : ''}`,
-      cx: x(km), cy: y(releve.altitude), r: 4.5,
+    // Le point fait 9 points de diamètre : c'est un repère, pas une cible.
+    // Au doigt, il était le seul endroit de la frise où l'on n'arrivait pas à
+    // appuyer — et il commande trois journées sur quinze, J1, J10 et J15.
+    //
+    // La zone sensible est donc une bande invisible, aussi haute que les
+    // journées de ride voisines et large de 20 points, posée par-dessus elles.
+    // Elle leur prend dix points de chaque côté : la journée de repos passe de
+    // 9 points de large à 20, ses deux voisines en gardent une quinzaine. Un
+    // partage plus juste que l'ancien, où l'une était intouchable et les
+    // autres confortables. Le point, lui, ne bouge pas d'un pixel et cesse
+    // simplement de recevoir les appuis — il n'a jamais été qu'un dessin.
+    const cible = creer('rect', {
+      class: 'frise__pause-cible',
+      x: x(km) - 10, y: marge.haut, width: 20, height: h,
       tabindex: '0', role: 'button', 'aria-label': `Jour ${etape.jour}, ${etape.titre}`,
     });
-    pastille.addEventListener('click', () => surChoixEtape(etape.jour));
-    pastille.addEventListener('keydown', (evenement) => {
+    cible.addEventListener('click', () => surChoixEtape(etape.jour));
+    cible.addEventListener('keydown', (evenement) => {
       if (evenement.key === 'Enter' || evenement.key === ' ') {
         evenement.preventDefault();
         surChoixEtape(etape.jour);
       }
     });
-    svg.append(pastille);
+    // Le survol désigne la journée sur la carte, comme pour les rides.
+    cible.addEventListener('pointerenter', () => surSurvolEtape(etape.jour));
+    cible.addEventListener('pointerleave', () => surSortieEtape());
+    cible.addEventListener('focus', () => surSurvolEtape(etape.jour));
+    cible.addEventListener('blur', () => surSortieEtape());
+
+    const pastille = creer('circle', {
+      class: `frise__pause${etape.jour === jourActif ? ' est-actif' : ''}`,
+      cx: x(km), cy: y(releve.altitude), r: 4.5,
+    });
+    svg.append(cible, pastille);
 
     let yEtiquette = y(releve.altitude) - 10;
     const etiquette = creer('text', {
@@ -305,7 +338,20 @@ export function dessinerFrise(svg, {
   // illisible dès que les motos roulent haut. Le calcul tient parce que
   // `altitudeMax` garde 300 m de réserve au-dessus du sommet : la crête ne monte
   // jamais jusqu'à `marge.haut`, et le mot passe dessus.
-  if (releveMotos) {
+  // Deux conditions pour que le mot s'écrive.
+  //
+  // `!cielRogne` : sans ciel, il s'écrirait par-dessus la crête, et sa flèche
+  // n'aurait plus la place de s'incurver.
+  //
+  // `jourActif === null` : le mot est ancré au kilomètre des motos, dans une
+  // frise qui défile. Dès qu'on ouvre une journée, la frise se recentre dessus
+  // et le mot sort par le côté — il se lisait alors « sommes ici ! », un bout
+  // de phrase suspendu au bord de l'écran, sur toutes les fiches sauf les
+  // premières. Il a de toute façon fini son travail : il sert à situer les
+  // motos quand on arrive sur le parcours entier, pas à commenter la journée
+  // qu'on est en train de lire. Le repère de position, lui, reste posé sur la
+  // courbe dans les deux cas — on perd la phrase, jamais l'information.
+  if (releveMotos && !cielRogne && jourActif === null) {
     const xMotos = x(releveMotos.km);
     const cote = xMotos > largeur / 2 ? -1 : 1;
     const yMot = marge.haut - 12;

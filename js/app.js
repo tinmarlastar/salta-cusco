@@ -165,6 +165,22 @@ function choisir(jour, { recentrer = true, majAdresse = true } = {}) {
   elements.identite.title = etape ? 'Revenir au parcours entier' : '';
 }
 
+/** Revient au parcours entier : la carte, et rien qui la couvre.
+
+    Sur téléphone, `choisir(null)` seul laissait la feuille ouverte : on
+    demandait « tout le parcours » et on obtenait la présentation du voyage,
+    un texte à lire posé par-dessus la carte qu'on venait justement chercher.
+    Le parcours entier EST la carte — c'est ce que le titre promet quand on le
+    touche. La feuille se replie donc avec la sélection.
+
+    Sur grand écran, où le panneau est une colonne et non une feuille,
+    `reglerFeuille` n'a rien à replier : l'appel y reste sans effet visible, et
+    les deux tailles d'écran gardent un seul chemin de retour. */
+function revenirAuParcours() {
+  choisir(null);
+  reglerFeuille('fermee');
+}
+
 /** Déplace la sélection d'un cran ; depuis l'accueil, avance sur la première étape. */
 function decaler(pas) {
   const jours = etat.etapes.map((e) => e.jour);
@@ -189,15 +205,51 @@ function redessinerFrise() {
     arriveeLe: etat.position.arriveeLe,
   });
   amenerEtapeEnVue();
+  majBordsFrise();
 }
 
-/** Sur un écran étroit la frise déborde : on l'amène sur l'étape choisie. */
+/** Marque lequel des deux bords de la frise cache une suite.
+
+    La frise est la seule navigation du site, et sur un téléphone elle mesure
+    704 points dans une fenêtre de 390 : à l'ouverture, on voit J1 à J8 et rien
+    ne dit que le voyage continue. La barre de défilement d'iOS reste invisible
+    tant qu'on ne touche pas — un visiteur qui ne devine pas le geste croit que
+    le raid s'arrête au huitième jour.
+
+    Le bord qui cache quelque chose s'estompe donc (le dégradé est dans la
+    CSS) : le tracé qui s'efface au lieu de s'arrêter net dit qu'il y a une
+    suite. Marqué des deux côtés séparément, parce qu'au bout de la course il
+    n'y a plus rien à annoncer et qu'un bord estompé mentirait alors.
+
+    Quatre points de tolérance : un défilement tactile s'arrête rarement sur
+    l'entier, et une frise arrivée au bout à 0,6 point près doit se lire comme
+    arrivée au bout. */
+function majBordsFrise() {
+  const defilement = elements.frise.parentElement;
+  const reste = defilement.scrollWidth - defilement.clientWidth;
+  const gauche = defilement.scrollLeft > 4;
+  const droite = defilement.scrollLeft < reste - 4;
+  defilement.dataset.bords = gauche && droite ? 'deux'
+    : gauche ? 'gauche'
+      : droite ? 'droite' : 'aucun';
+}
+
+/** Sur un écran étroit la frise déborde : on l'amène sur l'étape choisie, ou
+    sur son début quand il n'y a plus d'étape choisie. */
 function amenerEtapeEnVue() {
   const defilement = elements.frise.parentElement;
   if (defilement.scrollWidth <= defilement.clientWidth) return;
 
   const marque = elements.frise.querySelector('.est-actif');
-  if (!marque) return;
+  // Retour au parcours entier : la frise revient au premier jour. Elle restait
+  // sinon calée où la dernière journée consultée l'avait laissée — et
+  // « Nous sommes ici ! », ancré au kilomètre des motos, se relisait alors
+  // tronqué par le bord gauche, la phrase que le retour vient justement de
+  // faire réapparaître. Le parcours entier se regarde depuis son début.
+  if (!marque) {
+    defilement.scrollLeft = 0;
+    return;
+  }
 
   const boite = marque.getBBox ? marque.getBBox() : null;
   if (!boite) return;
@@ -479,6 +531,12 @@ function gabaritNavigation(precedent, suivant) {
 }
 
 function gabaritFiche(etape) {
+  // Espace insécable entre le drapeau et le nom du pays : sur une journée qui
+  // en traverse deux, la ligne peut se replier faute de place — la croix de
+  // fermeture lui prend son coin droit. Qu'elle se replie est très bien, mais
+  // qu'elle sépare « 🇨🇱 » de « Chili » laisserait un drapeau orphelin en bout
+  // de ligne. Elle casse maintenant au point médian, entre deux pays, qui est
+  // le seul endroit où la couper a un sens.
   const drapeaux = etape.pays
     .map((code) => etat.accueil.pays.find((p) => p.code === code))
     .filter(Boolean);
@@ -487,12 +545,20 @@ function gabaritFiche(etape) {
   // l'on arrive. La distance sur route se déduit du reste plutôt que d'être
   // saisie — deux chiffres à tenir d'accord au lieu d'un seul finiraient par
   // diverger.
+  //
+  // « Dont route » ne s'affiche que s'il y a de la route. La traversée du
+  // salar est intégralement en piste : la case occupait un sixième de la
+  // grille pour annoncer un zéro, et sur un téléphone cette grille est déjà ce
+  // qui sépare le titre du récit. Un chiffre qui ne dit rien ne vaut pas la
+  // ligne qu'il coûte. « Dont piste » reste, lui, même à zéro : il répond à
+  // une question qu'on se pose vraiment avant de partir — celle-là, un zéro y
+  // répond.
   const kmRoute = Math.max(0, etape.km - etape.kmPiste);
   const mesures = etape.ride
     ? `<div><dt>Départ à</dt><dd>${nombre(etape.depart.altitudeM)} <small>m</small></dd></div>
        <div><dt>Distance</dt><dd>${nombre(etape.km)} <small>km</small></dd></div>
        <div><dt>Dont piste</dt><dd>${nombre(etape.kmPiste)} <small>km</small></dd></div>
-       <div><dt>Dont route</dt><dd>${nombre(kmRoute)} <small>km</small></dd></div>
+       ${kmRoute ? `<div><dt>Dont route</dt><dd>${nombre(kmRoute)} <small>km</small></dd></div>` : ''}
        <div><dt>Arrivée à</dt><dd>${nombre(etape.arrivee.altitudeM)} <small>m</small></dd></div>
        ${gabaritDuree(etape, kmRoute)}`
     : `<div><dt>Étape</dt><dd>${echapper(etape.arrivee.nom)}</dd></div>
@@ -517,7 +583,7 @@ function gabaritFiche(etape) {
 
   return `<div class="fiche">
     <p class="fiche__jour" data-pays="${etape.pays[etape.pays.length - 1]}"><span class="fiche__numero">J${etape.jour}</span>
-      <span class="fiche__pays">· ${drapeaux.map((p) => `${p.drapeau} ${echapper(p.nom)}`).join(' · ')}</span></p>
+      <span class="fiche__pays">· ${drapeaux.map((p) => `${p.drapeau}&nbsp;${echapper(p.nom)}`).join(' · ')}</span></p>
     <h2 class="fiche__titre">${echapper(etape.titre)}</h2>
     ${etape.ride ? '' : '<p class="fiche__repos">Journée sans moto</p>'}
 
@@ -569,7 +635,10 @@ const LIBELLES_FEUILLE = {
     etape: { texte: 'Détail de la journée', enonce: 'Voir le détail de la journée' },
     accueil: { texte: 'Détail du parcours', enonce: 'Voir le détail du parcours' },
   },
-  pleine: { texte: '×', enonce: 'Replier le détail' },
+  // Ouverte, la poignée n'a plus de mot : le chevron retourné dit à lui seul
+  // que la feuille redescend. La phrase reste en `aria-label`, pour qui n'a
+  // que la voix — un chevron ne s'énonce pas.
+  pleine: { texte: '', enonce: 'Replier le détail' },
 };
 
 function libelleFeuille() {
@@ -622,6 +691,21 @@ function appliquerHabillage(nom) {
   for (const bouton of document.querySelectorAll('[data-habillage]')) {
     bouton.setAttribute('aria-pressed', String(bouton.dataset.habillage === nom));
   }
+
+  // La barre du navigateur suit l'habillage. Elle était écrite en dur dans
+  // l'entête HTML, sur la valeur de « Nations » : passer en « Nuit » laissait
+  // donc un bandeau blanc coiffer une page bleu nuit — exactement le défaut
+  // que cette balise était censée éviter, mais dans l'autre sens.
+  //
+  // La couleur se relit sur le document plutôt que d'être recopiée ici :
+  // quatre valeurs de plus à tenir d'accord avec la CSS auraient divergé au
+  // premier habillage retouché. `--nuit` est le fond de la page, c'est-à-dire
+  // ce que la barre doit prolonger.
+  const barre = document.querySelector('meta[name="theme-color"]');
+  if (barre) {
+    const fond = getComputedStyle(document.documentElement).getPropertyValue('--nuit').trim();
+    if (fond) barre.setAttribute('content', fond);
+  }
   try {
     // « Nuit » n'a pas de nom d'attribut — c'est le :root — mais il lui faut un
     // nom en mémoire. Sans lui, le choisir revenait à effacer la clé, donc à
@@ -663,7 +747,7 @@ function brancherInterface() {
     groupe: '.vignettes, .galerie',
   });
 
-  elements.boutonAccueil.addEventListener('click', () => choisir(null));
+  elements.boutonAccueil.addEventListener('click', revenirAuParcours);
 
   // Le titre du voyage ramène au parcours entier, comme le bouton voisin. Le
   // geste est celui qu'on attend d'un titre de site. Il reste un raccourci à
@@ -672,7 +756,7 @@ function brancherInterface() {
   // encombrerait la tabulation sans rien apporter. Sur écran étroit, où ce
   // bouton est masqué faute de place, c'est « Échap » qui tient le rôle.
   elements.identite.addEventListener('click', () => {
-    if (etat.jour !== null) choisir(null);
+    if (etat.jour !== null) revenirAuParcours();
   });
 
   for (const bouton of document.querySelectorAll('.fonds__bouton[data-fond]')) {
@@ -703,10 +787,14 @@ function brancherInterface() {
       evenement.preventDefault();
       decaler(evenement.key === 'ArrowRight' ? 1 : -1);
     }
-    if (evenement.key === 'Escape' && etat.jour !== null) choisir(null);
+    if (evenement.key === 'Escape' && etat.jour !== null) revenirAuParcours();
   });
 
   window.addEventListener('hashchange', () => choisir(jourDepuisAdresse(), { majAdresse: false }));
+
+  // Le dégradé des bords suit le doigt : `passive`, parce qu'on ne fait que
+  // lire une position — rien à annuler, et le défilement ne doit pas attendre.
+  elements.frise.parentElement.addEventListener('scroll', majBordsFrise, { passive: true });
 
   let attente;
   new ResizeObserver(() => {

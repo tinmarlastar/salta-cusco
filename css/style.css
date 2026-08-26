@@ -61,8 +61,16 @@
   /* Hauteur de cette bande. Fixée, et non laissée au contenu : la carte s'y
      arrête, le panneau aussi, et la poignée du téléphone se pose au-dessus —
      trois règles qui doivent connaître le chiffre. Deux lignes serrées dans un
-     bouton, plus le rembourrage et le filet du haut : 62 points. */
-  --barre-h: 3.875rem;
+     bouton, plus le rembourrage et le filet du haut : 62 points.
+
+     La réserve du bas s'y ajoute. La page est déclarée `viewport-fit=cover` :
+     elle s'étend donc sous la barre d'accueil de l'iPhone, et les derniers
+     points de cette bande — la commande la plus utilisée du site — tombaient
+     dessous. En comptant la réserve DANS le jeton plutôt que dans la seule
+     règle `.navigation`, la carte et le panneau, qui se calent tous deux
+     dessus, remontent avec elle : sinon la bande grandissait et venait
+     recouvrir la fin du récit. Vaut zéro partout où il n'y a rien à réserver. */
+  --barre-h: calc(3.875rem + env(safe-area-inset-bottom, 0px));
 
   --rythme: .5rem;
   --transition: 180ms cubic-bezier(.2, .6, .3, 1);
@@ -214,7 +222,13 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
   flex-wrap: wrap;
   gap: .5rem 1.5rem;
   min-height: var(--bandeau-h);
-  padding: .375rem 1.25rem;
+  /* Réserves latérales : en paysage, l'encoche de l'iPhone mord sur un bord de
+     l'écran, et le titre comme les pastilles d'habillage passaient dessous. */
+  padding:
+    .375rem
+    calc(1.25rem + env(safe-area-inset-right, 0px))
+    .375rem
+    calc(1.25rem + env(safe-area-inset-left, 0px));
   border-bottom: 1px solid var(--nuit-3);
   background: var(--nuit);
 }
@@ -397,7 +411,7 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
 .fonds {
   position: absolute;
   top: .625rem;
-  left: .625rem;
+  left: calc(.625rem + env(safe-area-inset-left, 0px));
   z-index: 500;
   display: flex;
   gap: 1px;
@@ -465,7 +479,13 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
    et les photos vers le bas, sur un panneau où chaque ligne compte. En pied,
    de quoi ne pas finir collé à la bande précédent/suivant — cet air-là venait
    de la marge haute de la bande, du temps qu'elle vivait dans la fiche. */
-.fiche { padding: .875rem 1.375rem 1.25rem; }
+.fiche {
+  padding:
+    .875rem
+    calc(1.375rem + env(safe-area-inset-right, 0px))
+    1.25rem
+    calc(1.375rem + env(safe-area-inset-left, 0px));
+}
 
 /* Le panneau occupe désormais la moitié de l'écran : sur un grand moniteur,
    une ligne de récit courrait sur 900 px, illisible. On borne la mesure du
@@ -709,7 +729,15 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
      La bande, elle, reste opaque : le contenu défile DESSOUS, et un fond
      translucide laisserait lire deux textes superposés. */
   gap: .5rem;
-  padding: 0 1.375rem;
+  /* Le rembourrage du bas absorbe la barre d'accueil de l'iPhone : les boutons
+     se posent au-dessus d'elle, dans la hauteur que `--barre-h` vient de leur
+     réserver. Les réserves latérales servent en paysage, où l'encoche mange un
+     bord de l'écran. */
+  padding:
+    0
+    calc(1.375rem + env(safe-area-inset-right, 0px))
+    env(safe-area-inset-bottom, 0px)
+    calc(1.375rem + env(safe-area-inset-left, 0px));
   background: var(--nuit);
   /* Elle se détache franchement du texte qui défile dessous : un trait soufre
      plutôt qu'un filet de la même couleur que le fond, et une ombre portée
@@ -838,7 +866,14 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
   display: flex;
   align-items: center;
   height: var(--frise-h);
-  padding: .3125rem 0;   /* symétrique : sinon `align-items: center` centre dans une boîte qui ne l'est pas */
+  /* Symétrique en haut et en bas : sinon `align-items: center` centre dans une
+     boîte qui ne l'est pas. Sur les côtés, la réserve de l'encoche — en
+     paysage, elle recouvrait le repère de J1 ou celui de J15. */
+  padding:
+    .3125rem
+    env(safe-area-inset-right, 0px)
+    .3125rem
+    env(safe-area-inset-left, 0px);
   border-bottom: 1px solid var(--nuit-3);
   background: var(--nuit);
 }
@@ -855,6 +890,27 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
 }
 
 .frise__defilement { flex: 1 1 auto; min-width: 0; overflow-x: auto; overflow-y: hidden; }
+
+/* Le bord qui cache une suite s'estompe. Sur un téléphone la frise mesure 704
+   points dans une fenêtre de 390 : les sept dernières journées sont hors champ,
+   et la barre de défilement d'iOS ne se montre qu'une fois qu'on a déjà touché.
+   Un tracé qui s'efface au lieu de s'arrêter net dit qu'il continue.
+
+   `js/app.js` (`majBordsFrise`) pose l'attribut : le dégradé ne s'applique
+   qu'au bord qui a effectivement quelque chose à cacher, jamais au bout de la
+   course où il annoncerait une suite qui n'existe pas. */
+.frise__defilement[data-bords="droite"] {
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent);
+}
+.frise__defilement[data-bords="gauche"] {
+  -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 2.5rem), transparent);
+  mask-image: linear-gradient(to left, #000 calc(100% - 2.5rem), transparent);
+}
+.frise__defilement[data-bords="deux"] {
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 2.5rem, #000 calc(100% - 2.5rem), transparent);
+  mask-image: linear-gradient(to right, transparent, #000 2.5rem, #000 calc(100% - 2.5rem), transparent);
+}
 
 .frise__svg {
   display: block;
@@ -908,7 +964,13 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
 }
 .frise__jour.est-actif { fill: var(--soufre); }
 
-.frise__pause { fill: var(--nuit); stroke: var(--poussiere); stroke-width: 1.5; cursor: pointer; }
+/* Le point ne reçoit plus les appuis : c'est la bande invisible posée sous lui
+   qui s'en charge (voir `frise__pause-cible` dans js/profil.js). Sans
+   `pointer-events: none`, il aurait continué d'intercepter les siens tout en
+   ayant perdu ses écouteurs — un trou de 9 points au milieu de sa propre
+   cible. */
+.frise__pause { fill: var(--nuit); stroke: var(--poussiere); stroke-width: 1.5; pointer-events: none; }
+.frise__pause-cible { fill: transparent; cursor: pointer; }
 .frise__pause.est-actif { fill: var(--soufre); stroke: var(--soufre); }
 
 /* « Nous sommes ici ! » et sa flèche. Manuscrites : partout ailleurs la frise
@@ -1605,6 +1667,84 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
 
 /* --------------------------------------------------------------- mobile */
 
+/* Ce que le doigt doit pouvoir viser.
+
+   `pointer: coarse` plutôt qu'une largeur : ce n'est pas la taille de l'écran
+   qui décide, c'est ce qui le touche. Un téléphone couché fait 844 points de
+   large et reste un téléphone ; un moniteur de 1 000 points reste piloté à la
+   souris, et n'a que faire de commandes grossies. La règle suit donc le doigt,
+   dans les deux orientations, et laisse le bureau tranquille.
+
+   La mesure d'avant, au doigt : quatre pastilles d'habillage de 18 points, les
+   trois fonds de carte hauts de 23, les onglets de 32, le zoom de Leaflet de
+   30. Le confort commence à 44. */
+@media (pointer: coarse) {
+  /* Les pastilles ne changent pas de taille : les grossir les élargissait
+     aussi, et la rangée poussait alors le titre sur une ligne de plus — dix-neuf
+     points d'entête pris sur la carte, mesure faite. Seule la zone sensible
+     déborde du dessin, et le dessin ne bouge pas d'un pixel.
+
+     En hauteur, de quoi atteindre 44 points, pris dans le rembourrage de
+     l'entête. En largeur, exactement la moitié de l'écart qui sépare deux
+     pastilles : les quatre zones se touchent alors sans se recouvrir. Aucun
+     appui ne tombe plus entre deux, et aucun ne revient à la voisine. */
+  .habillages button { position: relative; }
+  .habillages button::before {
+    content: "";
+    position: absolute;
+    inset: -.8125rem -.15625rem;
+  }
+
+  /* Ces trois-là s'agrandissent pour de bon : ils ont la place, et leur
+     hauteur d'avant tenait d'un dessin pensé pour le curseur. */
+  .fonds__bouton { min-height: 2.75rem; }
+  .onglets__bouton { min-height: 2.75rem; }
+
+  /* Le zoom de Leaflet, laissé à 30 points par la feuille du greffon. La règle
+     reprend son sélecteur pour la surcharger à égalité de poids — notre
+     feuille est chargée après la sienne. */
+  .leaflet-touch .leaflet-bar a {
+    width: 2.75rem;
+    height: 2.75rem;
+    line-height: 2.75rem;
+  }
+
+  /* Les intitulés des chiffres de l'étape — « Départ à », « Dont piste »,
+     « Durée estimée » — étaient posés en 9 points, capitales monospace
+     espacées : l'écriture la plus petite du site, et on la lit au soleil, le
+     casque souvent encore sur la tête. Le contraste passe le seuil (4,56), la
+     lisibilité non.
+
+     Dix points, et non onze. Mesuré sur un écran de 390 : à onze, la colonne
+     qu'il faut à « Durée estimée » fait tomber la grille de trois colonnes à
+     deux, la hauteur du bloc passe de 128 à 200 points, et le récit — ce qu'on
+     est venu lire — se retrouve enterré sous un demi-écran de chiffres. À dix,
+     les trois colonnes tiennent ; seul le plus long des intitulés se replie
+     sur deux lignes, et la grille ne prend que dix-huit points de plus.
+
+     Raccourcir ce libellé aurait tout réglé, mais le choix de « Durée
+     estimée » est argumenté deux fonctions plus haut dans `js/app.js` : il
+     porte la réserve que la valeur ne dit pas. On ne défait pas une décision
+     de langue pour une raison de gabarit. */
+  .mesures dt { font-size: .625rem; }
+
+  /* La croix qui referme la feuille : 50 × 31 points, une seule ligne de
+     rembourrage autour d'un caractère. C'est la sortie de la fiche, on la vise
+     souvent, et elle est posée dans un coin — l'endroit de l'écran où le pouce
+     est le moins précis. */
+  .panneau__poignee[data-hauteur="pleine"] {
+    align-items: center;
+    justify-content: center;
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+    padding: 0;
+  }
+
+  /* Précédent / Suivant tombaient à 43 points : la bande qui les porte en fait
+     62, il n'y avait qu'à le leur dire. */
+  .navigation button { min-height: 2.75rem; }
+}
+
 @media (max-width: 60rem) {
   /* La variable n'a plus d'effet sur la largeur, désormais à 50 % ; elle reste
      comme repère pour d'éventuels retours en arrière. */
@@ -1643,9 +1783,32 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
      coin, et une bande posée par-dessus l'aurait effacée. */
   .carte { position: absolute; inset: 0 0 var(--barre-h); }
 
+  /* Le choix du fond descend sur la colonne du site — les 22 points où
+     s'alignent déjà la poignée du détail, sous lui, et le bouton « Précédent »
+     sous elle. À dix, il était le seul élément du bord gauche à ne pas suivre
+     cette colonne, et les deux commandes de la carte se répondaient de travers
+     d'un coin à l'autre. Le zoom de Leaflet, en face, prend le même retrait :
+     déplacer un seul des deux aurait déséquilibré le haut de la carte. */
+  .fonds { left: calc(1.375rem + env(safe-area-inset-left, 0px)); }
+
+  /* Le choix du fond reprend sa hauteur propre — celle qu'il a en grand écran,
+     réglée par son texte et son rembourrage, et rien d'autre. Le plancher de 44
+     points posé pour le pouce (voir `pointer: coarse`) l'enflait à 46, à quoi
+     s'ajoutait un temps la hauteur de la poignée, à 38 : deux fois trop pour un
+     bandeau posé sur la carte, qu'on règle une fois et qu'on ne revisite pas.
+
+     Ses boutons redescendent donc à 23 points de haut. C'est sous le seuil du
+     pouce, et c'est assumé ici seulement : ils gardent toute leur largeur — de
+     43 à 77 points —, ils sont trois côte à côte sans rien autour à toucher par
+     erreur, et ils commandent la seule chose de l'écran qu'on ne change jamais
+     deux fois. Rien d'autre sur le téléphone ne repasse sous le seuil. */
+  .fonds__bouton { min-height: 0; }
+  .leaflet-right .leaflet-control { margin-right: 1.375rem; }
+
   /* Toute la largeur, et plus la part du panneau : ici la feuille couvre
      l'écran entier. */
   .navigation { width: 100%; }
+
 
   /* Le panneau devient une feuille tirée depuis le bas, et elle monte d'un
      seul tenant jusque sous la frise : toute la scène, la carte recouverte.
@@ -1677,18 +1840,34 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
   }
   .panneau.est-ouvert { transform: translateY(0); }
 
-  /* Fermée, la poignée est une pastille au bas de l'écran — sous le pouce, sa
-     barre à saisir au-dessus du mot : elle annonce une feuille qui monte. */
+  /* Fermée, la poignée est une pastille au bas de l'écran — sous le pouce, son
+     chevron À GAUCHE du mot : c'est le patron des deux boutons de la bande du
+     bas, juste en dessous d'elle, un cadre qui porte un aplat coloré devant
+     son libellé. Les trois commandes du bord bas se lisent alors d'un même
+     coup d'œil — reculer d'un jour, avancer d'un jour, ouvrir le détail.
+
+     Au-dessus du mot, le chevron formait une colonne à lui seul : il grandissait
+     la pastille vers le haut, sur la carte, pour un signe qui a sa place sur la
+     ligne du texte qu'il commande. */
   .panneau__poignee {
     position: absolute;
-    left: 50%;
-    bottom: calc(var(--barre-h) + .75rem);
+    /* Posée à gauche et à même le filet, plutôt que centrée et flottant douze
+       points au-dessus. Elle s'aligne alors sur le bord gauche du bouton
+       « Précédent » qui la suit immédiatement, et son bord bas se pose sur le
+       filet coloré qui ouvre la bande : les trois commandes forment un bloc au
+       pied de l'écran au lieu d'une pastille en suspens sur la carte.
+
+       Ce qu'elle rend à la carte n'est pas rien : centrée, elle se posait en
+       plein milieu du tracé, là où l'œil suit la route. Dans le coin, elle
+       laisse le trajet tranquille. */
+    left: calc(1.375rem + env(safe-area-inset-left, 0px));
+    bottom: var(--barre-h);
     z-index: 1001;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
-    gap: .25rem;
-    padding: .5rem 1.25rem;
+    gap: .5rem;
+    padding: .375rem .875rem .375rem .5rem;
     border: 1px solid var(--nuit-3);
     background: var(--nuit-voile);
     backdrop-filter: blur(12px);
@@ -1697,13 +1876,39 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
     font-size: .6875rem;
     letter-spacing: .08em;
     text-transform: uppercase;
+    /* Le libellé tient sur une ligne. Sans cela il se cassait en deux dès que
+       le chevron est passé à sa gauche : posée à `left: 50%`, la pastille ne
+       peut s'étaler que sur la moitié droite de l'écran, et « Détail de la
+       journée » n'y tenait plus une fois vingt-quatre points pris par le
+       carré. Le `nowrap` lui fait dépasser cette moitié — la translation la
+       recentre ensuite sur l'écran entier, ce qu'on veut de toute façon. */
+    white-space: nowrap;
     cursor: pointer;
-    transform: translateX(-50%);
   }
-  .panneau__poignee-barre {
-    width: 2rem;
-    height: 2px;
-    background: var(--poussiere);
+  /* Le chevron porte le même aplat coloré dans les deux états : c'est ce qui
+     fait reconnaître, sur la poignée fermée, le signe qui refermera la feuille
+     une fois ouverte. Le même carré, la même couleur, retourné — l'un annonce
+     l'autre.
+
+     Vingt-quatre points ici contre trente-deux ouverte, et c'est la mesure des
+     chevrons de la bande du bas : comme eux, il voyage accompagné d'un libellé
+     qui l'annonce. Ouverte, la feuille le laisse seul dans son coin, et il lui
+     faut alors de quoi se signaler tout seul. */
+  .panneau__poignee-chevron {
+    display: block;
+    width: 1.5rem;
+    height: 1.5rem;
+    padding: .3125rem;
+    border-radius: 2px;
+    background: var(--soufre);
+    color: var(--sur-accent);
+  }
+  .panneau__poignee-chevron path {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
   }
 
   /* Ouverte, la feuille couvre tout l'écran : il n'y a plus de bord à tirer,
@@ -1711,19 +1916,107 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
      posé dessus se lisait à cheval sur le récit qui défile dessous. La poignée
      devient donc une croix dans le coin haut droit du cadre, à l'endroit où
      l'on ferme une fiche, et rend au passage sa hauteur pleine à la bande de
-     navigation. La barre à saisir s'en va avec le geste qu'elle annonçait. */
+     navigation. La barre à saisir s'en va avec le geste qu'elle annonçait.
+
+     Elle est opaque pour la même raison que les onglets qu'elle côtoie : posée
+     en haut de la feuille, elle a le récit qui défile dessous, pas la carte. */
   .panneau__poignee[data-hauteur="pleine"] {
-    top: .5rem;
-    right: .5rem;
+    /* Calée en haut à droite de la feuille, elle ne défile pas : le panneau
+       est son bloc conteneur. Une fois le récit lancé, la barre d'onglets
+       vient se coller au même bord — les deux occupent alors la même bande, et
+       il faut qu'elles s'y superposent exactement. À `.5rem` du haut, la croix
+       dépassait de sept points sous la barre et s'imprimait sur la première
+       ligne du texte. */
+    top: 0;
+    /* Aucun décalage : le carré de 32 points est centré dans les 44 du pavé, il
+       se pose donc à six points du bord droit — et le pavé étant calé à zéro du
+       haut, à six points aussi du filet qui ferme la frise. Les deux blancs
+       sont égaux, ce qui est ce qu'on lit dans un coin.
+
+       C'est ce qui décide de l'écart, et non la gouttière de 22 points du
+       reste de la page : l'aligner dessus l'aurait fait tomber six points plus
+       bas que le filet pour vingt-deux à droite, un coin visiblement de
+       travers. */
+    right: env(safe-area-inset-right, 0px);
     bottom: auto;
     left: auto;
     gap: 0;
-    padding: .1875rem .5rem .3125rem;
+    padding: 0;
     font-size: 1.25rem;
     line-height: 1;
+    /* Ni cadre ni fond : la bande derrière elle est déjà opaque et pleine
+       largeur, et le cadre la détachait en vignette posée sur la fiche au lieu
+       de la ranger dans l'en-tête avec les onglets. Reste le signe seul, au
+       bout de la ligne qu'il ferme. */
+    border: 0;
+    background: none;
+    backdrop-filter: none;
     transform: none;
   }
-  .panneau__poignee[data-hauteur="pleine"] .panneau__poignee-barre { display: none; }
+  /* Ouverte, le libellé s'efface : le chevron retourné dit à lui seul que la
+     feuille redescend, et un mot posé à côté de lui dans ce coin-là n'aurait
+     plus de place. */
+  .panneau__poignee[data-hauteur="pleine"] .panneau__poignee-texte { display: none; }
+
+  /* Le signe se pose sur un carré plein de la couleur d'accent : seul au bout
+     d'une ligne de texte, il ne se lisait pas comme une commande.
+
+     Carré, et au rayon de 2 points des pastilles d'habillage de l'entête
+     (`.habillages button`) — l'autre petit carré plein du site. Le reste de la
+     page est à angle vif : les cases des mesures, les fonds de carte, la bande
+     du bas. Un rond aurait fait de cette croix la seule forme courbe d'un
+     écran qui n'en a pas, et 2 points suffisent à ne pas donner un angle à 90°
+     à un aplat de 32.
+
+     Trente-deux points : plus large que les chevrons de la bande du bas, qui
+     voyagent accompagnés d'un libellé les annonçant, là où elle est seule dans
+     son coin et doit se signaler toute seule.
+
+     Le carré se dessine sur le libellé, pas sur le bouton : le bouton garde
+     ses 44 points de zone sensible, et l'aplat visible se centre dedans sans
+     l'enfler. La couleur d'accent, jamais une valeur en dur — sur les quatre
+     habillages, `--sur-accent` est ce qui se pose dessus. */
+  .panneau__poignee[data-hauteur="pleine"] .panneau__poignee-chevron {
+    width: 2rem;
+    height: 2rem;
+    padding: .375rem;
+    /* Le même dessin, retourné : vers le bas, du côté où la feuille s'en va.
+       Le carré et sa couleur viennent de la règle commune plus haut — ils sont
+       justement ce qui fait le lien entre les deux états. */
+    transform: rotate(180deg);
+  }
+
+  /* Le carré est calé dans le coin, et la première ligne de la fiche passe
+     juste dessous tant qu'on n'a pas fait défiler. Elle lui rend sa place.
+
+     Le carré mord de 16 points dans la colonne de texte ; la réserve en fait
+     32, soit seize de blanc garantis entre la fin de la ligne et l'aplat, même
+     si la ligne allait au bout de ce qu'on lui laisse. Aux tailles réelles
+     elle n'y va pas : la plus longue des quinze, J4, s'arrête 41 points avant.
+     La réserve n'est donc pas ce qui met le blanc, c'est le garde-fou du jour
+     où le texte s'allongerait.
+
+     Si ce jour arrive, la ligne cède et jamais le carré — et elle casse au
+     point médian, entre deux pays, un espace insécable retenant chaque drapeau
+     contre son nom (voir `gabaritFiche`). Le titre, lui, commence assez bas
+     pour n'avoir rien à céder. */
+  .fiche__jour { padding-right: 2rem; }
+
+  /* Le pays se lit un cran plus petit qu'en grand écran — 14 points contre 16.
+     La croix lui a pris son coin droit, et les deux journées qui traversent une
+     frontière, J4 et J11, n'y tenaient plus qu'en se repliant sur deux lignes.
+     Une ligne de plus dans l'en-tête d'une fiche qu'on lit sur un téléphone
+     coûte plus cher que deux points de corps.
+
+     Quatorze et non quinze : à quinze, J4 tenait sur sa ligne mais finissait à
+     neuf points du rond. Assez pour ne pas le toucher ici, trop peu pour un
+     iPhone, qui ne dessine pas les drapeaux à la même largeur que le
+     navigateur où cette mesure a été prise. À quatorze il reste 25 points de
+     blanc, de quoi absorber l'écart. Le crénage, lui, ne bouge pas : il est
+     hérité en pixels de `.fiche__jour`, et ne suit donc pas le corps.
+
+     En grand écran, rien ne change : il n'y a pas de croix dans ce coin-là. */
+  .fiche__pays { font-size: .875rem; }
 
   /* Les deux moitiés de la barre peuvent enfin se serrer. Sans `min-width: 0`,
      un bouton refusait de descendre sous la largeur de son libellé : « Tout le
@@ -1741,15 +2034,78 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
 
   /* Les onglets restent visibles quand on fait défiler la fiche : ils sont le
      seul moyen d'atteindre les souvenirs, les enterrer les rendrait aussi
-     difficiles à trouver qu'avant. */
+     difficiles à trouver qu'avant.
+
+     Fond OPAQUE, et non le voile du panneau. Une barre collante ne surplombe
+     pas la carte, elle surplombe son propre texte : à 93 % d'opacité, les 7 %
+     restants suffisaient à laisser lire deux lignes du récit par-dessus
+     « Étape » et « Carnet de route ». L'habillage Nuit, qui pose du texte
+     clair sur fond sombre, en faisait le défaut le plus visible du site. Le
+     flou de fond part avec le voile : il ne floutait que ce qu'on ne voulait
+     de toute façon pas voir, au prix d'une couche composée à chaque image
+     défilée. */
   .onglets {
     position: sticky;
     top: 0;
     z-index: 1;
-    margin-top: 1rem;
-    background: var(--nuit-voile);
-    backdrop-filter: blur(12px);
+    background: var(--nuit);
+    /* La bande file d'un bord à l'autre de la feuille. Bornée à la colonne de
+       texte, elle laissait deux gouttières de 22 points par où le récit
+       continuait de défiler à découvert — et la croix, posée dans celle de
+       droite, flottait alors au-dessus du texte comme une vignette détachée.
+       Les marges négatives annulent le rembourrage de la fiche, que le
+       rembourrage intérieur rend aussitôt au contenu : les onglets ne bougent
+       pas d'un pixel, c'est le fond qui s'étend sous eux. */
+    margin: 1rem calc(-1 * (1.375rem + env(safe-area-inset-right, 0px)))
+            1.125rem calc(-1 * (1.375rem + env(safe-area-inset-left, 0px)));
+    padding-left: calc(1.375rem + env(safe-area-inset-left, 0px));
+    /* À droite, la place de la croix : sans elle, un onglet un peu long — ou
+       sa pastille de décompte — passerait dessous. */
+    padding-right: calc(3.125rem + env(safe-area-inset-right, 0px));
   }
+}
+
+/* L'écran couché.
+
+   La bascule vers la feuille se joue sur la LARGEUR (48 rem plus haut) — et un
+   téléphone couché fait 844 points de large. Il recevait donc la mise en page
+   de bureau dans une fenêtre haute de 390 : l'entête et la frise en prenaient
+   186, soit 48 % de l'écran, et le panneau, réduit à ce qui restait, affichait
+   le titre de la journée, les onglets, et pas une ligne de récit — sans même
+   une barre de défilement pour dire qu'il y avait une suite.
+
+   Plutôt que de basculer en feuille — la fiche prendrait alors 844 points de
+   large, et le récit s'y lirait sur des lignes de cent-dix caractères —, on
+   garde les deux colonnes et on rend au panneau la hauteur que l'entête et la
+   frise lui prenaient. Tout ce qui est ici est une question de hauteur : rien
+   n'y touche à la largeur, et le bureau, qui a de la place en haut, n'en voit
+   rien. */
+@media (max-height: 30rem) {
+  :root {
+    --bandeau-h: 2.25rem;
+    /* La frise garde son tracé à taille réelle : ce sont ses marges qui se
+       resserrent (voir `dessinerFrise`), pas le relief qui s'aplatit. Une
+       frise plate ne dirait plus rien d'un voyage qui monte à 5 000 mètres. */
+    --frise-h: 6.5rem;
+  }
+  .frise__svg { height: 5.75rem; }
+
+  /* Le sur-titre s'en va. Trois lignes d'entête sur un écran haut de 390
+     points, c'en est une de trop, et c'est celle qui en dit le moins : la
+     durée et l'opérateur se retrouvent dans la fiche d'accueil. */
+  .eyebrow { display: none; }
+  .bandeau { gap: .25rem 1rem; }
+  .bandeau__titre { font-size: 1.0625rem; }
+
+  /* L'entête de la fiche se resserre : sur un écran court, chaque ligne rendue
+     au récit compte double. Le numéro de journée et le titre restent les deux
+     plus gros caractères du panneau — c'est leur écart au reste qui compte,
+     pas leur taille absolue. */
+  .fiche { padding-top: .5rem; }
+  .fiche__numero { font-size: 1.25rem; }
+  .fiche__titre { margin: .125rem 0 .5rem; font-size: 1.25rem; }
+  .onglets { margin-top: .5rem; margin-bottom: .625rem; }
+  .mesures, .chiffres { gap: .5rem 1rem; margin-bottom: .75rem; padding-bottom: .75rem; }
 }
 
 @media (max-width: 30rem) {

@@ -80,7 +80,13 @@
   </div>
 
   <button type="button" class="panneau__poignee" id="poignee" aria-expanded="false" aria-controls="panneau">
-    <span class="panneau__poignee-barre" aria-hidden="true"></span>
+    <!-- Un seul chevron, dessiné une fois et retourné par la CSS selon l'état :
+         il pointe vers le haut quand la feuille est à monter, vers le bas quand
+         elle est à redescendre. Il remplace la barre à saisir d'avant, qui
+         annonçait le même geste sans dire dans quel sens. -->
+    <svg class="panneau__poignee-chevron" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+      <path d="M3.5 10 8 5.5 12.5 10"/>
+    </svg>
     <!-- Le libellé de départ est celui de la page d'accueil, où la visite
          commence ; `majPoignee` le change dès qu'une journée est choisie. -->
     <span class="panneau__poignee-texte" id="poignee-texte">Détail du parcours</span>

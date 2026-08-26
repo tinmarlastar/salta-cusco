@@ -610,7 +610,10 @@ const LIBELLES_FEUILLE = {
     etape: { texte: 'Détail de la journée', enonce: 'Voir le détail de la journée' },
     accueil: { texte: 'Détail du parcours', enonce: 'Voir le détail du parcours' },
   },
-  pleine: { texte: '×', enonce: 'Replier le détail' },
+  // Ouverte, la poignée n'a plus de mot : le chevron retourné dit à lui seul
+  // que la feuille redescend. La phrase reste en `aria-label`, pour qui n'a
+  // que la voix — un chevron ne s'énonce pas.
+  pleine: { texte: '', enonce: 'Replier le détail' },
 };
 
 function libelleFeuille() {

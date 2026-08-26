@@ -1840,10 +1840,21 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
     cursor: pointer;
     transform: translateX(-50%);
   }
-  .panneau__poignee-barre {
-    width: 2rem;
-    height: 2px;
-    background: var(--poussiere);
+  /* Fermée, la poignée montre un chevron vers le haut au-dessus de son
+     libellé : il dit le sens du geste, là où la barre à saisir qu'il remplace
+     annonçait bien qu'on pouvait tirer, mais pas vers où. */
+  .panneau__poignee-chevron {
+    display: block;
+    width: 1.125rem;
+    height: 1.125rem;
+    color: var(--poussiere);
+  }
+  .panneau__poignee-chevron path {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
   }
 
   /* Ouverte, la feuille couvre tout l'écran : il n'y a plus de bord à tirer,
@@ -1863,12 +1874,16 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
        dépassait de sept points sous la barre et s'imprimait sur la première
        ligne du texte. */
     top: 0;
-    /* Le bord droit de la pastille tombe sur la gouttière du site — les 22
-       points où s'alignent déjà les onglets au-dessus d'elle et les boutons
-       précédent/suivant en dessous. Collée au bord de l'écran, elle était la
-       seule chose de la feuille à ne pas suivre cette colonne. Un rem : la
-       moitié des 12 points que le pavé de 44 laisse autour du rond de 32. */
-    right: calc(1rem + env(safe-area-inset-right, 0px));
+    /* Aucun décalage : le carré de 32 points est centré dans les 44 du pavé, il
+       se pose donc à six points du bord droit — et le pavé étant calé à zéro du
+       haut, à six points aussi du filet qui ferme la frise. Les deux blancs
+       sont égaux, ce qui est ce qu'on lit dans un coin.
+
+       C'est ce qui décide de l'écart, et non la gouttière de 22 points du
+       reste de la page : l'aligner dessus l'aurait fait tomber six points plus
+       bas que le filet pour vingt-deux à droite, un coin visiblement de
+       travers. */
+    right: env(safe-area-inset-right, 0px);
     bottom: auto;
     left: auto;
     gap: 0;
@@ -1884,7 +1899,10 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
     backdrop-filter: none;
     transform: none;
   }
-  .panneau__poignee[data-hauteur="pleine"] .panneau__poignee-barre { display: none; }
+  /* Ouverte, le libellé s'efface : le chevron retourné dit à lui seul que la
+     feuille redescend, et un mot posé à côté de lui dans ce coin-là n'aurait
+     plus de place. */
+  .panneau__poignee[data-hauteur="pleine"] .panneau__poignee-texte { display: none; }
 
   /* Le signe se pose sur un carré plein de la couleur d'accent : seul au bout
      d'une ligne de texte, il ne se lisait pas comme une commande.
@@ -1904,36 +1922,32 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
      ses 44 points de zone sensible, et l'aplat visible se centre dedans sans
      l'enfler. La couleur d'accent, jamais une valeur en dur — sur les quatre
      habillages, `--sur-accent` est ce qui se pose dessus. */
-  .panneau__poignee[data-hauteur="pleine"] .panneau__poignee-texte {
-    display: grid;
-    place-items: center;
+  .panneau__poignee[data-hauteur="pleine"] .panneau__poignee-chevron {
     width: 2rem;
     height: 2rem;
+    padding: .375rem;
     border-radius: 2px;
     background: var(--soufre);
     color: var(--sur-accent);
-    font-size: 1.0625rem;
-    line-height: 1;
+    /* Le même dessin, retourné : vers le bas, du côté où la feuille s'en va. */
+    transform: rotate(180deg);
   }
 
-  /* La croix est calée dans le coin, et la première ligne de la fiche passe
-     juste dessous : sur J4, « ARGENTINE · CHILI » venait finir à six points
-     d'elle. Elle lui rend donc sa place — mais tout juste.
+  /* Le carré est calé dans le coin, et la première ligne de la fiche passe
+     juste dessous tant qu'on n'a pas fait défiler. Elle lui rend sa place.
 
-     Le pavé de la croix mord de 22 points dans la colonne de texte : c'est
-     tout ce qu'il faut lui céder. À 50, la réserve était si large que « 🇨🇱
-     CHILI » passait à la ligne suivante, séparé de son drapeau — un défaut pire
-     que celui qu'on corrigeait. Le signe lui-même étant centré dans son pavé,
-     ces 40 points laissent une vingtaine de blanc à l'œil jusqu'au rond. Huit
-     de plus que ce que le rond mord dans la colonne, et c'est voulu : à 32, la
-     ligne de J11 finissait à deux points du rond sans se replier — assez pour
-     ne pas le toucher, bien trop peu pour ne pas s'y cogner du regard. La
-     règle est maintenant nette : une journée à deux pays replie sa liste sur
-     deux lignes, ce qui est le comportement voulu : la ligne cède, jamais la croix — et elle casse au
+     Le carré mord de 16 points dans la colonne de texte ; la réserve en fait
+     32, soit seize de blanc garantis entre la fin de la ligne et l'aplat, même
+     si la ligne allait au bout de ce qu'on lui laisse. Aux tailles réelles
+     elle n'y va pas : la plus longue des quinze, J4, s'arrête 41 points avant.
+     La réserve n'est donc pas ce qui met le blanc, c'est le garde-fou du jour
+     où le texte s'allongerait.
+
+     Si ce jour arrive, la ligne cède et jamais le carré — et elle casse au
      point médian, entre deux pays, un espace insécable retenant chaque drapeau
      contre son nom (voir `gabaritFiche`). Le titre, lui, commence assez bas
      pour n'avoir rien à céder. */
-  .fiche__jour { padding-right: 2.5rem; }
+  .fiche__jour { padding-right: 2rem; }
 
   /* Le pays se lit un cran plus petit qu'en grand écran — 14 points contre 16.
      La croix lui a pris son coin droit, et les deux journées qui traversent une

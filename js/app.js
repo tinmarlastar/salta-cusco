@@ -412,11 +412,21 @@ const ICONE_MAISON = `<svg viewBox="0 0 16 16" width="14" height="14" aria-hidde
   <path d="M6.6 13.6v-3.1h2.8v3.1"/>
 </svg>`;
 
+// Chaque destination se dit de deux façons : au long, et en court pour les
+// écrans étroits, où la moitié de barre qui l'accueille ne fait plus que la
+// moitié d'un téléphone — « J13 Quince Mil » en débordait. Les deux libellés
+// sont écrits dans la page, la CSS choisit ; les calculer en JavaScript
+// d'après la largeur de la fenêtre aurait refait à la main ce qu'une media
+// query fait seule, et il aurait fallu tout réafficher à chaque rotation.
 const CIBLE_ACCUEIL = {
-  cle: 'accueil', sens: 'Accueil', libelle: 'Tout le parcours', icone: ICONE_MAISON,
+  cle: 'accueil', sens: 'Accueil', libelle: 'Tout le parcours', court: 'Parcours',
+  icone: ICONE_MAISON,
 };
-const cibleEtape = (etape) =>
-  (etape ? { cle: etape.jour, libelle: `J${etape.jour} ${etape.arrivee.nom}` } : null);
+// Le numéro suffit en court : c'est le nom que la frise donne aux journées, et
+// celui par lequel on les nomme partout ailleurs sur le site.
+const cibleEtape = (etape) => (etape
+  ? { cle: etape.jour, libelle: `J${etape.jour} ${etape.arrivee.nom}`, court: `J${etape.jour}` }
+  : null);
 
 /** La barre « précédent / suivant », en pied de panneau.
 
@@ -436,8 +446,11 @@ function gabaritNavigation(precedent, suivant) {
   // il tient la moitié de la barre — les lecteurs d'écran n'ont rien à en
   // dire.
   const vide = '<button type="button" disabled aria-hidden="true"></button>';
+  const destination = (cible) =>
+    `<span class="navigation__long">${echapper(cible.libelle)}</span>`
+    + `<span class="navigation__court">${echapper(cible.court)}</span>`;
   const texte = (cible, sens) =>
-    `<span class="navigation__texte"><span>${cible.sens || sens}</span>${echapper(cible.libelle)}</span>`;
+    `<span class="navigation__texte"><span class="navigation__sens">${cible.sens || sens}</span>${destination(cible)}</span>`;
   const ouvrir = (cible) => `<button type="button" data-jour="${echapper(cible.cle)}">`;
 
   return `<div class="navigation">

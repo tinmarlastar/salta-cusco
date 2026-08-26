@@ -1817,18 +1817,25 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
   }
   .panneau.est-ouvert { transform: translateY(0); }
 
-  /* Fermée, la poignée est une pastille au bas de l'écran — sous le pouce, sa
-     barre à saisir au-dessus du mot : elle annonce une feuille qui monte. */
+  /* Fermée, la poignée est une pastille au bas de l'écran — sous le pouce, son
+     chevron À GAUCHE du mot : c'est le patron des deux boutons de la bande du
+     bas, juste en dessous d'elle, un cadre qui porte un aplat coloré devant
+     son libellé. Les trois commandes du bord bas se lisent alors d'un même
+     coup d'œil — reculer d'un jour, avancer d'un jour, ouvrir le détail.
+
+     Au-dessus du mot, le chevron formait une colonne à lui seul : il grandissait
+     la pastille vers le haut, sur la carte, pour un signe qui a sa place sur la
+     ligne du texte qu'il commande. */
   .panneau__poignee {
     position: absolute;
     left: 50%;
     bottom: calc(var(--barre-h) + .75rem);
     z-index: 1001;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
-    gap: .25rem;
-    padding: .5rem 1.25rem;
+    gap: .5rem;
+    padding: .375rem .875rem .375rem .5rem;
     border: 1px solid var(--nuit-3);
     background: var(--nuit-voile);
     backdrop-filter: blur(12px);
@@ -1837,17 +1844,33 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
     font-size: .6875rem;
     letter-spacing: .08em;
     text-transform: uppercase;
+    /* Le libellé tient sur une ligne. Sans cela il se cassait en deux dès que
+       le chevron est passé à sa gauche : posée à `left: 50%`, la pastille ne
+       peut s'étaler que sur la moitié droite de l'écran, et « Détail de la
+       journée » n'y tenait plus une fois vingt-quatre points pris par le
+       carré. Le `nowrap` lui fait dépasser cette moitié — la translation la
+       recentre ensuite sur l'écran entier, ce qu'on veut de toute façon. */
+    white-space: nowrap;
     cursor: pointer;
     transform: translateX(-50%);
   }
-  /* Fermée, la poignée montre un chevron vers le haut au-dessus de son
-     libellé : il dit le sens du geste, là où la barre à saisir qu'il remplace
-     annonçait bien qu'on pouvait tirer, mais pas vers où. */
+  /* Le chevron porte le même aplat coloré dans les deux états : c'est ce qui
+     fait reconnaître, sur la poignée fermée, le signe qui refermera la feuille
+     une fois ouverte. Le même carré, la même couleur, retourné — l'un annonce
+     l'autre.
+
+     Vingt-quatre points ici contre trente-deux ouverte, et c'est la mesure des
+     chevrons de la bande du bas : comme eux, il voyage accompagné d'un libellé
+     qui l'annonce. Ouverte, la feuille le laisse seul dans son coin, et il lui
+     faut alors de quoi se signaler tout seul. */
   .panneau__poignee-chevron {
     display: block;
-    width: 1.125rem;
-    height: 1.125rem;
-    color: var(--poussiere);
+    width: 1.5rem;
+    height: 1.5rem;
+    padding: .3125rem;
+    border-radius: 2px;
+    background: var(--soufre);
+    color: var(--sur-accent);
   }
   .panneau__poignee-chevron path {
     fill: none;
@@ -1926,10 +1949,9 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
     width: 2rem;
     height: 2rem;
     padding: .375rem;
-    border-radius: 2px;
-    background: var(--soufre);
-    color: var(--sur-accent);
-    /* Le même dessin, retourné : vers le bas, du côté où la feuille s'en va. */
+    /* Le même dessin, retourné : vers le bas, du côté où la feuille s'en va.
+       Le carré et sa couleur viennent de la règle commune plus haut — ils sont
+       justement ce qui fait le lien entre les deux états. */
     transform: rotate(180deg);
   }
 

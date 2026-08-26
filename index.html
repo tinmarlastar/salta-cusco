@@ -81,7 +81,9 @@
 
   <button type="button" class="panneau__poignee" id="poignee" aria-expanded="false" aria-controls="panneau">
     <span class="panneau__poignee-barre" aria-hidden="true"></span>
-    <span id="poignee-texte">Voir le détail</span>
+    <!-- Le libellé de départ est celui de la page d'accueil, où la visite
+         commence ; `majPoignee` le change dès qu'une journée est choisie. -->
+    <span id="poignee-texte">Détail du parcours</span>
   </button>
 
   <aside class="panneau" id="panneau" tabindex="-1" aria-live="polite"></aside>

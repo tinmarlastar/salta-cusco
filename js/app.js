@@ -151,6 +151,7 @@ function choisir(jour, { recentrer = true, majAdresse = true } = {}) {
 
   etat.carte.montrerEtape(etape, { recentrer });
   afficherPanneau(etape);
+  majPoignee();
   redessinerFrise();
 
   if (majAdresse) {
@@ -556,19 +557,42 @@ function gabaritFiche(etape) {
 // le coin, comme sur toute fiche qu'on ferme, et non plus par un mot au bas
 // d'une page dont le bas est déjà pris par la navigation. Le signe seul ne
 // nommant rien, la phrase reste — en `aria-label`, pour qui n'a que la voix.
+//
+// Fermée, la poignée nomme ce qu'elle va ouvrir plutôt que le geste : sous la
+// carte du parcours entier, « Voir le détail » laissait croire au détail d'une
+// journée — celle qu'on venait peut-être de quitter — alors que la feuille
+// contient les chiffres et la présentation du voyage. Le libellé suit donc la
+// sélection, et c'est le seul endroit de l'écran qui dise, feuille fermée, ce
+// qu'on va lire.
 const LIBELLES_FEUILLE = {
-  fermee: { texte: 'Voir le détail', enonce: 'Voir le détail de la journée' },
+  fermee: {
+    etape: { texte: 'Détail de la journée', enonce: 'Voir le détail de la journée' },
+    accueil: { texte: 'Détail du parcours', enonce: 'Voir le détail du parcours' },
+  },
   pleine: { texte: '×', enonce: 'Replier le détail' },
 };
+
+function libelleFeuille() {
+  if (etat.feuille !== 'fermee') return LIBELLES_FEUILLE.pleine;
+  return etat.jour === null ? LIBELLES_FEUILLE.fermee.accueil : LIBELLES_FEUILLE.fermee.etape;
+}
+
+/** Réaccorde la poignée à ce qu'elle ouvrirait. Appelée aussi bien quand la
+    feuille bouge que quand la journée change sous elle : depuis la bande
+    précédent/suivant, on passe du parcours entier à J1 sans jamais toucher à
+    la feuille, et la poignée annoncerait sinon la page qu'on vient de quitter. */
+function majPoignee() {
+  const libelle = libelleFeuille();
+  elements.poigneeTexte.textContent = libelle.texte;
+  elements.poignee.setAttribute('aria-label', libelle.enonce);
+}
 
 function reglerFeuille(hauteur) {
   etat.feuille = hauteur;
   elements.panneau.classList.toggle('est-ouvert', hauteur === 'pleine');
   elements.poignee.dataset.hauteur = hauteur;
   elements.poignee.setAttribute('aria-expanded', String(hauteur !== 'fermee'));
-  const libelle = LIBELLES_FEUILLE[hauteur];
-  elements.poigneeTexte.textContent = libelle.texte;
-  elements.poignee.setAttribute('aria-label', libelle.enonce);
+  majPoignee();
   // `preventScroll` : sans lui, donner le focus au panneau demande au
   // navigateur de l'amener en vue — et à cet instant la feuille est encore
   // glissée sous le bord bas de la scène, qu'elle déborde donc de sa propre

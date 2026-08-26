@@ -1640,6 +1640,49 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
 
 /* --------------------------------------------------------------- mobile */
 
+/* Ce que le doigt doit pouvoir viser.
+
+   `pointer: coarse` plutôt qu'une largeur : ce n'est pas la taille de l'écran
+   qui décide, c'est ce qui le touche. Un téléphone couché fait 844 points de
+   large et reste un téléphone ; un moniteur de 1 000 points reste piloté à la
+   souris, et n'a que faire de commandes grossies. La règle suit donc le doigt,
+   dans les deux orientations, et laisse le bureau tranquille.
+
+   La mesure d'avant, au doigt : quatre pastilles d'habillage de 18 points, les
+   trois fonds de carte hauts de 23, les onglets de 32, le zoom de Leaflet de
+   30. Le confort commence à 44. */
+@media (pointer: coarse) {
+  /* Les pastilles ne changent pas de taille : les grossir les élargissait
+     aussi, et la rangée poussait alors le titre sur une ligne de plus — dix-neuf
+     points d'entête pris sur la carte, mesure faite. Seule la zone sensible
+     déborde du dessin, et le dessin ne bouge pas d'un pixel.
+
+     En hauteur, de quoi atteindre 44 points, pris dans le rembourrage de
+     l'entête. En largeur, exactement la moitié de l'écart qui sépare deux
+     pastilles : les quatre zones se touchent alors sans se recouvrir. Aucun
+     appui ne tombe plus entre deux, et aucun ne revient à la voisine. */
+  .habillages button { position: relative; }
+  .habillages button::before {
+    content: "";
+    position: absolute;
+    inset: -.8125rem -.15625rem;
+  }
+
+  /* Ces trois-là s'agrandissent pour de bon : ils ont la place, et leur
+     hauteur d'avant tenait d'un dessin pensé pour le curseur. */
+  .fonds__bouton { min-height: 2.75rem; }
+  .onglets__bouton { min-height: 2.75rem; }
+
+  /* Le zoom de Leaflet, laissé à 30 points par la feuille du greffon. La règle
+     reprend son sélecteur pour la surcharger à égalité de poids — notre
+     feuille est chargée après la sienne. */
+  .leaflet-touch .leaflet-bar a {
+    width: 2.75rem;
+    height: 2.75rem;
+    line-height: 2.75rem;
+  }
+}
+
 @media (max-width: 60rem) {
   /* La variable n'a plus d'effet sur la largeur, désormais à 50 % ; elle reste
      comme repère pour d'éventuels retours en arrière. */

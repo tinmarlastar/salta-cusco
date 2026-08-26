@@ -35,6 +35,16 @@
      couleur que son propre fond, donc invisible. */
   --sur-media: #ffffff;
 
+  /* L'accent tel qu'on l'ÉCRIT, par opposition à l'accent dont on peint un
+     fond. Les deux se confondent sur les habillages sombres ; sur papier
+     clair, l'accent qui fait un beau bouton devient une encre trop pâle —
+     mesuré à 2,69 pour la phrase de la frise en « Sel », quand il en faut 4,5
+     pour du texte courant. D'où ce second jeton, assombri juste ce qu'il faut
+     dans les deux habillages concernés, et laissé égal à l'accent partout
+     ailleurs. Règle : `--soufre` pour ce qui est peint (fonds, bordures,
+     tracés), `--accent-encre` pour ce qui est lu. */
+  --accent-encre: var(--soufre);
+
   --voile-media:      rgba(16, 27, 49, .78);  /* boutons posés sur une photo */
   --voile-visionneuse:rgba(8, 13, 24, .94);
   --ombre:            rgba(8, 13, 24, .5);
@@ -103,8 +113,9 @@
 
   --sel:       #1b2433;
   --texte-2:   #3b4557;
-  --poussiere: #6d7686;
+  --poussiere: #666e7d;  /* 4,63 sur le papier : 4,13 avant, sous le seuil */
   --soufre:    #c8891b;
+  --accent-encre: #936514;  /* 4,61 — voir `--accent-encre` plus haut */
   --colorada:  #b8442c;
 
   /* Encre et non blanc : sur ce jaune, le blanc tombe à 2,98 de contraste,
@@ -132,8 +143,9 @@
 
   --sel:       #33291d;
   --texte-2:   #4e4132;
-  --poussiere: #7d6c55;
+  --poussiere: #74644f;  /* 4,65 sur le sable : 4,12 avant, sous le seuil */
   --soufre:    #1c7a72;
+  --accent-encre: #1a736b;  /* 4,61 — voir `--accent-encre` plus haut */
   --colorada:  #bf4326;
 
   --sur-accent: #fbf7ee;
@@ -267,7 +279,7 @@ h1, h2, h3 { margin: 0; line-height: 1.1; }
 }
 
 .bandeau__titre span {
-  color: var(--soufre);
+  color: var(--accent-encre);
   font-stretch: 100%;
   font-weight: 500;
   text-transform: none;
@@ -413,7 +425,7 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
   font-variant-numeric: tabular-nums;
 }
 
-.chiffres dd b { font-weight: 500; color: var(--soufre); }
+.chiffres dd b { font-weight: 500; color: var(--accent-encre); }
 
 /* Boutons de fond de carte */
 
@@ -537,7 +549,7 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
   transition: color var(--transition), border-color var(--transition);
 }
 .onglets__bouton:hover { color: var(--sel); }
-.onglets__bouton.est-actif { color: var(--soufre); border-bottom-color: var(--soufre); }
+.onglets__bouton.est-actif { color: var(--accent-encre); border-bottom-color: var(--accent-encre); }
 
 .onglets__compte {
   min-width: 1.125rem;
@@ -571,7 +583,7 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
 }
 
 .fiche__numero {
-  color: var(--soufre);
+  color: var(--accent-encre);
   font-size: 1.5rem;
   font-weight: 500;
   letter-spacing: 0;
@@ -707,10 +719,10 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
   text-align: left;
   cursor: pointer;
 }
-.points button:hover .points__nom { color: var(--soufre); }
+.points button:hover .points__nom { color: var(--accent-encre); }
 
 .points__nom { font-size: .875rem; font-weight: 600; transition: color var(--transition); }
-.points__nom em { font-family: var(--mono); font-size: .6875rem; font-style: normal; font-weight: 400; color: var(--soufre); }
+.points__nom em { font-family: var(--mono); font-size: .6875rem; font-style: normal; font-weight: 400; color: var(--accent-encre); }
 .points__note { font-size: .8125rem; line-height: 1.5; color: var(--poussiere); }
 
 /* Navigation entre étapes */
@@ -999,7 +1011,7 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
   font-family: var(--manuscrite);
   font-size: 1.0625rem;
   font-weight: 600;
-  fill: var(--soufre);
+  fill: var(--accent-encre);
   paint-order: stroke;
   stroke: var(--nuit);
   stroke-width: 3px;
@@ -1009,7 +1021,7 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
 
 .frise__ici-fleche {
   fill: none;
-  stroke: var(--soufre);
+  stroke: var(--accent-encre);
   stroke-width: 1.5;
   stroke-linecap: round;
   stroke-linejoin: round;
@@ -1155,7 +1167,7 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
   color: var(--poussiere);
 }
 .souvenir__entete b { color: var(--sel); font-weight: 500; }
-.souvenir__entete em { font-style: normal; color: var(--soufre); }
+.souvenir__entete em { font-style: normal; color: var(--accent-encre); }
 
 .souvenir__media {
   display: block;
@@ -1188,7 +1200,7 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
   cursor: pointer;
   transition: color var(--transition), border-color var(--transition);
 }
-.souvenir__actions button:hover { border-color: var(--soufre); color: var(--soufre); }
+.souvenir__actions button:hover { border-color: var(--soufre); color: var(--accent-encre); }
 
 /* Galerie : une photo seule garde toute la largeur, plusieurs passent en
    grille. `minmax(0, 1fr)` et non `1fr` — sans le zéro, une image large force
@@ -1243,7 +1255,7 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
 .souvenir__consigne {
   margin: .375rem 0 0;
   font-size: .8125rem;
-  color: var(--soufre);
+  color: var(--accent-encre);
 }
 
 /* Le fichier joint d'une entrée en attente : dire qu'il est gardé évite de
@@ -1288,7 +1300,7 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
   font-size: .6875rem;
   letter-spacing: .12em;
   text-transform: uppercase;
-  color: var(--soufre);
+  color: var(--accent-encre);
 }
 .souvenir-form__titre::after {
   content: '';
@@ -1323,7 +1335,7 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
    l'autre se voie du coin de l'œil, sans avoir à lire. */
 .souvenir-form__badge.est-compagnon {
   border-color: var(--soufre);
-  color: var(--soufre);
+  color: var(--accent-encre);
 }
 
 .souvenir-form__statut-detail { flex: 1 1 8rem; }
@@ -1341,7 +1353,7 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
   cursor: pointer;
   transition: border-color var(--transition), color var(--transition);
 }
-.souvenir-form__changer:hover { border-color: var(--soufre); color: var(--soufre); }
+.souvenir-form__changer:hover { border-color: var(--soufre); color: var(--accent-encre); }
 
 .souvenir-form__champ {
   display: block;
@@ -1480,7 +1492,7 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
   transition: border-color var(--transition), color var(--transition);
 }
 .visionneuse__fermer:hover,
-.visionneuse__fleche:hover { border-color: var(--soufre); color: var(--soufre); }
+.visionneuse__fleche:hover { border-color: var(--soufre); color: var(--accent-encre); }
 .visionneuse__fleche[hidden] { display: none; }
 
 .visionneuse__fermer {
@@ -1591,7 +1603,7 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
   transition: color var(--transition), border-color var(--transition);
 }
 .admin-nav__bouton:hover { color: var(--sel); }
-.admin-nav__bouton[aria-pressed="true"] { color: var(--soufre); border-left-color: var(--soufre); }
+.admin-nav__bouton[aria-pressed="true"] { color: var(--accent-encre); border-left-color: var(--soufre); }
 
 /* Sur téléphone, le menu passe de colonne verticale à barre d'onglets
    horizontale sous l'en-tête — même patron que .onglets sur le site public.

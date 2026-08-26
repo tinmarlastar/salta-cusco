@@ -4,8 +4,9 @@ Carte interactive du raid moto Vintage Rides de Salta (Argentine) à Cusco (Pér
 3 036 km dont 875 km de piste, quatre pays andins, quinze jours.
 
 Le site tient en trois écrans : une carte qui porte tout le parcours, une fiche
-par jour, et une frise du bas qui est en réalité le profil d'altitude du voyage
-entier — les quinze jours y sont posés sur la silhouette réelle du trajet.
+par jour, et une frise en tête de page qui est en réalité le profil d'altitude
+du voyage entier — les quinze jours y sont posés sur la silhouette réelle du
+trajet.
 
 ## Le faire tourner chez soi
 
@@ -78,14 +79,21 @@ css/style.css         toute la mise en forme
 js/app.js             état, panneau, navigation entre étapes
 js/carte.js           carte Leaflet : fonds, traces, jalons
 js/profil.js          la frise et les profils d'altitude, en SVG
+js/souvenirs*.js      le carnet de route : service, file d'attente, affichage
+admin.html, js/admin.js  la modération, hors du site public
 data/etapes.json      le contenu éditorial des quinze jours
 data/parcours.geojson les traces et les relevés d'altitude
+data/config.json      l'adresse du service du carnet
 img/etapes/           les photos, extraites de la brochure
 tools/                les deux scripts de fabrication
+worker/               le service Cloudflare du carnet (D1 + R2)
 ```
 
-Leaflet est embarqué dans `js/vendor/` : le site ne dépend d'aucun CDN ni
-d'aucune clé d'API. Les trois fonds de carte (satellite Esri, relief
+Leaflet est embarqué dans `js/vendor/` : aucune bibliothèque n'est appelée à
+distance, et le site n'utilise aucune clé d'API. Restent deux dépendances
+extérieures : les tuiles des fonds de carte, et les trois polices, chargées
+depuis Google Fonts (`index.html`). Sans réseau, le texte s'affiche dans les
+polices de l'appareil — `display=swap` — et la carte reste grise. Les trois fonds de carte (satellite Esri, relief
 OpenTopoMap, plan CARTO) sont libres d'accès avec attribution.
 
 ## Ce que le tracé vaut
@@ -133,9 +141,10 @@ allumée, un second surlignage y ferait deux journées actives à la fois.
 **Le panneau a deux onglets**, *Étape* et *Carnet de route*. Il s'ouvre sur le
 carnet quand la journée a reçu des notes, sur l'étape sinon — c'est ce qu'on vient
 chercher. Un clic sur un onglet tient jusqu'au changement de journée. La barre
-« journée précédente / suivante » est collée au bas du panneau, donc toujours
-atteignable : elle vivait auparavant après le récit et toutes les notes,
-c'est-à-dire une page entière de défilement plus bas.
+« journée précédente / suivante » vit hors du panneau, au pied de la scène,
+donc toujours atteignable : elle borde la carte quand la feuille est fermée et
+le récit quand elle est ouverte. Elle vivait auparavant après le récit et toutes
+les notes, c'est-à-dire une page entière de défilement plus bas.
 
 La même barre ferme aussi la fiche d'accueil, où elle n'a qu'une moitié —
 « Suivant · J1 Salta » — et depuis J1 le retour ramène à l'accueil, sous le
@@ -146,11 +155,22 @@ intitulé ni chevron : un « Suivant — » grisé annonçait une suite qui n'ex
 pas. L'onglet *Étape* garde ce qui décrit la
 journée — chiffres, profil, récit, points — et laisse les notes au sien.
 
-**Sur téléphone**, la fiche est une feuille à trois hauteurs, que la poignée
-fait défiler : repliée, à mi-hauteur, pleine. La position intermédiaire est
-réglée pour laisser voir le titre, les onglets et la première rangée de photos
-sans masquer la carte — c'est elle qui remplace les deux gestes qu'il fallait
-faire avant pour atteindre le carnet.
+**Sur téléphone**, la fiche est une feuille tirée depuis le bas, à deux
+hauteurs : fermée, ou pleine — elle monte alors d'un seul tenant jusque sous la
+frise, la carte recouverte. Les hauteurs partielles d'avant donnaient une
+lucarne où la fiche se lisait par tiers ; sur un écran de téléphone, garder la
+carte visible pendant qu'on lit le récit coûte plus qu'elle ne rapporte. La
+frise, elle, reste toujours au-dessus : c'est la seule navigation du site.
+
+La poignée dit « + d'infos » et porte un chevron qui montre où va la feuille ;
+ouverte, le chevron seul suffit à la refermer, et l'`aria-label` continue de
+dire ce qui s'ouvre — le détail de la journée, ou celui du parcours entier
+depuis l'accueil. L'entête, lui, se resserre : « Tout le parcours » s'efface (le
+titre y ramène) et les quatre pastilles d'habillage tiennent le coin haut droit.
+
+Toujours sur téléphone, la frise déborde de l'écran — 704 points pour 375. Elle
+se cale donc sur ce qu'on vient regarder : la journée ouverte, ou, depuis
+l'accueil, l'endroit où en sont les motos.
 
 ## Le carnet de route
 
@@ -229,9 +249,9 @@ Aux deux bouts du voyage, la frise annonce une date plutôt qu'un lieu :
 le… » une fois J15 atteint. L'automatique les déduit de la date de départ ;
 en manuel, un champ de date paraît dans le module — et seulement à ces deux
 moments-là, « Pas encore partis » et la dernière journée, les seuls où il y
-a quelque chose à dater. Laissé vide, la frise s'en tient à « Nous sommes
-ici ! ». Une date saisie n'est jamais perdue en changeant de journée : elle
-ressort le moment venu.
+a quelque chose à dater. Laissé vide, la frise dit « Nous ne sommes pas encore
+partis ! » avant le départ, et « Nous sommes ici ! » en chemin. Une date saisie
+n'est jamais perdue en changeant de journée : elle ressort le moment venu.
 
 ### Développer en local
 
@@ -257,15 +277,16 @@ MOT_DE_PASSE_GROUPE=...
 MOT_DE_PASSE_ADMIN=...
 ```
 
-> **Important — sécurité.** Le plan d'implémentation de cette fonctionnalité,
-> commité dans ce dépôt (donc public s'il est hébergé sur GitHub), utilise en
-> exemple les mots de passe de développement `uyuni2026` et `admin-de-test`.
-> Ils sont visibles par quiconque lit l'historique du dépôt. **Ne jamais les
+> **Important — sécurité.** Les mots de passe de développement `uyuni2026` et
+> `admin-de-test` ont servi d'exemple dans le plan d'implémentation de cette
+> fonctionnalité. Ils n'apparaissent plus dans les fichiers d'aujourd'hui, mais
+> restent lisibles dans l'historique du dépôt, public s'il est hébergé sur
+> GitHub. **Ne jamais les
 > réutiliser comme mots de passe de production** : choisir, au moment du
 > déploiement (étape « Poser les deux mots de passe » ci-dessous), deux mots
 > de passe différents de ceux-là.
 
-Tests des fonctions d'autorisation et de la file d'attente hors-ligne (12
+Tests des fonctions d'autorisation et de la file d'attente hors-ligne (24
 tests) :
 
 ```bash
@@ -349,7 +370,7 @@ le compte Cloudflare. Elles ne demandent qu'un compte gratuit.
    `https://souvenirs-salta-cusco.<compte>.workers.dev`.
 
 7. **Pointer le site sur le service en ligne** — remplacer le contenu de
-   `data/config.json` (actuellement réglé sur le service local) :
+   `data/config.json` (déjà réglé sur le service déployé dans ce dépôt) :
 
    ```json
    {

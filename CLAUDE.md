@@ -35,7 +35,7 @@ npx wrangler d1 execute souvenirs --local --file=schema.sql
 npx wrangler dev --local --port 8787
 ```
 
-Worker tests (12 tests, plain `node:test`, no other test runner in the repo):
+Worker tests (24 tests, plain `node:test`, no other test runner in the repo):
 
 ```bash
 cd worker && node --test test/
@@ -77,9 +77,10 @@ under `js/vendor/` and `css/vendor/`:
 - `carte.js` — the Leaflet map: basemaps, route traces, waypoints, and the
   cursor synced to profile-chart hover.
 - `profil.js` — all SVG rendering, hand-written (no charting library): both the
-  top "frise" (the whole-trip altitude profile, which doubles as the *only*
-  day-navigation bar on the site — there is no separate day list) and each
-  stage's small altitude chart.
+  top "frise" (the whole-trip altitude profile, which doubles as the site's main
+  day-navigation bar — there is no separate day list; a permanent
+  previous/next bar at the foot of the scene is the only other way through the
+  days) and each stage's small altitude chart.
 - `souvenirs.js` / `souvenirs-file.js` / `souvenirs-vue.js` — the
   participant-memories feature, deliberately split by concern and not to be
   merged: `souvenirs.js` talks to the Worker and never touches the DOM;

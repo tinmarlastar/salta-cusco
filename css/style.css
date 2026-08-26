@@ -1708,6 +1708,25 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
     height: 2.75rem;
     line-height: 2.75rem;
   }
+
+  /* Les intitulés des chiffres de l'étape — « Départ à », « Dont piste »,
+     « Durée estimée » — étaient posés en 9 points, capitales monospace
+     espacées : l'écriture la plus petite du site, et on la lit au soleil, le
+     casque souvent encore sur la tête. Le contraste passe le seuil (4,56), la
+     lisibilité non.
+
+     Dix points, et non onze. Mesuré sur un écran de 390 : à onze, la colonne
+     qu'il faut à « Durée estimée » fait tomber la grille de trois colonnes à
+     deux, la hauteur du bloc passe de 128 à 200 points, et le récit — ce qu'on
+     est venu lire — se retrouve enterré sous un demi-écran de chiffres. À dix,
+     les trois colonnes tiennent ; seul le plus long des intitulés se replie
+     sur deux lignes, et la grille ne prend que dix-huit points de plus.
+
+     Raccourcir ce libellé aurait tout réglé, mais le choix de « Durée
+     estimée » est argumenté deux fonctions plus haut dans `js/app.js` : il
+     porte la réserve que la valeur ne dit pas. On ne défait pas une décision
+     de langue pour une raison de gabarit. */
+  .mesures dt { font-size: .625rem; }
 }
 
 @media (max-width: 60rem) {

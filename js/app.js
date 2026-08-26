@@ -38,6 +38,7 @@ const elements = {
   poigneeTexte: document.getElementById('poignee-texte'),
   boutonAccueil: document.getElementById('bouton-accueil'),
   identite: document.querySelector('.bandeau__identite'),
+  navigation: document.getElementById('navigation'),
 };
 
 // ------------------------------------------------------------------ données
@@ -214,6 +215,7 @@ function amenerEtapeEnVue() {
 function afficherPanneau(etape) {
   elements.panneau.innerHTML = etape ? gabaritFiche(etape) : gabaritAccueil(etat.accueil);
   elements.panneau.scrollTop = 0;
+  afficherNavigation(etape);
 
   if (etape) {
     const trace = etat.traces.features.find((f) => f.properties.jour === etape.jour);
@@ -243,17 +245,31 @@ function afficherPanneau(etape) {
     brancherOnglets();
   }
 
-  for (const bouton of elements.panneau.querySelectorAll('[data-jour]')) {
+  for (const bouton of elements.panneau.querySelectorAll('[data-lat]')) {
+    bouton.addEventListener('click', () => {
+      etat.carte.carte.setView([Number(bouton.dataset.lat), Number(bouton.dataset.lon)], 13);
+    });
+  }
+}
+
+/** La bande du bas : d'où l'on vient, où l'on va.
+
+    Refaite à chaque journée comme la fiche, mais séparément : elle n'est plus
+    dedans, et depuis l'accueil elle n'a qu'une moitié à remplir. */
+function afficherNavigation(etape) {
+  const precedente = etape ? etat.etapes.find((e) => e.jour === etape.jour - 1) : null;
+  const suivante = etape ? etat.etapes.find((e) => e.jour === etape.jour + 1) : etat.etapes[0];
+  // Depuis l'accueil il n'y a rien en arrière ; depuis J1, le retour ramène au
+  // parcours entier plutôt qu'à une journée qui n'existe pas.
+  const precedent = etape ? (precedente ? cibleEtape(precedente) : CIBLE_ACCUEIL) : null;
+  elements.navigation.innerHTML = gabaritNavigation(precedent, cibleEtape(suivante));
+
+  for (const bouton of elements.navigation.querySelectorAll('[data-jour]')) {
     // « accueil » plutôt qu'un numéro convenu : la vue d'ensemble n'est pas
     // une journée, et un 0 posé là aurait fini par se glisser dans une
     // comparaison de jours, où il aurait passé pour une étape.
     const cible = bouton.dataset.jour === 'accueil' ? null : Number(bouton.dataset.jour);
     bouton.addEventListener('click', () => choisir(cible));
-  }
-  for (const bouton of elements.panneau.querySelectorAll('[data-lat]')) {
-    bouton.addEventListener('click', () => {
-      etat.carte.carte.setView([Number(bouton.dataset.lat), Number(bouton.dataset.lon)], 13);
-    });
   }
 }
 
@@ -349,8 +365,6 @@ function gabaritAccueil(voyage) {
       ${voyage.hebergements.map((photo) =>
         `<img src="${photo}" alt="" loading="lazy" tabindex="0">`).join('')}
     </div>
-
-    ${gabaritNavigation(null, cibleEtape(etat.etapes[0]))}
   </div>`;
 }
 
@@ -428,13 +442,17 @@ const cibleEtape = (etape) => (etape
   ? { cle: etape.jour, libelle: `J${etape.jour} ${etape.arrivee.nom}`, court: `J${etape.jour}` }
   : null);
 
-/** La barre « précédent / suivant », en pied de panneau.
+/** La barre « précédent / suivant », au pied de l'écran.
 
-    La même sur l'accueil et sur une journée : c'est le seul chemin qui mène
-    d'un bout à l'autre du voyage sans passer par la frise, et il n'aurait pas
-    de sens qu'il change de forme en route. Depuis l'accueil il n'y a que la
-    suite, depuis J1 le retour ramène au parcours entier, depuis J15 il n'y a
-    plus rien devant.
+    Elle vit hors du panneau, dans la scène : c'est le seul chemin qui mène
+    d'un bout à l'autre du voyage sans passer par la frise, et au pied de la
+    fiche il disparaissait avec elle — sur téléphone, feuille fermée, changer
+    de journée demandait de rouvrir le détail pour le refermer aussitôt.
+
+    La même sur l'accueil et sur une journée : il n'aurait pas de sens qu'un
+    chemin change de forme en route. Depuis l'accueil il n'y a que la suite,
+    depuis J1 le retour ramène au parcours entier, depuis J15 il n'y a plus
+    rien devant.
 
     Une moitié sans destination garde sa place — la barre reste coupée en deux,
     de largeur constante — mais reste vide : ni intitulé, ni chevron, ni tiret.
@@ -453,15 +471,13 @@ function gabaritNavigation(precedent, suivant) {
     `<span class="navigation__texte"><span class="navigation__sens">${cible.sens || sens}</span>${destination(cible)}</span>`;
   const ouvrir = (cible) => `<button type="button" data-jour="${echapper(cible.cle)}">`;
 
-  return `<div class="navigation">
-    ${precedent ? `${ouvrir(precedent)}<b aria-hidden="true">${precedent.icone || '←'}</b>${texte(precedent, 'Précédent')}</button>` : vide}
-    ${suivant ? `${ouvrir(suivant)}${texte(suivant, 'Suivant')}<b aria-hidden="true">${suivant.icone || '→'}</b></button>` : vide}
-  </div>`;
+  // Les deux boutons seuls : leur bande est écrite dans `index.html`, elle ne
+  // se refait pas à chaque journée.
+  return `${precedent ? `${ouvrir(precedent)}<b aria-hidden="true">${precedent.icone || '←'}</b>${texte(precedent, 'Précédent')}</button>` : vide}
+    ${suivant ? `${ouvrir(suivant)}${texte(suivant, 'Suivant')}<b aria-hidden="true">${suivant.icone || '→'}</b></button>` : vide}`;
 }
 
 function gabaritFiche(etape) {
-  const precedente = etat.etapes.find((e) => e.jour === etape.jour - 1);
-  const suivante = etat.etapes.find((e) => e.jour === etape.jour + 1);
   const drapeaux = etape.pays
     .map((code) => etat.accueil.pays.find((p) => p.code === code))
     .filter(Boolean);
@@ -527,8 +543,6 @@ function gabaritFiche(etape) {
     <div class="volet" data-volet="souvenirs" id="volet-souvenirs" role="tabpanel" aria-labelledby="onglet-souvenirs">
       <div class="souvenirs" id="souvenirs-etape"></div>
     </div>
-
-    ${gabaritNavigation(precedente ? cibleEtape(precedente) : CIBLE_ACCUEIL, cibleEtape(suivante))}
   </div>`;
 }
 

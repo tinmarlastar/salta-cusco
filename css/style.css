@@ -54,6 +54,15 @@
   --bandeau-h: 3.5rem;
   --frise-h: 8.125rem;
   --panneau-l: 24rem;      /* plancher du panneau, voir `.panneau` */
+  /* La part de la scène qui revient au panneau. Nommée parce que deux règles
+     doivent s'accorder dessus : le panneau lui-même, et la bande précédent/
+     suivant qui le borde en bas sans être dedans. */
+  --panneau-part: 60%;
+  /* Hauteur de cette bande. Fixée, et non laissée au contenu : la carte s'y
+     arrête, le panneau aussi, et la poignée du téléphone se pose au-dessus —
+     trois règles qui doivent connaître le chiffre. Deux lignes serrées dans un
+     bouton, plus le rembourrage et le filet du haut : 62 points. */
+  --barre-h: 3.875rem;
 
   --rythme: .5rem;
   --transition: 180ms cubic-bezier(.2, .6, .3, 1);
@@ -440,9 +449,12 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
      de lieux autour de la trace du jour — c'est ce qu'un tiers ne donnait
      plus. La largeur fixe d'avant (24 rem) tenait de l'époque où le panneau
      n'était qu'une fiche de lecture. */
-  flex: 0 0 60%;
+  flex: 0 0 var(--panneau-part);
   overflow-y: auto;
   overscroll-behavior: contain;
+  /* La bande du bas est posée par-dessus, hors du flux : sans cette réserve,
+     la fin de la fiche passerait dessous sans jamais pouvoir en sortir. */
+  padding-bottom: var(--barre-h);
   border-right: 1px solid var(--nuit-3);
   background: var(--nuit);
 }
@@ -450,8 +462,10 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
 .panneau__poignee { display: none; }
 
 /* Peu de rembourrage en tête : cette bande vide poussait le titre, les onglets
-   et les photos vers le bas, sur un panneau où chaque ligne compte. */
-.fiche { padding: .875rem 1.375rem 0; }
+   et les photos vers le bas, sur un panneau où chaque ligne compte. En pied,
+   de quoi ne pas finir collé à la bande précédent/suivant — cet air-là venait
+   de la marge haute de la bande, du temps qu'elle vivait dans la fiche. */
+.fiche { padding: .875rem 1.375rem 1.25rem; }
 
 /* Le panneau occupe désormais la moitié de l'écran : sur un grand moniteur,
    une ligne de récit courrait sur 900 px, illisible. On borne la mesure du
@@ -663,15 +677,22 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
 
 /* Navigation entre étapes */
 
-/* Collée au bas du panneau, donc toujours atteignable. Auparavant elle vivait
-   après le récit, les points et tous les souvenirs : sur une journée bavarde
-   il fallait défiler une page entière pour trouver « journée suivante », ce
-   qui est précisément le geste qu'on fait le plus. */
+/* Posée au bas de la scène, donc toujours atteignable — et toujours là : elle
+   vivait dans la fiche, d'abord après le récit et les souvenirs (il fallait
+   défiler une page entière pour trouver « journée suivante », le geste qu'on
+   fait le plus), puis collée au bas du panneau. Elle en sort : sur téléphone,
+   feuille fermée, elle disparaissait avec le détail.
+
+   Elle borde le panneau sans y être — d'où la largeur reprise de lui. */
 .navigation {
-  position: sticky;
+  position: absolute;
+  left: 0;
   bottom: 0;
-  z-index: 2;
+  z-index: 1002;
+  width: var(--panneau-part);
+  height: var(--barre-h);
   display: flex;
+  align-items: center;
   /* Une bande qui PORTE deux boutons détachés, et non deux pans jointifs à
      même le fond de la page : ainsi collés bord à bord et de la couleur du
      panneau, ils se lisaient comme une bordure de plus, pas comme deux
@@ -681,8 +702,7 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
      La bande, elle, reste opaque : le contenu défile DESSOUS, et un fond
      translucide laisserait lire deux textes superposés. */
   gap: .5rem;
-  margin: 1.25rem -1.375rem 0;
-  padding: .5rem 1.375rem;
+  padding: 0 1.375rem;
   background: var(--nuit);
   /* Elle se détache franchement du texte qui défile dessous : un trait soufre
      plutôt qu'un filet de la même couleur que le fond, et une ombre portée
@@ -1596,7 +1616,12 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
      Il reste en grand écran, où la place ne manque pas et où il porte le seul
      libellé qui nomme la destination. */
   .bandeau__navigation { display: none; }
-  .bandeau__identite { flex: 1 1 100%; min-width: 0; }
+  /* `1 1 0` et non `1 1 100%` : l'identité prend ce qui reste de la ligne au
+     lieu de l'exiger tout entière, et les pastilles d'habillage tiennent donc
+     le coin haut droit de l'entête au lieu d'être renvoyées dessous. Quand la
+     place manque, c'est le titre qui passe sur deux lignes — lui sait se
+     replier, elles non. */
+  .bandeau__identite { flex: 1 1 0; min-width: 0; }
   .bandeau__titre { font-size: 1.0625rem; font-stretch: 100%; }
   .bandeau__titre span { display: block; font-size: .9375rem; }
   .eyebrow { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -1606,7 +1631,14 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
   /* Le panneau devient une feuille tirée depuis le bas. Sans overflow ici, la
      feuille fermée sort de la scène et reste visible par-dessus la frise. */
   .scene { display: block; overflow: hidden; }
-  .carte { position: absolute; inset: 0; }
+  /* La carte s'arrête au-dessus de la bande du bas plutôt que de passer
+     dessous : la mention de Leaflet et des fournisseurs de tuiles vit dans ce
+     coin, et une bande posée par-dessus l'aurait effacée. */
+  .carte { position: absolute; inset: 0 0 var(--barre-h); }
+
+  /* Toute la largeur, et plus la part du panneau : ici la feuille couvre
+     l'écran entier. */
+  .navigation { width: 100%; }
 
   /* Le panneau devient une feuille tirée depuis le bas, et elle monte d'un
      seul tenant jusque sous la frise : toute la scène, la carte recouverte.
@@ -1623,9 +1655,12 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
     position: absolute;
     left: 0;
     right: 0;
-    bottom: 0;
     z-index: 1000;
-    height: 100%;
+    bottom: var(--barre-h);
+    height: calc(100% - var(--barre-h));
+    /* La bande ne recouvre plus la fiche, elle la borde : le récit peut aller
+       jusqu'au bord bas de la feuille. */
+    padding-bottom: 0;
     border-right: 0;
     border-top: 1px solid var(--nuit-3);
     background: var(--nuit-voile);
@@ -1640,7 +1675,7 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
   .panneau__poignee {
     position: absolute;
     left: 50%;
-    bottom: .75rem;
+    bottom: calc(var(--barre-h) + .75rem);
     z-index: 1001;
     display: flex;
     flex-direction: column;

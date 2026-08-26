@@ -85,6 +85,13 @@
   </button>
 
   <aside class="panneau" id="panneau" tabindex="-1" aria-live="polite"></aside>
+
+  <!-- La barre « précédent / suivant » vit dans la scène, hors du panneau :
+       sur téléphone elle borde la carte quand la feuille est fermée, et le
+       récit quand elle est ouverte. Au pied de la fiche, elle disparaissait
+       avec le détail — il fallait rouvrir la journée pour passer à la
+       suivante, alors que c'est le geste qu'on fait le plus. -->
+  <nav class="navigation" id="navigation" aria-label="Journée précédente et suivante"></nav>
 </main>
 
 <script src="js/vendor/leaflet.js"></script>

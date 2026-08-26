@@ -268,6 +268,14 @@ export function dessinerFrise(svg, {
   // lui, est resté sur la carte, où il a de la place pour se faire voir.
   const releveMotos = releveAuKm(kmDeLaJournee(positionJour, voyage), voyage);
 
+  // Le kilomètre des motos, en unités du viewBox, laissé sur le SVG : c'est là
+  // que la vue va chercher où centrer la frise quand aucune journée n'est
+  // choisie (`amenerEtapeEnVue`). Le dessin est seul à connaître l'échelle qui
+  // mène d'un kilomètre à une abscisse ; la recalculer ailleurs l'aurait
+  // dupliquée, et deux copies d'un même calcul finissent toujours par diverger.
+  if (releveMotos) svg.dataset.motosX = x(releveMotos.km).toFixed(1);
+  else delete svg.dataset.motosX;
+
   // Les jours sans ride : un point posé sur la crête, cliquable lui aussi.
   for (const etape of etapes.filter((e) => !e.ride)) {
     const km = positionJourSansRide(etape.jour, voyage.segments, voyage.totalKm);

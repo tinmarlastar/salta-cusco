@@ -238,32 +238,40 @@ function majBordsFrise() {
 }
 
 /** Sur un écran étroit la frise déborde : on l'amène sur l'étape choisie, ou
-    sur son début quand il n'y a plus d'étape choisie. */
+    sur les motos quand il n'y en a plus. */
 function amenerEtapeEnVue() {
   const defilement = elements.frise.parentElement;
   if (defilement.scrollWidth <= defilement.clientWidth) return;
 
+  /** Amène une abscisse du dessin au milieu de la fenêtre. Positionnement
+      direct plutôt qu'animé : la frise vient d'être redessinée, un glissement
+      donnerait l'impression qu'elle flotte pendant la lecture. */
+  const centrerSur = (xDessin) => {
+    const largeurVue = elements.frise.viewBox.baseVal.width;
+    if (!largeurVue) return;
+    const echelle = elements.frise.getBoundingClientRect().width / largeurVue;
+    defilement.scrollLeft = xDessin * echelle - defilement.clientWidth / 2;
+  };
+
   const marque = elements.frise.querySelector('.est-actif');
-  // Retour au parcours entier : la frise revient au premier jour. Elle restait
-  // sinon calée où la dernière journée consultée l'avait laissée — et
-  // « Nous sommes ici ! », ancré au kilomètre des motos, se relisait alors
-  // tronqué par le bord gauche, la phrase que le retour vient justement de
-  // faire réapparaître. Le parcours entier se regarde depuis son début.
+  // Parcours entier : la frise se cale sur les motos plutôt que sur le premier
+  // jour. Sur un téléphone elle mesure le double de la fenêtre, et la moitié du
+  // voyage est hors champ : arriver sur l'accueil au huitième jour de route et
+  // ne voir que J1 à J8 cache précisément ce qu'on vient regarder. Ce qu'elle
+  // montre est ce que la phrase annonce — « Nous sommes ici ! » en chemin, la
+  // date du départ avant de partir, celle de l'arrivée une fois à Cusco.
+  //
+  // Avant le départ, les motos sont au kilomètre zéro : la frise se cale donc
+  // sur son début, comme avant, le défilement négatif étant ramené à zéro par
+  // le navigateur. Rien ne change tant qu'on n'est pas partis.
   if (!marque) {
-    defilement.scrollLeft = 0;
+    centrerSur(Number(elements.frise.dataset.motosX) || 0);
     return;
   }
 
   const boite = marque.getBBox ? marque.getBBox() : null;
   if (!boite) return;
-
-  const largeurVue = elements.frise.viewBox.baseVal.width;
-  if (!largeurVue) return;
-  const echelle = elements.frise.getBoundingClientRect().width / largeurVue;
-  // Positionnement direct plutôt qu'animé : la frise vient d'être redessinée,
-  // un glissement donnerait l'impression qu'elle flotte pendant la lecture.
-  const centre = (boite.x + boite.width / 2) * echelle;
-  defilement.scrollLeft = centre - defilement.clientWidth / 2;
+  centrerSur(boite.x + boite.width / 2);
 }
 
 // ------------------------------------------------------------------ panneau

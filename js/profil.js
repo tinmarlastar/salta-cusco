@@ -113,9 +113,9 @@ const dateEnToutesLettres = (iso) => {
 
 /** Ce que la flèche annonce : la phrase dessinée, et sa version parlée.
 
-    Trois moments, dans l'ordre où le voyage les traverse — avant le départ,
-    en chemin, une fois arrivés. La date courte tient sur la frise, la longue
-    se laisse lire à voix haute. */
+    Quatre moments, dans l'ordre où le voyage les traverse — pas encore partis,
+    départ annoncé, en chemin, arrivés. La date courte tient sur la frise, la
+    longue se laisse lire à voix haute. */
 function motDeLaFrise({ positionJour, departPrevuLe, arriveeLe }) {
   if (arriveeLe) {
     return {
@@ -129,11 +129,20 @@ function motDeLaFrise({ positionJour, departPrevuLe, arriveeLe }) {
       description: `Départ prévu le ${dateEnToutesLettres(departPrevuLe)}, de Salta`,
     };
   }
+  // Personne n'a encore dit où en sont les motos, et aucune date n'est
+  // annoncée : la flèche montre alors Salta, le kilomètre zéro. « Nous sommes
+  // ici ! » y désignait un endroit où le voyage n'a pas commencé — on croyait
+  // le raid en cours, à sa première étape. La phrase dit donc l'attente, qui
+  // est la seule chose vraie à ce moment-là.
+  if (!positionJour) {
+    return {
+      phrase: 'Nous ne sommes pas encore partis !',
+      description: "Nous ne sommes pas encore partis : les motos attendent à Salta",
+    };
+  }
   return {
     phrase: 'Nous sommes ici !',
-    description: positionJour
-      ? `Nous sommes ici : les motos en sont au jour ${positionJour}`
-      : 'Nous sommes ici : les motos n\'ont pas encore quitté Salta',
+    description: `Nous sommes ici : les motos en sont au jour ${positionJour}`,
   };
 }
 

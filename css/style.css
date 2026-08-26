@@ -198,16 +198,27 @@ body > * { min-width: 0; }
 
 h1, h2, h3 { margin: 0; line-height: 1.1; }
 
+/* Le lien d'évitement ne se montre qu'au clavier, à la première tabulation :
+   c'est la seule fois où on le voit, et il se peignait alors comme un lien de
+   navigateur brut, souligné — le seul soulignement du site. Pire, il recevait
+   l'anneau de focus commun, tracé dans la MÊME couleur que son fond et décalé
+   de deux pixels : un second cadre flottant autour du premier, séparé de lui
+   par un liseré de page. On lisait un défaut d'affichage, pas un bouton.
+   Il se peint donc comme les boutons du site, et sans anneau : surgir est déjà
+   son signal de focus, il n'en a pas besoin d'un deuxième. */
 .saut-contenu {
   position: absolute;
   left: -9999px;
   z-index: 1200;
   padding: .625rem 1rem;
+  border-radius: 2px;
   background: var(--soufre);
   color: var(--sur-accent);
   font-weight: 700;
+  text-decoration: none;
 }
 .saut-contenu:focus { left: .5rem; top: .5rem; }
+.saut-contenu:focus-visible { outline: none; }
 
 :where(a, button, [tabindex]):focus-visible {
   outline: 2px solid var(--soufre);

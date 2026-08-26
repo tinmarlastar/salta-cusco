@@ -189,6 +189,33 @@ function redessinerFrise() {
     arriveeLe: etat.position.arriveeLe,
   });
   amenerEtapeEnVue();
+  majBordsFrise();
+}
+
+/** Marque lequel des deux bords de la frise cache une suite.
+
+    La frise est la seule navigation du site, et sur un téléphone elle mesure
+    704 points dans une fenêtre de 390 : à l'ouverture, on voit J1 à J8 et rien
+    ne dit que le voyage continue. La barre de défilement d'iOS reste invisible
+    tant qu'on ne touche pas — un visiteur qui ne devine pas le geste croit que
+    le raid s'arrête au huitième jour.
+
+    Le bord qui cache quelque chose s'estompe donc (le dégradé est dans la
+    CSS) : le tracé qui s'efface au lieu de s'arrêter net dit qu'il y a une
+    suite. Marqué des deux côtés séparément, parce qu'au bout de la course il
+    n'y a plus rien à annoncer et qu'un bord estompé mentirait alors.
+
+    Quatre points de tolérance : un défilement tactile s'arrête rarement sur
+    l'entier, et une frise arrivée au bout à 0,6 point près doit se lire comme
+    arrivée au bout. */
+function majBordsFrise() {
+  const defilement = elements.frise.parentElement;
+  const reste = defilement.scrollWidth - defilement.clientWidth;
+  const gauche = defilement.scrollLeft > 4;
+  const droite = defilement.scrollLeft < reste - 4;
+  defilement.dataset.bords = gauche && droite ? 'deux'
+    : gauche ? 'gauche'
+      : droite ? 'droite' : 'aucun';
 }
 
 /** Sur un écran étroit la frise déborde : on l'amène sur l'étape choisie. */
@@ -707,6 +734,10 @@ function brancherInterface() {
   });
 
   window.addEventListener('hashchange', () => choisir(jourDepuisAdresse(), { majAdresse: false }));
+
+  // Le dégradé des bords suit le doigt : `passive`, parce qu'on ne fait que
+  // lire une position — rien à annuler, et le défilement ne doit pas attendre.
+  elements.frise.parentElement.addEventListener('scroll', majBordsFrise, { passive: true });
 
   let attente;
   new ResizeObserver(() => {

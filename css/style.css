@@ -891,6 +891,27 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
 
 .frise__defilement { flex: 1 1 auto; min-width: 0; overflow-x: auto; overflow-y: hidden; }
 
+/* Le bord qui cache une suite s'estompe. Sur un téléphone la frise mesure 704
+   points dans une fenêtre de 390 : les sept dernières journées sont hors champ,
+   et la barre de défilement d'iOS ne se montre qu'une fois qu'on a déjà touché.
+   Un tracé qui s'efface au lieu de s'arrêter net dit qu'il continue.
+
+   `js/app.js` (`majBordsFrise`) pose l'attribut : le dégradé ne s'applique
+   qu'au bord qui a effectivement quelque chose à cacher, jamais au bout de la
+   course où il annoncerait une suite qui n'existe pas. */
+.frise__defilement[data-bords="droite"] {
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent);
+}
+.frise__defilement[data-bords="gauche"] {
+  -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 2.5rem), transparent);
+  mask-image: linear-gradient(to left, #000 calc(100% - 2.5rem), transparent);
+}
+.frise__defilement[data-bords="deux"] {
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 2.5rem, #000 calc(100% - 2.5rem), transparent);
+  mask-image: linear-gradient(to right, transparent, #000 2.5rem, #000 calc(100% - 2.5rem), transparent);
+}
+
 .frise__svg {
   display: block;
   width: 100%;

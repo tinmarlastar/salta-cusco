@@ -514,12 +514,20 @@ function gabaritFiche(etape) {
   // l'on arrive. La distance sur route se déduit du reste plutôt que d'être
   // saisie — deux chiffres à tenir d'accord au lieu d'un seul finiraient par
   // diverger.
+  //
+  // « Dont route » ne s'affiche que s'il y a de la route. La traversée du
+  // salar est intégralement en piste : la case occupait un sixième de la
+  // grille pour annoncer un zéro, et sur un téléphone cette grille est déjà ce
+  // qui sépare le titre du récit. Un chiffre qui ne dit rien ne vaut pas la
+  // ligne qu'il coûte. « Dont piste » reste, lui, même à zéro : il répond à
+  // une question qu'on se pose vraiment avant de partir — celle-là, un zéro y
+  // répond.
   const kmRoute = Math.max(0, etape.km - etape.kmPiste);
   const mesures = etape.ride
     ? `<div><dt>Départ à</dt><dd>${nombre(etape.depart.altitudeM)} <small>m</small></dd></div>
        <div><dt>Distance</dt><dd>${nombre(etape.km)} <small>km</small></dd></div>
        <div><dt>Dont piste</dt><dd>${nombre(etape.kmPiste)} <small>km</small></dd></div>
-       <div><dt>Dont route</dt><dd>${nombre(kmRoute)} <small>km</small></dd></div>
+       ${kmRoute ? `<div><dt>Dont route</dt><dd>${nombre(kmRoute)} <small>km</small></dd></div>` : ''}
        <div><dt>Arrivée à</dt><dd>${nombre(etape.arrivee.altitudeM)} <small>m</small></dd></div>
        ${gabaritDuree(etape, kmRoute)}`
     : `<div><dt>Étape</dt><dd>${echapper(etape.arrivee.nom)}</dd></div>

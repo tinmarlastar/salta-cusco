@@ -279,7 +279,7 @@ async function deposerFichier(fichier, jour, env, cors) {
     return {
       refus: erreur(
         genre === 'video'
-          ? `Vidéo trop lourde (maximum ${mo} Mo). Raccourcissez le clip ou baissez la qualité.`
+          ? `Vidéo trop lourde (maximum ${mo} Mo). Raccourcis le clip ou baisse la qualité.`
           : `Image trop lourde (maximum ${mo} Mo).`,
         413, cors,
       ),
@@ -367,7 +367,7 @@ async function creerMedia(jour, requete, env, cors) {
   // fonction (prénom manquant, aucun fichier reçu) restent des refus
   // définitifs à juste titre : eux ne dépendent pas d'un transport interrompu.
   const formulaire = await requete.formData().catch(() => null);
-  if (!formulaire) return erreur('Envoi illisible, réessayez', 503, cors);
+  if (!formulaire) return erreur('Envoi illisible, réessaie', 503, cors);
 
   const auteur = assainir(formulaire.get('auteur'), AUTEUR_MAX);
   const texte = assainir(formulaire.get('texte'), TEXTE_MAX);
@@ -436,7 +436,7 @@ async function ajouterMedia(id, requete, env, cors) {
   // Voir `creerMedia` : un multipart tronqué par le réseau est un incident de
   // transport, à renvoyer plus tard, pas un refus définitif.
   const formulaire = await requete.formData().catch(() => null);
-  if (!formulaire) return erreur('Envoi illisible, réessayez', 503, cors);
+  if (!formulaire) return erreur('Envoi illisible, réessaie', 503, cors);
 
   const { media, refus } = await deposerFichier(formulaire.get('fichier'), ligne.jour, env, cors);
   if (refus) return refus;
@@ -847,7 +847,7 @@ export default {
       // en-têtes CORS déjà calculés, sinon le navigateur ne voit qu'une
       // erreur CORS opaque au lieu du vrai message.
       console.error(e);
-      return erreur('Erreur du service, réessayez plus tard', 500, cors);
+      return erreur('Erreur du service, réessaie plus tard', 500, cors);
     }
   },
 };

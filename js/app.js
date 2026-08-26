@@ -624,16 +624,16 @@ function gabaritFiche(etape) {
 // d'une page dont le bas est déjà pris par la navigation. Le signe seul ne
 // nommant rien, la phrase reste — en `aria-label`, pour qui n'a que la voix.
 //
-// Fermée, la poignée nomme ce qu'elle va ouvrir plutôt que le geste : sous la
-// carte du parcours entier, « Voir le détail » laissait croire au détail d'une
-// journée — celle qu'on venait peut-être de quitter — alors que la feuille
-// contient les chiffres et la présentation du voyage. Le libellé suit donc la
-// sélection, et c'est le seul endroit de l'écran qui dise, feuille fermée, ce
-// qu'on va lire.
+// Fermée, la poignée dit « + d'infos » — trois signes qui tiennent dans la
+// pastille et laissent la carte respirer, là où « Détail de la journée »
+// prenait la moitié du bord bas. Ce que la feuille contient, la vue le dit
+// déjà : c'est la journée nommée sur la frise, ou le parcours entier quand
+// aucune n'est choisie. L'énoncé, lui, garde la précision que le mot a perdue —
+// une voix qui annonce « plus d'infos » sans dire sur quoi n'annonce rien.
 const LIBELLES_FEUILLE = {
   fermee: {
-    etape: { texte: 'Détail de la journée', enonce: 'Voir le détail de la journée' },
-    accueil: { texte: 'Détail du parcours', enonce: 'Voir le détail du parcours' },
+    etape: { texte: "+ d'infos", enonce: 'Voir le détail de la journée' },
+    accueil: { texte: "+ d'infos", enonce: 'Voir le détail du parcours' },
   },
   // Ouverte, la poignée n'a plus de mot : le chevron retourné dit à lui seul
   // que la feuille redescend. La phrase reste en `aria-label`, pour qui n'a

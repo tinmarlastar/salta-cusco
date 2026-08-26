@@ -87,9 +87,9 @@
     <svg class="panneau__poignee-chevron" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
       <path d="M3.5 10 8 5.5 12.5 10"/>
     </svg>
-    <!-- Le libellé de départ est celui de la page d'accueil, où la visite
-         commence ; `majPoignee` le change dès qu'une journée est choisie. -->
-    <span class="panneau__poignee-texte" id="poignee-texte">Détail du parcours</span>
+    <!-- Le mot ne bouge plus d'une vue à l'autre ; c'est l'`aria-label`, posé
+         par `majPoignee`, qui dit s'il ouvre la journée ou le parcours. -->
+    <span class="panneau__poignee-texte" id="poignee-texte">+ d'infos</span>
   </button>
 
   <aside class="panneau" id="panneau" tabindex="-1" aria-live="polite"></aside>

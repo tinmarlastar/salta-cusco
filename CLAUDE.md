@@ -68,7 +68,9 @@ current ~1%.
 ## Architecture
 
 **Frontend (`js/`)**, all ES modules, no CDN, no API keys — Leaflet is vendored
-under `js/vendor/` and `css/vendor/`:
+under `js/vendor/` and `css/vendor/`, and the three webfonts under
+`css/vendor/polices.css` + `css/vendor/polices/`. Nothing is fetched from a
+third party except the map tiles:
 
 - `app.js` — orchestrator. Owns the single `etat` state object, loads
   `data/etapes.json` + `data/parcours.geojson`, mounts the map/frise/panel, and

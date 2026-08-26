@@ -89,12 +89,14 @@ tools/                les deux scripts de fabrication
 worker/               le service Cloudflare du carnet (D1 + R2)
 ```
 
-Leaflet est embarqué dans `js/vendor/` : aucune bibliothèque n'est appelée à
-distance, et le site n'utilise aucune clé d'API. Restent deux dépendances
-extérieures : les tuiles des fonds de carte, et les trois polices, chargées
-depuis Google Fonts (`index.html`). Sans réseau, le texte s'affiche dans les
-polices de l'appareil — `display=swap` — et la carte reste grise. Les trois fonds de carte (satellite Esri, relief
-OpenTopoMap, plan CARTO) sont libres d'accès avec attribution.
+Leaflet est embarqué dans `js/vendor/`, et les trois polices dans
+`css/vendor/polices/` — licence SIL Open Font, sous-ensembles latin et
+latin-ext, 232 Kio chargés pour un texte français. Aucune bibliothèque, aucune
+fonte, aucune clé d'API n'est donc appelée à distance : il ne reste qu'une
+seule dépendance extérieure, les tuiles des fonds de carte. Sans réseau, le
+texte se lit normalement et seule la carte reste grise. Les trois fonds
+(satellite Esri, relief OpenTopoMap, plan CARTO) sont libres d'accès avec
+attribution.
 
 ## Ce que le tracé vaut
 

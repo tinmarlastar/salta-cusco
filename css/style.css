@@ -1712,6 +1712,9 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
      devient donc une croix dans le coin haut droit du cadre, à l'endroit où
      l'on ferme une fiche, et rend au passage sa hauteur pleine à la bande de
      navigation. La barre à saisir s'en va avec le geste qu'elle annonçait. */
+     La croix est opaque pour la même raison que les onglets qu'elle côtoie :
+     posée en haut de la feuille, elle a le récit qui défile dessous, pas la
+     carte. */
   .panneau__poignee[data-hauteur="pleine"] {
     top: .5rem;
     right: .5rem;
@@ -1721,6 +1724,8 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
     padding: .1875rem .5rem .3125rem;
     font-size: 1.25rem;
     line-height: 1;
+    background: var(--nuit);
+    backdrop-filter: none;
     transform: none;
   }
   .panneau__poignee[data-hauteur="pleine"] .panneau__poignee-barre { display: none; }
@@ -1741,14 +1746,22 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
 
   /* Les onglets restent visibles quand on fait défiler la fiche : ils sont le
      seul moyen d'atteindre les souvenirs, les enterrer les rendrait aussi
-     difficiles à trouver qu'avant. */
+     difficiles à trouver qu'avant.
+
+     Fond OPAQUE, et non le voile du panneau. Une barre collante ne surplombe
+     pas la carte, elle surplombe son propre texte : à 93 % d'opacité, les 7 %
+     restants suffisaient à laisser lire deux lignes du récit par-dessus
+     « Étape » et « Carnet de route ». L'habillage Nuit, qui pose du texte
+     clair sur fond sombre, en faisait le défaut le plus visible du site. Le
+     flou de fond part avec le voile : il ne floutait que ce qu'on ne voulait
+     de toute façon pas voir, au prix d'une couche composée à chaque image
+     défilée. */
   .onglets {
     position: sticky;
     top: 0;
     z-index: 1;
     margin-top: 1rem;
-    background: var(--nuit-voile);
-    backdrop-filter: blur(12px);
+    background: var(--nuit);
   }
 }
 

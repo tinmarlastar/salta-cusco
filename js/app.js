@@ -817,6 +817,16 @@ function brancherInterface() {
     clearTimeout(attente);
     attente = setTimeout(redessinerFrise, 120);
   }).observe(elements.frise.parentElement);
+
+  // Les polices arrivent après le premier dessin sur un réseau lent — celui du
+  // voyage. Or la frise mesure du texte : la moto se pose devant la phrase des
+  // motards d'après sa largeur, et c'est encore elle qui décide si l'ensemble
+  // tient dans la fenêtre. Mesurée avec la police de secours puis remplacée par
+  // Caveat, la phrase change de largeur sous la mesure, et la moto reste à
+  // l'écart d'avant. Un redessin quand les polices sont prêtes remet les deux
+  // d'aplomb ; il ne coûte qu'un passage, et rien s'il n'y a pas de police à
+  // attendre.
+  document.fonts?.ready.then(() => redessinerFrise());
 }
 
 demarrer();

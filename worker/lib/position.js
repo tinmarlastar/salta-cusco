@@ -137,6 +137,35 @@ export function dateDuJourVoyage({ depart, decalage = 0, jour }) {
   return versDate(versInstant(depart) + (jour - PREMIER_JOUR_ROULE - decalage) * MS_PAR_JOUR);
 }
 
+/** Le calendrier des bascules, pour la page d'administration.
+
+    Une entrée par journée roulée : le jour, sa date locale, l'INSTANT où la
+    frise basculera dessus, et le fuseau dans lequel cet instant vaut 20 h.
+
+    On rend des instants absolus et un nom de fuseau, jamais des heures déjà
+    écrites. Le service sait QUAND une journée bascule ; savoir l'écrire — en
+    heure locale, en heure française, ou dans les deux — est l'affaire du
+    navigateur. Formater ici aurait obligé le service à choisir un fuseau
+    d'affichage, ce qu'il n'a aucun moyen de deviner.
+
+    Les villes n'y sont pas non plus : elles vivent dans `data/etapes.json`, que
+    le site joint au calendrier par le numéro de journée. */
+export function calendrierDesBascules({ depart, decalage = 0 }) {
+  if (!depart) return [];
+  const calendrier = [];
+  for (let jour = PREMIER_JOUR_ROULE; jour <= JOURS_VOYAGE; jour += 1) {
+    const date = dateDuJourVoyage({ depart, decalage, jour });
+    const fuseau = FUSEAU_PAR_JOUR[jour];
+    calendrier.push({
+      jour,
+      date,
+      fuseau,
+      bascule: instantLocal(date, HEURE_BASCULE, fuseau).toISOString(),
+    });
+  }
+  return calendrier;
+}
+
 /** La journée à montrer (2 à 15), ou `null` tant qu'on n'a pas quitté Salta.
 
     `depart` : la date où l'on quitte Salta, AAAA-MM-JJ. `decalage` : jours

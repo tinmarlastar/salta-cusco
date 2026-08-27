@@ -5,6 +5,7 @@
 import { creerId, creerJeton, hacherJeton, memeSecret } from './lib/securite.js';
 import {
   calculerPositionAuto, dateDuJourVoyage, dateParisDuJour, PREMIER_JOUR_ROULE,
+  calendrierDesBascules,
 } from './lib/position.js';
 import { normaliserEtape, assemblerStatistiques } from './lib/visites.js';
 import { requetes, normaliser } from './lib/consommation.js';
@@ -947,6 +948,34 @@ async function lireVisites(requete, env, cors) {
   );
 }
 
+/** Le calendrier prévisionnel des bascules, pour la page d'administration.
+
+    Route à part et non un champ de plus sur `/api/position` : celle-là est
+    appelée par le SITE à chaque chargement de page, et quatorze entrées de
+    calendrier y pèseraient sur tous les lecteurs pour un tableau que seule la
+    modération regarde.
+
+    Vide hors du mode automatique : en manuel, c'est la main qui décide, il n'y
+    a rien à prévoir. */
+async function lireCalendrier(requete, env, cors) {
+  if (!await adminAutorise(requete, env)) return erreur('Mot de passe incorrect', 401, cors);
+
+  const { results } = await env.DB
+    .prepare('SELECT cle, valeur FROM reglages WHERE cle IN (?, ?, ?)')
+    .bind(CLES_POSITION.mode, CLES_POSITION.depart, CLES_POSITION.decalage)
+    .all();
+  const parCle = new Map((results || []).map((l) => [l.cle, l.valeur]));
+
+  if (parCle.get(CLES_POSITION.mode) !== 'auto') return repondre({ calendrier: [] }, { cors });
+
+  return repondre({
+    calendrier: calendrierDesBascules({
+      depart: parCle.get(CLES_POSITION.depart) || null,
+      decalage: Number(parCle.get(CLES_POSITION.decalage) ?? 0),
+    }),
+  }, { cors });
+}
+
 export default {
   async fetch(requete, env) {
     const cors = entetesCors(requete, env);
@@ -997,6 +1026,10 @@ export default {
       if (chemin === '/api/position') {
         if (requete.method === 'GET') return await lirePosition(env, cors);
         if (requete.method === 'PUT') return await ecrirePosition(requete, env, cors);
+      }
+
+      if (chemin === '/api/position/calendrier' && requete.method === 'GET') {
+        return await lireCalendrier(requete, env, cors);
       }
 
       if (chemin === '/api/decomptes' && requete.method === 'GET') {

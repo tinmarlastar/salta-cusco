@@ -177,3 +177,50 @@ test('la date annoncée est bien celle du soir où la journée bascule', () => {
     }
   }
 });
+
+// ------------------------------------------------------ le prévisionnel
+
+/* Le calendrier des bascules, tel que la page d'administration l'affiche.
+
+   Il rend des INSTANTS absolus et le nom du fuseau, jamais des heures déjà
+   écrites : c'est le service qui sait QUAND une journée bascule, et le
+   navigateur qui sait l'écrire — en heure locale, en heure française, ou dans
+   les deux. Rendre « 20h00 » tout fait aurait obligé le service à choisir un
+   fuseau d'affichage, ce qui n'est pas son affaire. */
+test('calendrierDesBascules couvre les quatorze journées roulées', async () => {
+  const { calendrierDesBascules } = await import('../lib/position.js');
+  const cal = calendrierDesBascules({ depart: '2026-08-29', decalage: 0 });
+  assert.equal(cal.length, 14);
+  assert.equal(cal[0].jour, 2);
+  assert.equal(cal[cal.length - 1].jour, 15);
+});
+
+test('chaque entrée porte son instant de bascule et son fuseau', async () => {
+  const { calendrierDesBascules } = await import('../lib/position.js');
+  const [premiere] = calendrierDesBascules({ depart: '2026-08-29', decalage: 0 });
+  assert.equal(premiere.date, '2026-08-29');
+  assert.equal(premiere.fuseau, 'America/Argentina/Salta');
+  assert.equal(premiere.bascule, '2026-08-29T23:00:00.000Z'); // 20 h à Salta
+});
+
+/* Le calendrier et le calcul de la position doivent dire la même chose : sinon
+   la page annoncerait une bascule à une heure, et la frise changerait à une
+   autre. */
+test('chaque bascule annoncée est bien celle que la position applique', async () => {
+  const { calendrierDesBascules } = await import('../lib/position.js');
+  for (const decalage of [-1, 0, 3]) {
+    for (const entree of calendrierDesBascules({ depart: '2026-08-29', decalage })) {
+      const instant = new Date(entree.bascule);
+      assert.equal(
+        calculerPositionAuto({ depart: '2026-08-29', decalage, maintenant: instant }),
+        entree.jour,
+        `décalage ${decalage}, J${entree.jour}`,
+      );
+    }
+  }
+});
+
+test('le calendrier est vide sans date de départ', async () => {
+  const { calendrierDesBascules } = await import('../lib/position.js');
+  assert.deepEqual(calendrierDesBascules({ depart: null, decalage: 0 }), []);
+});

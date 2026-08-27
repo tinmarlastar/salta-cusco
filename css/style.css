@@ -1802,6 +1802,60 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
   color: var(--poussiere);
 }
 
+/* ------------------------------------------------------------ visites
+
+   La fréquentation reprend les cartes de Consommation — même page, même geste,
+   on vient y lire des chiffres — mais sans jauge de plafond : la fréquentation
+   n'en a pas, et une barre qui se remplit y aurait suggéré un quota inexistant.
+   Seules les barres de comparaison restent, qui rapportent chaque valeur à la
+   plus forte. */
+
+/* La courbe des jours, en barres : c'est la forme d'une fréquentation, et elle
+   répond du même coup à « est-ce que ça monte ? ». 4,5 rem de haut — assez pour
+   qu'une différence se voie, assez peu pour que la page reste une page de
+   chiffres et non un tableau de bord. */
+.visites__serie {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 4.5rem;
+  padding: .5rem .875rem 0;
+  background: var(--nuit-2);
+}
+.visites__barre {
+  flex: 1 1 0;
+  min-width: 2px;
+  background: var(--soufre);
+}
+
+.visites__bornes {
+  display: flex;
+  justify-content: space-between;
+  margin: 0;
+  padding: 0 .875rem;
+  font-family: var(--mono);
+  font-size: .625rem;
+  letter-spacing: .06em;
+  color: var(--poussiere);
+}
+
+.visites__etape {
+  display: grid;
+  gap: .3125rem;
+  padding: .625rem .875rem;
+  background: var(--nuit-2);
+}
+.visites__etape-nom {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  align-items: baseline;
+  justify-content: space-between;
+  margin: 0;
+  font-size: .875rem;
+  color: var(--texte-2);
+}
+
 /* Choix de la journée à modérer. */
 .admin-filtre {
   display: flex;

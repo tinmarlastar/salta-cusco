@@ -255,6 +255,48 @@ a quelque chose à dater. Laissé vide, la frise dit « Nous ne sommes pas encor
 partis ! » avant le départ, et « Nous sommes ici ! » en chemin. Une date saisie
 n'est jamais perdue en changeant de journée : elle ressort le moment venu.
 
+### Compter les visites
+
+La page d'administration a un module **Visites** : combien de personnes lisent
+le carnet, combien de pages elles ouvrent, et quelles étapes elles ouvrent le
+plus. Trois blocs — les totaux depuis le début, la journée en cours, la courbe
+jour après jour — puis le classement des quinze journées et de l'accueil.
+
+**Rien n'identifie personne.** Pas d'adresse IP, pas de cookie, pas d'empreinte
+de navigateur. C'est le navigateur du lecteur qui retient chez lui, en
+`localStorage`, qu'il a déjà été compté aujourd'hui, et en `sessionStorage`
+quelles étapes il a déjà ouvertes pendant sa visite ; il n'envoie qu'un numéro
+d'étape et un booléen. Le service ne peut donc ni reconnaître un lecteur d'un
+jour à l'autre, ni savoir combien de fois la même personne est revenue. C'est le
+prix — assumé — d'un compteur qui n'espionne pas : le chiffre des « visiteurs
+uniques » repose sur la parole du navigateur, et un lecteur qui vide son
+stockage sera recompté.
+
+Ce qui est compté, exactement :
+
+- **une page vue** par étape réellement ouverte, une seule fois par visite —
+  aller et venir entre l'accueil et le jour 7 ne compte pas dix fois ;
+- **un visiteur** la première fois qu'un navigateur se manifeste dans la
+  journée, à l'heure de Paris comme le reste du site.
+
+Deux tables, `visites_jour` et `visites_etape`, deux compteurs qu'on incrémente
+plutôt qu'une ligne par visite : une table qui grossit à chaque page lue aurait
+fini par peser plus lourd que les souvenirs eux-mêmes.
+
+La route d'écriture `POST /api/visite` est **publique** — c'est un site
+public — mais réservée aux origines de `ORIGINES_AUTORISEES`. Sans ce garde, une
+boucle de `curl` gonflerait les chiffres et mangerait le forfait d'écritures de
+D1. Une origine se forge : ce n'est pas inviolable, c'est proportionné.
+
+Ce module a besoin des deux nouvelles tables. **Appliquer `schema.sql` à la base
+distante avant de déployer**, sinon le service interroge des tables qui
+n'existent pas :
+
+```bash
+cd worker && npx wrangler d1 execute souvenirs --remote --file=schema.sql
+cd worker && npx wrangler deploy
+```
+
 ### Suivre la consommation
 
 La page d'administration a un troisième module, **Consommation** : où en est le

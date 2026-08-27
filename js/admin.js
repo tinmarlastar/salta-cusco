@@ -11,7 +11,7 @@
 
 import {
   chargerConfig, listerTout, supprimerContribution,
-  lireReglagesPosition, ecrirePosition, lireConsommation, ErreurService,
+  lireReglagesPosition, ecrirePosition, lireConsommation, lireVisites, ErreurService,
 } from './souvenirs.js';
 import { gabaritGalerie, brancherVisionneuse } from './souvenirs-vue.js';
 import { brancherHabillages } from './habillage.js';
@@ -52,6 +52,10 @@ let modeAffiche = null;
 // rendu, et se redessinent seuls quand la réponse arrive.
 let consommation = null;
 let soucisConsommation = null;
+
+// Les statistiques de fréquentation, mêmes règles que les compteurs Cloudflare.
+let visites = null;
+let soucisVisites = null;
 
 /** Titres des étapes, pour nommer les journées des deux menus. */
 let titresEtapes = new Map();
@@ -387,12 +391,122 @@ async function chargerConsommation() {
   if (contenu) contenu.innerHTML = gabaritModuleConsommation();
 }
 
+/* Le module Visites. Mêmes cartes que Consommation — c'est la même page et le
+   même geste, on vient y lire des chiffres — mais sans jauge : il n'y a pas de
+   plafond à la fréquentation, et une barre qui se remplit y aurait suggéré un
+   quota inexistant. */
+
+const dateCourteFr = (aaaaMmJj) => {
+  const [, mois, jour] = aaaaMmJj.split('-');
+  return `${jour}/${mois}`;
+};
+
+function gabaritChiffre(libelle, valeur, precision) {
+  return `<div class="conso__mesure">
+    <p class="conso__libelle">${echapper(libelle)}
+      <span class="conso__periode">${echapper(precision)}</span></p>
+    <p class="conso__valeur">${valeur.toLocaleString('fr-FR')}</p>
+  </div>`;
+}
+
+/* La série des jours, en barres verticales : c'est la forme d'une
+   fréquentation, et elle répond du même coup à « est-ce que ça monte ? », ce
+   qu'une liste de nombres ne dit qu'au prix d'une lecture ligne à ligne.
+   Rapportée au jour le plus fréquenté, comme le classement des étapes : au
+   total, aucune barre ne serait visible. */
+function gabaritSerie(jours) {
+  if (!jours.length) return '';
+  const sommet = Math.max(...jours.map((j) => j.pages), 1);
+  const barres = jours.map((j) => {
+    const hauteur = Math.max(2, (j.pages / sommet) * 100);
+    const titre = `${dateCourteFr(j.date)} — ${j.visiteurs} visiteur${j.visiteurs > 1 ? 's' : ''}, ${j.pages} page${j.pages > 1 ? 's' : ''}`;
+    return `<div class="visites__barre" style="height:${hauteur.toFixed(1)}%" title="${echapper(titre)}"></div>`;
+  }).join('');
+
+  return `<section class="conso__service">
+    <h2 class="conso__nom">Jour après jour</h2>
+    <div class="visites__serie" role="img"
+         aria-label="Fréquentation quotidienne du ${echapper(dateCourteFr(jours[0].date))} au ${echapper(dateCourteFr(jours[jours.length - 1].date))}">
+      ${barres}
+    </div>
+    <p class="visites__bornes">
+      <span>${echapper(dateCourteFr(jours[0].date))}</span>
+      <span>${echapper(dateCourteFr(jours[jours.length - 1].date))}</span>
+    </p>
+  </section>`;
+}
+
+function nomEtape(numero) {
+  if (numero === 0) return 'Accueil — le parcours entier';
+  const titre = titresEtapes.get(numero);
+  return titre ? `J${numero} · ${titre}` : `J${numero}`;
+}
+
+function gabaritEtapesLues(etapes) {
+  if (!etapes.length) return '';
+  const lignes = etapes.map((e) => `
+    <div class="visites__etape">
+      <p class="visites__etape-nom">${echapper(nomEtape(e.etape))}
+        <span class="conso__periode">${e.pages.toLocaleString('fr-FR')}</span></p>
+      <div class="conso__jauge"><span class="conso__part" style="width:${(e.part * 100).toFixed(1)}%"></span></div>
+    </div>`).join('');
+
+  return `<section class="conso__service">
+    <h2 class="conso__nom">Les étapes les plus lues</h2>
+    ${lignes}
+  </section>`;
+}
+
+function gabaritModuleVisites() {
+  if (soucisVisites) return `<p class="souvenirs__vide">${echapper(soucisVisites)}</p>`;
+  if (!visites) return '<p class="souvenirs__vide">Lecture des visites\u2026</p>';
+
+  if (!visites.total.pages) {
+    return `<p class="souvenirs__vide">Aucune visite enregistrée pour le moment.
+      Le compteur démarre à la première page ouverte après la mise en ligne.</p>`;
+  }
+
+  return `<div class="conso">
+    <section class="conso__service">
+      <h2 class="conso__nom">Depuis le début</h2>
+      ${gabaritChiffre('Visiteurs', visites.total.visiteurs, 'uniques par jour, cumulés')}
+      ${gabaritChiffre('Pages vues', visites.total.pages, 'toutes journées confondues')}
+    </section>
+    <section class="conso__service">
+      <h2 class="conso__nom">Aujourd\u2019hui</h2>
+      ${gabaritChiffre('Visiteurs', visites.aujourdhui.visiteurs, 'depuis minuit, heure de Paris')}
+      ${gabaritChiffre('Pages vues', visites.aujourdhui.pages, 'depuis minuit')}
+    </section>
+    ${gabaritSerie(visites.jours)}
+    ${gabaritEtapesLues(visites.etapes)}
+    <p class="conso__pied">Aucune adresse IP, aucun cookie, aucune empreinte : le
+      navigateur retient chez lui qu\u2019il a d\u00e9j\u00e0 \u00e9t\u00e9 compt\u00e9 aujourd\u2019hui et n\u2019envoie
+      qu\u2019un \u00ab\u00a0+1\u00a0\u00bb anonyme. Une m\u00eame \u00e9tape rouverte dans la m\u00eame visite ne compte
+      qu\u2019une fois.</p>
+  </div>`;
+}
+
+async function chargerVisites() {
+  try {
+    visites = await lireVisites(motDePasse);
+    soucisVisites = null;
+  } catch (souci) {
+    soucisVisites = souci?.statut
+      ? souci.message
+      : 'Le service ne répond pas, réessaie plus tard.';
+  }
+  if (ongletAdmin !== 'visites') return;
+  const contenu = racine.querySelector('.admin-contenu');
+  if (contenu) contenu.innerHTML = gabaritModuleVisites();
+}
+
 function gabaritNav() {
   const entree = (cle, libelle) => `<button type="button" class="admin-nav__bouton"
     data-onglet-admin="${cle}" aria-pressed="${ongletAdmin === cle}">${libelle}</button>`;
   return `<nav class="admin-nav" aria-label="Modules de l'administration">
     ${entree('position', 'Où en sont les motos')}
     ${entree('souvenirs', 'Modération')}
+    ${entree('visites', 'Visites')}
     ${entree('consommation', 'Consommation')}
   </nav>`;
 }
@@ -436,6 +550,7 @@ async function afficher() {
   let module;
   if (ongletAdmin === 'position') module = gabaritModulePosition();
   else if (ongletAdmin === 'consommation') module = gabaritModuleConsommation();
+  else if (ongletAdmin === 'visites') module = gabaritModuleVisites();
   else module = gabaritModuleModeration(contributions);
 
   racine.innerHTML = `<div class="admin-mise-en-page">
@@ -447,6 +562,7 @@ async function afficher() {
   // posent d'eux-mêmes. Les attendre ici aurait fait patienter devant une page
   // vide pour un chiffre dont la modération n'a que faire.
   if (ongletAdmin === 'consommation') chargerConsommation();
+  if (ongletAdmin === 'visites') chargerVisites();
 }
 
 /** Enregistre un réglage de position et rafraîchit seulement la note et le

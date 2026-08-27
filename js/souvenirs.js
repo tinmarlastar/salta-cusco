@@ -333,6 +333,24 @@ export async function listerTout(motDePasse) {
   return donnees.contributions || [];
 }
 
+/** Signale une page vue au service. Voir `js/visites.js` pour ce qui est
+    décidé chez le lecteur, et ce qui n'est délibérément jamais envoyé.
+
+    Le délai est court : un compteur n'a aucune raison de retenir quoi que ce
+    soit, et l'appelant ne l'attend pas. */
+export async function compterVisite({ etape, visiteur }) {
+  return appeler('/api/visite', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ etape, visiteur }),
+  });
+}
+
+/** Les statistiques de fréquentation, pour la page d'administration. */
+export async function lireVisites(motDePasse) {
+  return appeler('/api/visites', { headers: { 'X-Mot-De-Passe': motDePasse } });
+}
+
 /** Les compteurs Cloudflare, pour la page d'administration.
 
     Rendus tels que le service les calcule : valeurs, plafonds de l'offre

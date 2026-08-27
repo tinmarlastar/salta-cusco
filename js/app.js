@@ -9,6 +9,7 @@ import { ajusterMotDeLaFrise, assemblerVoyage, dessinerFrise, dessinerProfilEtap
 import { monterSouvenirs, brancherVisionneuse } from './souvenirs-vue.js';
 import { listerDecomptes, lirePosition } from './souvenirs.js';
 import { brancherHabillages } from './habillage.js';
+import { signalerVisite } from './visites.js';
 
 const nombre = (valeur) => valeur.toLocaleString('fr-FR');
 const echapper = (texte) => String(texte).replace(/[&<>"]/g, (c) =>
@@ -159,6 +160,12 @@ function choisir(jour, { recentrer = true, majAdresse = true } = {}) {
     const cible = etape ? `#j${etape.jour}` : ' ';
     if (location.hash !== cible) history.replaceState(null, '', etape ? cible : location.pathname);
   }
+  // La fréquentation se compte ici, au seul endroit par où passent tous les
+  // changements de journée — clic sur la frise, flèches du clavier, adresse
+  // collée, bouton précédent du navigateur. Posé ailleurs, il aurait fallu s'en
+  // souvenir à chaque nouvelle façon de changer d'étape. L'accueil vaut 0.
+  signalerVisite(etape ? etape.jour : 0);
+
   elements.boutonAccueil.hidden = !etape;
   // Pas de curseur de main sur l'accueil, où le clic n'aurait nulle part où
   // aller : une invitation sans destination se remarque tout de suite.

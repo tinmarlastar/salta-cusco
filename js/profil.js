@@ -115,34 +115,71 @@ const dateEnToutesLettres = (iso) => {
 
     Quatre moments, dans l'ordre où le voyage les traverse — pas encore partis,
     départ annoncé, en chemin, arrivés. La date courte tient sur la frise, la
-    longue se laisse lire à voix haute. */
-function motDeLaFrise({ positionJour, departPrevuLe, arriveeLe }) {
+    longue se laisse lire à voix haute.
+
+    Les villes viennent de `data/etapes.json` et ne sont plus écrites ici :
+    « Salta » et « Cusco » y étaient en dur, dans les descriptions, et un
+    itinéraire retouché les aurait laissées mentir sans que rien ne le dise.
+
+    Chacune est facultative. `data/etapes.json` s'édite à la main : une clé
+    absente ou renommée ne doit pas produire « Nous sommes à undefined ! » sur
+    la page d'accueil. Sans ville, chaque phrase retombe donc sur sa forme
+    d'avant — plus vague, mais vraie.
+
+    Exporté pour les tests : quatre branches, des dates et des villes qui
+    peuvent manquer, et c'est la seule phrase du site qui change toute seule,
+    sans que personne ne la relise. */
+export function motDeLaFrise({ positionJour, departPrevuLe, arriveeLe, villes = {} }) {
   if (arriveeLe) {
+    const ou = villes.arrivee ? ` à ${villes.arrivee}` : '';
     return {
-      phrase: `Nous sommes arrivés le ${dateCourte(arriveeLe)}`,
-      description: `Nous sommes arrivés à Cusco le ${dateEnToutesLettres(arriveeLe)}`,
+      phrase: `Nous sommes arrivés${ou} le ${dateCourte(arriveeLe)}`,
+      description: `Nous sommes arrivés${ou} le ${dateEnToutesLettres(arriveeLe)}`,
     };
   }
   if (!positionJour && departPrevuLe) {
-    return {
-      phrase: `Départ prévu le ${dateCourte(departPrevuLe)} !`,
-      description: `Départ prévu le ${dateEnToutesLettres(departPrevuLe)}, de Salta`,
-    };
+    // « Départ de Salta le… » plutôt que « Départ prévu le… » : la date seule
+    // ne disait pas d'où, alors que la flèche montre justement ce point-là.
+    return villes.depart
+      ? {
+        phrase: `Départ de ${villes.depart} le ${dateCourte(departPrevuLe)} !`,
+        description: `Départ de ${villes.depart} le ${dateEnToutesLettres(departPrevuLe)}`,
+      }
+      : {
+        phrase: `Départ prévu le ${dateCourte(departPrevuLe)} !`,
+        description: `Départ prévu le ${dateEnToutesLettres(departPrevuLe)}`,
+      };
   }
   // Personne n'a encore dit où en sont les motos, et aucune date n'est
-  // annoncée : la flèche montre alors Salta, le kilomètre zéro. « Nous sommes
-  // ici ! » y désignait un endroit où le voyage n'a pas commencé — on croyait
-  // le raid en cours, à sa première étape. La phrase dit donc l'attente, qui
-  // est la seule chose vraie à ce moment-là.
+  // annoncée : la flèche montre alors le kilomètre zéro. « Nous sommes ici ! »
+  // y désignait un endroit où le voyage n'a pas commencé — on croyait le raid
+  // en cours, à sa première étape. La phrase dit donc l'attente, qui est la
+  // seule chose vraie à ce moment-là.
+  //
+  // Et elle ne nomme aucune ville, à dessein : avant le départ, personne n'est
+  // nulle part. « Nous sommes à Salta ! » la veille annoncerait une présence
+  // qui n'existe pas — les motards sont encore chez eux, et la flèche montre
+  // déjà le point de départ.
   if (!positionJour) {
     return {
       phrase: 'Nous ne sommes pas encore partis !',
-      description: "Nous ne sommes pas encore partis : les motos attendent à Salta",
+      description: villes.depart
+        ? `Nous ne sommes pas encore partis : les motos attendent à ${villes.depart}`
+        : 'Nous ne sommes pas encore partis',
+    };
+  }
+  // En chemin. La position est celle du BOUT de la journée — dire « on en est à
+  // J7 » veut dire qu'elle est faite — donc la ville est celle où l'on arrive
+  // ce soir-là, pas celle d'où l'on est parti le matin.
+  if (!villes.courante) {
+    return {
+      phrase: 'Nous sommes ici !',
+      description: `Nous sommes ici : les motos en sont au jour ${positionJour}`,
     };
   }
   return {
-    phrase: 'Nous sommes ici !',
-    description: `Nous sommes ici : les motos en sont au jour ${positionJour}`,
+    phrase: `Nous sommes à ${villes.courante} !`,
+    description: `Nous sommes à ${villes.courante}, au jour ${positionJour} du voyage`,
   };
 }
 
@@ -415,7 +452,22 @@ export function dessinerFrise(svg, {
     // Le service ne date que ce qu'il sait dater : en position manuelle, ou en
     // cours de route, les deux dates sont nulles et la phrase d'origine
     // reprend la main.
-    const { phrase, description } = motDeLaFrise({ positionJour, departPrevuLe, arriveeLe });
+    // Les villes du repère, lues dans le contenu éditorial plutôt qu'écrites
+    // ici. Celle du milieu est l'ARRIVÉE de la journée en cours : la position
+    // est au bout de l'étape — dire « on en est à J7 » veut dire qu'elle est
+    // faite — donc c'est la ville où l'on dort ce soir-là, pas celle d'où l'on
+    // est parti le matin. Les deux bouts se prennent au premier et au dernier
+    // jour plutôt qu'aux indices 0 et 15 : rien ne garantit que `etapes` soit
+    // trié, et une étape ajoutée un jour le déferait sans prévenir.
+    const parJour = [...etapes].sort((a, b) => a.jour - b.jour);
+    const villes = {
+      depart: parJour[0]?.depart?.nom || null,
+      arrivee: parJour[parJour.length - 1]?.arrivee?.nom || null,
+      courante: parJour.find((e) => e.jour === positionJour)?.arrivee?.nom || null,
+    };
+    const { phrase, description } = motDeLaFrise({
+      positionJour, departPrevuLe, arriveeLe, villes,
+    });
 
     // Le mot porte seul l'information, maintenant que le pictogramme a quitté la
     // frise : lu à voix haute, « Nous sommes ici ! » ne dirait pas où. La flèche

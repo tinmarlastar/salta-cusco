@@ -1,10 +1,17 @@
 <!DOCTYPE html>
-<html lang="fr">
+<!-- L'habillage est posé ici comme sur `index.html`, et pour la même raison :
+     sans cet attribut, la page se peindrait en bleu nuit (le :root) le temps
+     que le module démarre, puis virerait à l'habillage retenu. Un habillage
+     par défaut qui n'existe qu'après le premier rendu n'est pas un défaut,
+     c'est un clignotement. Le choix mémorisé est rétabli ensuite. -->
+<html lang="fr" data-habillage="nations">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Modération du carnet de route</title>
 <meta name="robots" content="noindex">
+<!-- Réécrite au démarrage selon l'habillage, comme sur le site. -->
+<meta name="theme-color" content="#F4F6F8">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body class="page-admin">
@@ -13,7 +20,18 @@
     <p class="eyebrow">Salta → Cusco</p>
     <h1 class="bandeau__titre">Modération</h1>
   </div>
-  <p style="margin:0 0 0 auto"><a class="bouton-accueil" href="index.html">← Le site</a></p>
+  <!-- Les mêmes quatre habillages que le site, au même endroit de l'entête :
+       la modération se fait sur le téléphone qui sert à lire le carnet, et
+       basculer de l'un à l'autre ne devait pas obliger à repasser par
+       l'accueil. Le choix est partagé — voir `js/habillage.js`. -->
+  <div class="habillages" role="group" aria-label="Habillage du site" style="margin-left:auto">
+    <button type="button" data-habillage="" aria-pressed="false" title="Nuit" aria-label="Habillage Nuit"></button>
+    <button type="button" data-habillage="sel" aria-pressed="false" title="Sel" aria-label="Habillage Sel"></button>
+    <button type="button" data-habillage="altiplano" aria-pressed="false" title="Altiplano" aria-label="Habillage Altiplano"></button>
+    <button type="button" data-habillage="nations" aria-pressed="true" title="Nations" aria-label="Habillage Nations"></button>
+  </div>
+
+  <p style="margin:0"><a class="bouton-accueil" href="index.html">← Le site</a></p>
 </header>
 
 <main class="admin" id="admin"></main>

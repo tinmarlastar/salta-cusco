@@ -14,6 +14,7 @@ import {
   lireReglagesPosition, ecrirePosition, lireConsommation, ErreurService,
 } from './souvenirs.js';
 import { gabaritGalerie, brancherVisionneuse } from './souvenirs-vue.js';
+import { brancherHabillages } from './habillage.js';
 
 const echapper = (texte) => String(texte ?? '').replace(/[&<>"]/g, (c) =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -558,6 +559,11 @@ racine.addEventListener('change', async (evenement) => {
 // entier avant de décider de la supprimer est le geste même de la
 // modération.
 brancherVisionneuse(racine);
+
+// L'habillage se pose avant le premier chargement réseau : il ne dépend que du
+// stockage local, et attendre le service pour peindre la page aurait laissé
+// l'entête sur l'habillage par défaut le temps d'un aller-retour.
+brancherHabillages();
 
 await chargerConfig();
 await chargerTitres();

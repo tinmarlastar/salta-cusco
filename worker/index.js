@@ -94,8 +94,14 @@ function grouperMedias(lignes) {
 }
 
 async function listerEtape(jour, env, cors) {
+  // La plus récente en premier. Un carnet de route se lit comme un fil
+  // d'actualité : ce qu'on vient d'écrire est ce qu'on vient voir, et sur une
+  // journée bien remplie l'ordre chronologique obligeait à dérouler tout le
+  // reste pour l'atteindre. L'identifiant préfixe l'horodatage, donc `id DESC`
+  // suffit — et l'index (jour, id) se parcourt à l'envers aussi bien qu'à
+  // l'endroit, sans qu'il y ait rien à changer au schéma.
   const { results } = await env.DB
-    .prepare('SELECT * FROM contributions WHERE jour = ? ORDER BY id ASC')
+    .prepare('SELECT * FROM contributions WHERE jour = ? ORDER BY id DESC')
     .bind(jour)
     .all();
 

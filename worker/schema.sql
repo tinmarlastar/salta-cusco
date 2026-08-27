@@ -13,8 +13,10 @@ CREATE TABLE IF NOT EXISTS contributions (
   cle_idempotence  TEXT NOT NULL UNIQUE
 );
 
--- Lister une étape dans l'ordre chronologique sans trier après coup :
--- l'identifiant préfixe l'horodatage, donc l'index suffit.
+-- Lister une étape sans trier après coup : l'identifiant préfixe l'horodatage,
+-- donc l'index suffit. La liste se lit de la plus récente à la plus ancienne
+-- (`ORDER BY id DESC`) ; un index se parcourt à l'envers aussi bien qu'à
+-- l'endroit, il n'y a donc rien à changer ici.
 CREATE INDEX IF NOT EXISTS idx_contributions_jour ON contributions (jour, id);
 
 -- ---------------------------------------------------------------- médias

@@ -599,9 +599,14 @@ export function monterSouvenirs(conteneur, jour, { surDecompte = null } = {}) {
       return;
     }
     if (mienne !== generation) return; // un appel plus récent a pris le dessus
+    // Les notes en attente d'envoi passent AVANT les publiées : ce sont les plus
+    // récentes de toutes — on vient de les écrire — et la liste se lit
+    // désormais de la plus récente à la plus ancienne. Posées après, elles
+    // auraient disparu tout en bas d'une journée bien remplie, juste au moment
+    // où l'on cherche à vérifier que sa note est bien partie.
     liste.innerHTML = publiees.length || attente.length
-      ? publiees.map(gabaritContribution).join('')
-        + attente.map((e) => gabaritEnAttente(e, progressionEnvoi())).join('')
+      ? attente.map((e) => gabaritEnAttente(e, progressionEnvoi())).join('')
+        + publiees.map(gabaritContribution).join('')
       : '<p class="souvenirs__vide">Aucune note pour cette étape. Sois le premier.</p>';
 
     // Le décompte sort du MÊME chargement que la liste : le recalculer ailleurs

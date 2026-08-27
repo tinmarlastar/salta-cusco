@@ -3,7 +3,9 @@
    Le site reste statique ; seul le bloc « souvenirs » appelle ce service. */
 
 import { creerId, creerJeton, hacherJeton, memeSecret } from './lib/securite.js';
-import { calculerPositionAuto, dateDuJourVoyage, dateParisDuJour } from './lib/position.js';
+import {
+  calculerPositionAuto, dateDuJourVoyage, dateParisDuJour, PREMIER_JOUR_ROULE,
+} from './lib/position.js';
 import { normaliserEtape, assemblerStatistiques } from './lib/visites.js';
 import { requetes, normaliser } from './lib/consommation.js';
 
@@ -679,7 +681,11 @@ async function lirePosition(env, cors) {
   let arriveeLe = null;
   if (mode === 'auto' && depart) {
     jour = calculerPositionAuto({ depart, decalage });
-    if (jour === null) departPrevuLe = dateDuJourVoyage({ depart, decalage, jour: 1 });
+    // La date annoncée est celle où l'on QUITTE Salta, donc celle de la première
+    // journée roulée — J1 est le rassemblement sur place, pas un départ.
+    if (jour === null) {
+      departPrevuLe = dateDuJourVoyage({ depart, decalage, jour: PREMIER_JOUR_ROULE });
+    }
     if (jour === JOURS) arriveeLe = dateDuJourVoyage({ depart, decalage, jour: JOURS });
   } else {
     if (jour === null) departPrevuLe = departPrevuPose;

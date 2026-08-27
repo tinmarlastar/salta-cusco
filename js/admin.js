@@ -130,7 +130,7 @@ function gabaritDateAnnoncee(jourManuel) {
   let valeur;
   if (jourManuel === null) {
     id = 'position-depart-prevu';
-    libelle = 'Date du départ prévu';
+    libelle = 'Date de départ de Salta';
     valeur = position.departPrevuPose;
   } else if (jourManuel === derniere) {
     id = 'position-arrivee';
@@ -148,7 +148,12 @@ function gabaritDateAnnoncee(jourManuel) {
 
 /** Menu de journée du mode manuel, et la date à annoncer quand il y en a une. */
 function gabaritJourManuel() {
-  const jours = [...titresEtapes.keys()].sort((a, b) => a - b);
+  // J1 ne figure pas dans le menu : ce n'est pas une étape roulée — zéro
+  // kilomètre, Salta → Salta, c'est la journée de rassemblement sur place. Elle
+  // se lit comme les autres sur le site, mais n'est jamais une position. Tant
+  // qu'on n'a pas quitté Salta, le réglage juste est « Pas encore partis », qui
+  // fait annoncer la date du départ. Voir `PREMIER_JOUR_ROULE` côté service.
+  const jours = [...titresEtapes.keys()].sort((a, b) => a - b).filter((j) => j > 1);
   const valeurCourante = position.mode === 'manuel' ? position.jour : null;
   const options = jours.map((jour) => {
     const titre = titresEtapes.get(jour);
@@ -175,7 +180,7 @@ function gabaritAuto() {
   const decalage = position.decalage ?? 0;
 
   return `<p class="admin-filtre">
-      <label for="position-depart">Date de départ</label>
+      <label for="position-depart">Date de départ de Salta</label>
       <input type="date" id="position-depart" class="admin-filtre__menu" value="${echapper(depart)}">
     </p>
     <p class="admin-filtre">
@@ -203,7 +208,7 @@ function gabaritModulePosition() {
   // seule confirmation que la date saisie sort bien à l'écran — le champ,
   // lui, montre ce qui est enregistré, pas ce qui est affiché.
   const annonce = position.departPrevuLe
-    ? `Frise : « Départ prévu le ${dateSeuleLisible(position.departPrevuLe)} ».`
+    ? `Frise : « Départ de Salta le ${dateSeuleLisible(position.departPrevuLe)} ».`
     : position.arriveeLe
       ? `Frise : « Nous sommes arrivés le ${dateSeuleLisible(position.arriveeLe)} ».`
       : '';

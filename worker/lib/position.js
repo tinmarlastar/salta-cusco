@@ -6,6 +6,18 @@
    voyage change un jour de longueur. */
 
 const JOURS_VOYAGE = 15;
+
+/* La première journée ROULÉE, et le repère de tout ce calendrier.
+
+   J1 n'en est pas une : `ride: false`, zéro kilomètre, Salta → Salta — c'est la
+   journée de rassemblement sur place. Elle se lit comme les autres sur le site,
+   mais n'est jamais une position : le compteur ne s'y arrête pas et le menu de
+   l'admin ne la propose pas.
+
+   `depart` désigne donc la date où l'on QUITTE Salta, celle de J2. Faire partir
+   le calendrier de J1 revenait à annoncer un départ de Salta le jour même où
+   l'on y arrive — c'est le défaut que ce repère corrige. */
+export const PREMIER_JOUR_ROULE = 2;
 const MS_PAR_JOUR = 24 * 60 * 60 * 1000;
 
 /** La date du jour à Paris, au format AAAA-MM-JJ.
@@ -41,29 +53,32 @@ export function joursEntre(depart, arrivee) {
 
     L'inverse de `calculerPositionAuto` : celle-ci part de la date du jour et
     trouve la journée, celle-là part d'une journée et retrouve sa date. Elle
-    sert à annoncer les deux extrémités du voyage — « Départ prévu le… » avant
-    J1, « Nous sommes arrivés le… » une fois J15 atteint.
+    sert à annoncer les deux extrémités du voyage — « Départ de Salta le… »
+    avant d'être partis, « Nous sommes arrivés le… » une fois J15 atteint.
 
     Le décalage joue en sens INVERSE ici : deux jours d'avance, c'est une
     journée atteinte deux jours plus tôt. Sans ce signe, la frise annoncerait
     un départ le 1er septembre tout en attendant le 3 pour passer à J1 — elle
     se contredirait à l'écran. */
 export function dateDuJourVoyage({ depart, decalage = 0, jour }) {
-  return versDate(versInstant(depart) + (jour - 1 - decalage) * MS_PAR_JOUR);
+  return versDate(versInstant(depart) + (jour - PREMIER_JOUR_ROULE - decalage) * MS_PAR_JOUR);
 }
 
-/** La journée à montrer (1 à 15), ou `null` avant le départ.
+/** La journée à montrer (2 à 15), ou `null` tant qu'on n'a pas quitté Salta.
 
-    `depart` : date AAAA-MM-JJ. `decalage` : jours d'avance (positif) ou de
-    retard (négatif) — un décalage négatif peut repousser sous J1 même après
-    le départ. `maintenant` : injectable pour les tests, sinon l'instant
-    présent. Au-delà du quinzième jour, plafonne à 15 : le voyage est fini,
-    les motos restent à Cusco plutôt que de disparaître. */
+    `depart` : la date où l'on quitte Salta, AAAA-MM-JJ. `decalage` : jours
+    d'avance (positif) ou de retard (négatif) — un décalage négatif peut
+    repousser avant le départ. `maintenant` : injectable pour les tests, sinon
+    l'instant présent. Au-delà du quinzième jour, plafonne à 15 : le voyage est
+    fini, les motos restent à Cusco plutôt que de disparaître.
+
+    Ne rend JAMAIS J1 : voir `PREMIER_JOUR_ROULE`. Avant le départ la frise
+    annonce la date à venir, elle ne prétend pas qu'on est déjà quelque part. */
 export function calculerPositionAuto({ depart, decalage = 0, maintenant = new Date() }) {
   const aujourdhui = dateParisDuJour(maintenant);
   const ecoules = joursEntre(depart, aujourdhui);
-  const jour = ecoules + 1 + decalage;
-  if (jour < 1) return null;
+  const jour = ecoules + PREMIER_JOUR_ROULE + decalage;
+  if (jour < PREMIER_JOUR_ROULE) return null;
   if (jour > JOURS_VOYAGE) return JOURS_VOYAGE;
   return jour;
 }

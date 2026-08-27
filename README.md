@@ -373,12 +373,16 @@ MOT_DE_PASSE_ADMIN=...
 > déploiement (étape « Poser les deux mots de passe » ci-dessous), deux mots
 > de passe différents de ceux-là.
 
-Tests des fonctions d'autorisation et de la file d'attente hors-ligne (24
-tests) :
+Tests des fonctions pures du service — autorisation, position, consommation,
+visites — et de la file d'attente hors-ligne (61 tests) :
 
 ```bash
-cd worker && node --test test/
+cd worker && node --test
 ```
+
+Sans chemin : `node --test test/` fonctionnait sous Node 20, mais Node 22 lit le
+dossier comme un module et échoue. La forme nue trouve les mêmes fichiers sous
+les deux versions.
 
 ### Déployer le service
 

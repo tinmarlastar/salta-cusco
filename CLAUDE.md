@@ -35,10 +35,13 @@ npx wrangler d1 execute souvenirs --local --file=schema.sql
 npx wrangler dev --local --port 8787
 ```
 
-Worker tests (24 tests, plain `node:test`, no other test runner in the repo):
+Worker tests (61 tests, plain `node:test`, no other test runner in the repo).
+Pass no path: `node --test test/` worked on Node 20 but Node 22 reads the
+directory as a module and fails. Bare `--test` discovers the same files under
+both:
 
 ```bash
-cd worker && node --test test/
+cd worker && node --test
 # single file:
 cd worker && node --test test/securite.test.js
 ```

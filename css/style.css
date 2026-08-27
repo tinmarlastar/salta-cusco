@@ -1383,9 +1383,9 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
   letter-spacing: .08em;
   text-transform: uppercase;
 }
-/* Compagnon : la couleur d'accent du site, pour que le passage d'un état à
+/* Motard : la couleur d'accent du site, pour que le passage d'un état à
    l'autre se voie du coin de l'œil, sans avoir à lire. */
-.souvenir-form__badge.est-compagnon {
+.souvenir-form__badge.est-motard {
   border-color: var(--soufre);
   color: var(--accent-encre);
 }

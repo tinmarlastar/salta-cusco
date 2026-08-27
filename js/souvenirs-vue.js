@@ -307,14 +307,18 @@ function gabaritEnAttente(entree, progression) {
 // et évite de le redemander inutilement.
 /** Ligne de statut : lire ou publier, et sous quel nom.
 
-    Deux états, nommés d'après le vocabulaire du site (« Souvenirs des
-    compagnons ») :
-      - Visiteur   : aucun mot de passe en mémoire, on peut tout lire, publier
-                     le demandera.
-      - Compagnon  : un mot de passe est en mémoire, on publie sans rien
-                     retaper — et on voit enfin sous quel prénom.
+    Deux états :
+      - Visiteur : aucun mot de passe en mémoire, on peut tout lire, publier
+                   le demandera.
+      - Motard   : un mot de passe est en mémoire, on publie sans rien
+                   retaper — et on voit enfin sous quel prénom.
 
-    « Compagnon » veut dire « un mot de passe est mémorisé », ce qui vaut
+    « Motard » et non « Compagnon » : le second nommait une place dans le
+    voyage, quand ce badge ne dit qu'une chose, celui qui a le droit d'écrire.
+    Ce sont les motards qui l'ont, l'intitulé du formulaire le dit désormais
+    aussi (« réservé aux motards »), et les deux mots devaient s'accorder.
+
+    « Motard » veut dire « un mot de passe est mémorisé », ce qui vaut
     « correct » en pratique : un refus du service l'efface aussitôt (voir la
     branche de refus dans `rafraichir`), et le statut retombe de lui-même à
     Visiteur. Le seul écart tient aux quelques secondes entre l'envoi et la
@@ -322,12 +326,12 @@ function gabaritEnAttente(entree, progression) {
     comme bon. */
 function gabaritStatut() {
   const auteur = localStorage.getItem(CLE_AUTEUR) || '';
-  const compagnon = Boolean(auteur && localStorage.getItem(CLE_MOT_DE_PASSE));
-  if (!compagnon) {
+  const motard = Boolean(auteur && localStorage.getItem(CLE_MOT_DE_PASSE));
+  if (!motard) {
     return `<span class="souvenir-form__badge">Visiteur</span>
       <span class="souvenir-form__statut-detail">lecture seule — le mot de passe du groupe te sera demandé pour publier</span>`;
   }
-  return `<span class="souvenir-form__badge est-compagnon">Compagnon</span>
+  return `<span class="souvenir-form__badge est-motard">Motard</span>
     <span class="souvenir-form__statut-detail">tu publies en tant que <b>${echapper(auteur)}</b></span>
     <button type="button" class="souvenir-form__changer" data-action="changer-identite">Changer</button>`;
 }
@@ -649,7 +653,7 @@ export function monterSouvenirs(conteneur, jour, { surDecompte = null } = {}) {
     majStatut();
   }
 
-  /** Réécrit la ligne « Visiteur / Compagnon ». */
+  /** Réécrit la ligne « Visiteur / Motard ». */
   function majStatut() {
     const ligne = formulaire.querySelector('.souvenir-form__statut');
     if (ligne) ligne.innerHTML = gabaritStatut();

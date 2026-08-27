@@ -1725,9 +1725,9 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
   color: var(--texte-2);
 }
 
-/* La période et le plafond se disent du même ton que les légendes du site :
-   ce sont des repères, pas la mesure elle-même. */
-.conso__periode, .conso__plafond {
+/* La période et le détail chiffré se disent du même ton que les légendes du
+   site : ce sont des repères, pas la réponse qu'on cherche. */
+.conso__periode, .conso__detail {
   font-family: var(--mono);
   font-size: .625rem;
   letter-spacing: .06em;
@@ -1735,16 +1735,26 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
   color: var(--poussiere);
 }
 
+/* Le pourcentage porte la carte : c'est la seule chose qu'on vient lire ici.
+   Chiffres tabulaires pour que huit jauges empilées alignent leurs unités
+   plutôt que de danser d'une ligne à l'autre. */
 .conso__valeur {
   display: flex;
   flex-wrap: wrap;
   gap: .5rem;
   align-items: baseline;
   margin: 0;
-  font-size: 1.125rem;
+  font-size: 1.75rem;
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
   color: var(--sel);
 }
+
+/* Le dépassement se peint jusque dans le chiffre — c'est là que l'œil tombe
+   d'abord. L'approche, elle, se dit toujours par le mot seul : du rouge dès
+   80 % crierait pour un seuil qu'on franchit en marchant. */
+.conso__mesure.est-depasse .conso__valeur { color: var(--colorada); }
 
 /* Trois pixels : assez pour se voir d'un coup d'œil, assez peu pour rester une
    règle sous un chiffre plutôt qu'un objet de plus à regarder. */

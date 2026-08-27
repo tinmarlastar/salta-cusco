@@ -322,11 +322,14 @@ function gabaritMesure(mesure) {
   const largeur = Math.min(1, mesure.part) * 100;
   const alerte = { proche: 'proche du plafond', depasse: 'plafond dépassé' }[mesure.niveau];
 
+  // Le POURCENTAGE en grand, la valeur brute en dessous. C'est lui qui répond à
+  // la question qu'on se pose en ouvrant cette page — « suis-je encore dans le
+  // gratuit ? » — quand « 84 000 » ne veut rien dire sans son plafond à côté.
   return `<div class="conso__mesure est-${mesure.niveau}">
     <p class="conso__libelle">${echapper(mesure.libelle)}
       <span class="conso__periode">${PERIODES[mesure.periode] || ''}</span></p>
-    <p class="conso__valeur">${echapper(valeur)}
-      <span class="conso__plafond">sur ${echapper(plafond)} · ${pourcent}</span></p>
+    <p class="conso__valeur">${pourcent}</p>
+    <p class="conso__detail">${echapper(valeur)} sur ${echapper(plafond)}</p>
     <div class="conso__jauge" role="img"
          aria-label="${pourcent} du forfait ${echapper(mesure.libelle)}">
       <span class="conso__part" style="width:${largeur.toFixed(1)}%"></span>

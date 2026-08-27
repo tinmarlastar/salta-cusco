@@ -2,27 +2,30 @@
    gratuite laisse dépenser.
 
    Fonctions pures, sans accès réseau — testables directement, comme
-   lib/securite.js et lib/position.js. L'appel à l'API GraphQL de Cloudflare
-   vit dans index.js ; ici on ne fait que FORMER la requête et LIRE la réponse.
-   Cette coupure a une raison pratique : la réponse de Cloudflare est un
-   empilement de tableaux imbriqués dont chaque niveau peut manquer, et c'est
-   exactement le genre de code qu'on veut éprouver sous `node --test` plutôt
-   qu'en production, à 4 000 mètres, sur la seule page qui dit si le service
-   tient encore. */
+   lib/securite.js et lib/position.js. Les appels à l'API GraphQL vivent dans
+   index.js ; ici on ne fait que FORMER les requêtes et LIRE les réponses.
+
+   UNE REQUÊTE PAR JEU DE DONNÉES, et non une seule qui les demande tous.
+   La raison est arrivée en production : une requête GraphQL dont un seul champ
+   est inconnu est rejetée EN ENTIER, avant d'être exécutée. Un `max` de trop
+   sur le jeu D1 effaçait donc aussi les compteurs Workers et R2, qui eux
+   étaient justes — et le panneau n'affichait plus rien du tout. Séparées, les
+   mesures vivent chacune leur vie : celles qui répondent s'affichent, celle
+   qui échoue dit pourquoi, à sa place. Le coût est de cinq appels au lieu
+   d'un, lancés de front. */
 
 /* Les forfaits de l'offre gratuite, en un seul endroit.
 
-   ATTENTION : ces valeurs sont celles relevées dans la documentation
-   Cloudflare en août 2026. Elles bougent — Cloudflare les a déjà relevées
-   plusieurs fois — et rien ici ne les vérifie automatiquement. Si le panneau
-   annonce un jour une marge qui ne correspond plus au tableau de bord, c'est
-   cette table qu'il faut revoir en premier, et non le calcul.
+   ATTENTION : valeurs relevées dans la documentation Cloudflare en août 2026.
+   Elles bougent, et rien ici ne les vérifie. Si le panneau annonce un jour une
+   marge qui ne correspond plus au tableau de bord, c'est cette table qu'il faut
+   revoir en premier, et non le calcul.
 
-   Le giga-octet est pris pour 10⁹ octets et non 2³⁰. Cloudflare écrit
-   « 10 GB-month » sans jamais préciser lequel des deux : on choisit donc la
-   lecture la plus sévère, qui rend le forfait plus petit de 7 % et fait monter
-   la jauge plus vite. Se tromper de ce côté fait s'inquiéter un peu tôt ; se
-   tromper de l'autre ferait annoncer de la marge qui n'existe pas. */
+   Le giga-octet vaut 10⁹ octets et non 2³⁰. Cloudflare écrit « 10 GB-month »
+   sans jamais préciser lequel : on choisit la lecture la plus sévère, qui rend
+   le forfait plus petit de 7 % et fait monter la jauge plus vite. Se tromper de
+   ce côté fait s'inquiéter un peu tôt ; se tromper de l'autre ferait annoncer
+   de la marge qui n'existe pas. */
 export const SEUILS = {
   workersRequetesParJour: 100_000,
   d1LignesLuesParJour: 5_000_000,
@@ -74,91 +77,109 @@ export function classeOperationR2(actionType) {
   return 'A';
 }
 
-/** La requête posée à l'API GraphQL de Cloudflare.
-
-    Deux fenêtres de temps, parce que les forfaits ne se remettent pas à zéro
-    au même rythme : Workers et D1 se comptent à la journée, le stockage et les
-    opérations R2 au mois. Les demander en une seule requête évite trois
-    allers-retours depuis un Worker qui a dix millisecondes de processeur.
-
-    `limit` vaut 1 pour les jeux qu'on agrège en bloc, et 100 pour les
-    opérations R2, dont on veut le détail par type d'action — c'est lui qui
-    permet de les répartir par classe. */
-export function requeteGraphQL({ idCompte, debutJour, debutMois, maintenant }) {
-  const query = `
-    query Consommation($compte: String!, $debutJour: Time!, $debutMois: Time!, $maintenant: Time!) {
+/* Deux façons de borner le temps, imposées par Cloudflare et non choisies :
+   ses jeux D1 ne se filtrent que par DATE (`date_geq`, en AAAA-MM-JJ), les
+   autres par instant (`datetime_geq`, en ISO complet). C'est un `datetime_geq`
+   posé sur D1 qui a fait rejeter la première version. */
+const envoi = (cle, jeu, corps, { parDate = false, debut, fin }) => ({
+  cle,
+  query: `
+    query Consommation($compte: String!, $debut: ${parDate ? 'Date' : 'Time'}!, $fin: ${parDate ? 'Date' : 'Time'}!) {
       viewer {
         accounts(filter: { accountTag: $compte }) {
-          workersInvocationsAdaptive(
-            limit: 1
-            filter: { datetime_geq: $debutJour, datetime_leq: $maintenant }
-          ) {
-            sum { requests }
-          }
-          d1AnalyticsAdaptiveGroups(
-            limit: 1
-            filter: { datetime_geq: $debutJour, datetime_leq: $maintenant }
-          ) {
-            sum { rowsRead rowsWritten }
-            max { databaseSizeBytes }
-          }
-          r2StorageAdaptiveGroups(
-            limit: 1
-            filter: { datetime_geq: $debutMois, datetime_leq: $maintenant }
-          ) {
-            max { payloadSize objectCount }
-          }
-          r2OperationsAdaptiveGroups(
-            limit: 100
-            filter: { datetime_geq: $debutMois, datetime_leq: $maintenant }
-          ) {
-            dimensions { actionType }
-            sum { requests }
-          }
+          ${jeu}(
+            limit: ${jeu === 'r2OperationsAdaptiveGroups' ? 100 : 1}
+            filter: { ${parDate ? 'date_geq: $debut, date_leq: $fin' : 'datetime_geq: $debut, datetime_leq: $fin'} }
+          ) ${corps}
         }
       }
-    }`;
-  return { query, variables: { compte: idCompte, debutJour, debutMois, maintenant } };
+    }`,
+  variables: { compte: null, debut, fin },
+  jeu,
+});
+
+/** Les cinq envois à faire, un par jeu de données.
+
+    Chacun porte sa clé — celle sous laquelle `normaliser` ira chercher sa
+    réponse — sa requête et ses variables. Les fenêtres diffèrent parce que les
+    forfaits ne se remettent pas à zéro au même rythme : Workers et D1 à la
+    journée, le stockage et les opérations R2 au mois. */
+export function requetes({ idCompte, debutJour, debutMois, maintenant, jour, mois }) {
+  const liste = [
+    envoi('workers', 'workersInvocationsAdaptive', '{ sum { requests } }',
+      { debut: debutJour, fin: maintenant }),
+    envoi('d1Lignes', 'd1AnalyticsAdaptiveGroups', '{ sum { rowsRead rowsWritten } }',
+      { parDate: true, debut: jour, fin: jour }),
+    envoi('d1Taille', 'd1StorageAdaptiveGroups', '{ max { databaseSizeBytes } }',
+      { parDate: true, debut: jour, fin: jour }),
+    envoi('r2Stockage', 'r2StorageAdaptiveGroups', '{ max { payloadSize objectCount } }',
+      { debut: debutMois, fin: maintenant }),
+    envoi('r2Operations', 'r2OperationsAdaptiveGroups',
+      '{ dimensions { actionType } sum { requests } }',
+      { debut: debutMois, fin: maintenant }),
+  ];
+  // Le compte est le même partout : posé ici plutôt que répété cinq fois.
+  for (const e of liste) e.variables.compte = idCompte;
+  // `mois` n'est pas utilisé : les jeux R2 se filtrent par instant, pas par
+  // date. Il reste accepté en entrée pour que l'appelant calcule ses bornes
+  // d'un seul tenant, sans avoir à savoir lesquelles serviront.
+  void mois;
+  return liste;
 }
 
-/* Lecture défensive de la réponse. Chaque niveau peut manquer : un jeu de
-   données qu'une offre ne sert pas, un champ renommé, un compte sans trafic
-   depuis minuit qui rend un tableau vide plutôt que des zéros. Toutes ces
-   formes doivent donner un nombre, sans quoi le panneau entier disparaîtrait
-   pour un champ absent. */
+/* Lecture défensive : un jeu peut manquer, un champ être renommé, un compte
+   n'avoir aucun trafic depuis minuit et rendre un tableau vide plutôt que des
+   zéros. Toutes ces formes doivent donner un nombre. */
 const nombre = (valeur) => (Number.isFinite(valeur) ? valeur : 0);
-const premierGroupe = (compte, jeu) => (Array.isArray(compte[jeu]) ? compte[jeu][0] : null) || {};
 
-function mesurer(libelle, valeur, plafond, { unite = 'nombre', periode = 'jour' } = {}) {
+/** Extrait le premier groupe d'une réponse, ou dit pourquoi il n'y en a pas.
+
+    Rend `{ groupe }` ou `{ erreur }`. La distinction compte : un tableau vide
+    est un vrai zéro — personne n'a rien consommé — là où une réponse sans
+    compte est une panne de configuration. Les confondre afficherait « 0 »
+    rassurant sur un compteur qui n'a simplement pas été lu. */
+function lire(reponse, jeu) {
+  if (!reponse) return { erreur: 'Aucune réponse pour ce jeu de données.' };
+  if (reponse.erreur) return { erreur: reponse.erreur };
+  const comptes = reponse.charge?.data?.viewer?.accounts;
+  if (!Array.isArray(comptes) || !comptes.length) {
+    return { erreur: "Aucun compte dans la réponse : l'identifiant de compte est-il le bon ?" };
+  }
+  const groupes = comptes[0][jeu];
+  return { groupe: (Array.isArray(groupes) ? groupes[0] : null) || {}, groupes: groupes || [] };
+}
+
+function mesurer(libelle, valeur, plafond, { unite = 'nombre', periode = 'jour', erreur } = {}) {
+  // `valeur: null` et non zéro quand la lecture a échoué : un zéro affirmerait
+  // que rien n'a été consommé, ce qu'on ne sait justement pas.
+  if (erreur) return { libelle, valeur: null, plafond, unite, periode, part: 0, niveau: 'calme', erreur };
   const part = plafond > 0 ? valeur / plafond : 0;
   return { libelle, valeur, plafond, unite, periode, part, niveau: niveau(part) };
 }
 
-/** Traduit la réponse de Cloudflare en trois services et leurs mesures.
+/** Traduit les cinq réponses en trois services et leurs mesures.
 
-    La forme rendue est celle que le panneau d'administration affiche
-    directement : chaque mesure porte sa valeur, son plafond, la part
-    consommée, sa période de remise à zéro et son niveau d'alerte. Le
-    navigateur n'a plus rien à calculer, et surtout plus aucun seuil à
-    connaître — ils vivent ici, en un seul endroit. */
-export function normaliser(charge, { releveLe }) {
-  const comptes = charge?.data?.viewer?.accounts;
-  if (!Array.isArray(comptes) || !comptes.length) {
-    throw new Error("La réponse de Cloudflare ne contient aucun compte : l'identifiant de compte est-il le bon ?");
-  }
-  const compte = comptes[0];
+    `reponses` est un objet dont chaque clé est celle d'un envoi, et chaque
+    valeur soit `{ charge }` — la réponse GraphQL — soit `{ erreur }`.
 
-  const workers = premierGroupe(compte, 'workersInvocationsAdaptive');
-  const d1 = premierGroupe(compte, 'd1AnalyticsAdaptiveGroups');
-  const r2 = premierGroupe(compte, 'r2StorageAdaptiveGroups');
+    La forme rendue est celle que le panneau affiche directement : chaque mesure
+    porte sa valeur, son plafond, la part consommée, sa période de remise à zéro
+    et son niveau d'alerte — ou son erreur. Le navigateur n'a plus rien à
+    calculer, et surtout aucun seuil à connaître : ils vivent ici seulement. */
+export function normaliser(reponses, { releveLe }) {
+  const workers = lire(reponses.workers, 'workersInvocationsAdaptive');
+  const d1Lignes = lire(reponses.d1Lignes, 'd1AnalyticsAdaptiveGroups');
+  const d1Taille = lire(reponses.d1Taille, 'd1StorageAdaptiveGroups');
+  const r2Stockage = lire(reponses.r2Stockage, 'r2StorageAdaptiveGroups');
+  const r2Operations = lire(reponses.r2Operations, 'r2OperationsAdaptiveGroups');
 
   // Les opérations arrivent en une ligne par type d'action : on les replie sur
   // les deux classes facturées, en laissant tomber les gratuites.
-  const operations = { A: 0, B: 0 };
-  for (const groupe of compte.r2OperationsAdaptiveGroups || []) {
+  const ops = { A: 0, B: 0 };
+  for (const groupe of r2Operations.groupes || []) {
     const classe = classeOperationR2(groupe?.dimensions?.actionType);
     if (classe === 'gratuite') continue;
-    operations[classe] += nombre(groupe?.sum?.requests);
+    ops[classe] += nombre(groupe?.sum?.requests);
   }
 
   return {
@@ -167,29 +188,34 @@ export function normaliser(charge, { releveLe }) {
       {
         nom: 'Workers',
         mesures: [
-          mesurer('Requêtes', nombre(workers.sum?.requests), SEUILS.workersRequetesParJour),
+          mesurer('Requêtes', nombre(workers.groupe?.sum?.requests),
+            SEUILS.workersRequetesParJour, { erreur: workers.erreur }),
         ],
       },
       {
         nom: 'D1',
         mesures: [
-          mesurer('Lignes lues', nombre(d1.sum?.rowsRead), SEUILS.d1LignesLuesParJour),
-          mesurer('Lignes écrites', nombre(d1.sum?.rowsWritten), SEUILS.d1LignesEcritesParJour),
-          mesurer('Taille de la base', nombre(d1.max?.databaseSizeBytes), SEUILS.d1TailleOctets,
-            { unite: 'octets', periode: 'instantane' }),
+          mesurer('Lignes lues', nombre(d1Lignes.groupe?.sum?.rowsRead),
+            SEUILS.d1LignesLuesParJour, { erreur: d1Lignes.erreur }),
+          mesurer('Lignes écrites', nombre(d1Lignes.groupe?.sum?.rowsWritten),
+            SEUILS.d1LignesEcritesParJour, { erreur: d1Lignes.erreur }),
+          mesurer('Taille de la base', nombre(d1Taille.groupe?.max?.databaseSizeBytes),
+            SEUILS.d1TailleOctets,
+            { unite: 'octets', periode: 'instantane', erreur: d1Taille.erreur }),
         ],
       },
       {
         nom: 'R2',
         mesures: [
-          mesurer('Stockage', nombre(r2.max?.payloadSize), SEUILS.r2StockageOctets,
-            { unite: 'octets', periode: 'mois' }),
-          mesurer('Fichiers', nombre(r2.max?.objectCount), 0,
-            { unite: 'nombre', periode: 'instantane' }),
-          mesurer('Opérations classe A', operations.A, SEUILS.r2OperationsAParMois,
-            { periode: 'mois' }),
-          mesurer('Opérations classe B', operations.B, SEUILS.r2OperationsBParMois,
-            { periode: 'mois' }),
+          mesurer('Stockage', nombre(r2Stockage.groupe?.max?.payloadSize),
+            SEUILS.r2StockageOctets,
+            { unite: 'octets', periode: 'mois', erreur: r2Stockage.erreur }),
+          mesurer('Fichiers', nombre(r2Stockage.groupe?.max?.objectCount), 0,
+            { periode: 'instantane', erreur: r2Stockage.erreur }),
+          mesurer('Opérations classe A', ops.A, SEUILS.r2OperationsAParMois,
+            { periode: 'mois', erreur: r2Operations.erreur }),
+          mesurer('Opérations classe B', ops.B, SEUILS.r2OperationsBParMois,
+            { periode: 'mois', erreur: r2Operations.erreur }),
         ],
       },
     ],

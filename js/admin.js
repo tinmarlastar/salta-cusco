@@ -286,6 +286,16 @@ const PERIODES = {
 };
 
 function gabaritMesure(mesure) {
+  // Une mesure que Cloudflare n'a pas su rendre porte sa raison plutôt qu'un
+  // chiffre. Elle garde sa place dans la carte : une jauge manquante se voit et
+  // se corrige, une mesure escamotée laisse croire qu'elle n'a jamais existé.
+  if (mesure.erreur) {
+    return `<div class="conso__mesure est-muette">
+      <p class="conso__libelle">${echapper(mesure.libelle)}</p>
+      <p class="conso__souci">${echapper(mesure.erreur)}</p>
+    </div>`;
+  }
+
   const valeur = mesure.unite === 'octets'
     ? poidsDecimal(mesure.valeur)
     : mesure.valeur.toLocaleString('fr-FR');

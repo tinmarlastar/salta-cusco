@@ -4,7 +4,7 @@
 
 import { creerId, creerJeton, hacherJeton, memeSecret } from './lib/securite.js';
 import { calculerPositionAuto, dateDuJourVoyage } from './lib/position.js';
-import { requeteGraphQL, normaliser } from './lib/consommation.js';
+import { requetes, normaliser } from './lib/consommation.js';
 
 const TEXTE_MAX = 5000; // de quoi raconter une journée entière, pas seulement une légende
 const AUTEUR_MAX = 40;
@@ -781,22 +781,54 @@ async function listerTout(requete, env, cors) {
 }
 
 const GRAPHQL_CLOUDFLARE = 'https://api.cloudflare.com/client/v4/graphql';
-// Dix secondes : l'API analytique de Cloudflare répond en général en moins
-// d'une, et la page d'administration doit dire « je n'ai pas pu » plutôt que
-// de tourner. Rien ici n'est réessayé — un compteur n'a pas à insister.
+// Dix secondes par jeu de données, tous lancés de front : l'API analytique de
+// Cloudflare répond en général en moins d'une seconde, et la page doit dire
+// « je n'ai pas pu » plutôt que de tourner. Rien n'est réessayé — un compteur
+// n'a pas à insister.
 const DELAI_ANALYTIQUE_MS = 10_000;
+
+/** Pose une requête à Cloudflare et rend soit `{ charge }`, soit `{ erreur }`.
+
+    Ne lève jamais : c'est tout l'intérêt d'avoir séparé les jeux de données.
+    Un champ que Cloudflare ne connaît pas fait tomber CETTE mesure et elle
+    seule ; les autres continuent de s'afficher. */
+async function interrogerCloudflare(envoi, jeton) {
+  try {
+    const reponse = await fetch(GRAPHQL_CLOUDFLARE, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${jeton}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: envoi.query, variables: envoi.variables }),
+      signal: AbortSignal.timeout(DELAI_ANALYTIQUE_MS),
+    });
+    if (!reponse.ok) {
+      return { erreur: `Cloudflare a refusé la demande (${reponse.status}). Le jeton a-t-il bien la permission « Account Analytics : Read » ?` };
+    }
+    const charge = await reponse.json();
+    // Les erreurs GraphQL arrivent dans un 200 : sans ce test, une réponse
+    // vide se lirait comme un compte à zéro. Le message de Cloudflare est
+    // rendu TEL QUEL, en anglais — il nomme le champ fautif, et c'est la seule
+    // chose qui permette de corriger sans tâtonner.
+    if (Array.isArray(charge?.errors) && charge.errors.length) {
+      return { erreur: charge.errors[0]?.message || 'Cloudflare a rejeté la requête.' };
+    }
+    return { charge };
+  } catch (souci) {
+    console.error(souci);
+    return { erreur: "L'API de Cloudflare n'a pas répondu à temps." };
+  }
+}
 
 /** Les compteurs de consommation Cloudflare, pour la page d'administration.
 
     Réservée à l'administration : ces chiffres portent sur le COMPTE entier,
-    pas seulement sur ce projet. Le jeton, lui, ne quitte jamais le service —
-    le navigateur reçoit des mesures déjà calculées, sans rien savoir ni du
-    secret ni de la forme GraphQL.
+    pas seulement sur ce projet. Le jeton ne quitte jamais le service — le
+    navigateur reçoit des mesures déjà calculées, sans rien savoir ni du secret
+    ni de la forme GraphQL.
 
-    Les fenêtres de temps sont en UTC, et non à Paris comme le reste du site :
-    ce sont les forfaits de Cloudflare qu'on mesure, et c'est à minuit UTC
-    qu'ils se remettent à zéro. Les caler sur Paris aurait décalé les compteurs
-    d'une ou deux heures selon la saison, juste assez pour faire douter. */
+    Les fenêtres sont en UTC, et non à Paris comme le reste du site : ce sont
+    les forfaits de Cloudflare qu'on mesure, et c'est à minuit UTC qu'ils se
+    remettent à zéro. Les caler sur Paris aurait décalé les compteurs d'une ou
+    deux heures selon la saison, juste assez pour faire douter. */
 async function lireConsommation(requete, env, cors) {
   if (!await adminAutorise(requete, env)) return erreur('Mot de passe incorrect', 401, cors);
 
@@ -809,53 +841,36 @@ async function lireConsommation(requete, env, cors) {
   }
 
   const maintenant = new Date();
-  const debutJour = new Date(Date.UTC(
-    maintenant.getUTCFullYear(), maintenant.getUTCMonth(), maintenant.getUTCDate(),
-  ));
-  const debutMois = new Date(Date.UTC(maintenant.getUTCFullYear(), maintenant.getUTCMonth(), 1));
+  const an = maintenant.getUTCFullYear();
+  const mois0 = maintenant.getUTCMonth();
+  const debutJour = new Date(Date.UTC(an, mois0, maintenant.getUTCDate()));
+  const debutMois = new Date(Date.UTC(an, mois0, 1));
+  const enDate = (d) => d.toISOString().slice(0, 10);
 
-  const { query, variables } = requeteGraphQL({
+  const envois = requetes({
     idCompte: env.ID_COMPTE_CF,
     debutJour: debutJour.toISOString(),
     debutMois: debutMois.toISOString(),
     maintenant: maintenant.toISOString(),
+    jour: enDate(debutJour),
+    mois: enDate(debutMois),
   });
 
-  let charge;
-  try {
-    const reponse = await fetch(GRAPHQL_CLOUDFLARE, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${env.JETON_ANALYTIQUE_CF}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ query, variables }),
-      signal: AbortSignal.timeout(DELAI_ANALYTIQUE_MS),
-    });
-    if (!reponse.ok) {
-      return erreur(`Cloudflare a refusé la demande (${reponse.status}). Le jeton a-t-il bien `
-        + "la permission « Account Analytics : Read » ?", 502, cors);
-    }
-    charge = await reponse.json();
-  } catch (souci) {
-    console.error(souci);
-    return erreur("L'API de Cloudflare n'a pas répondu à temps.", 504, cors);
+  // De front : cinq allers-retours en série auraient coûté cinq fois l'attente
+  // pour des mesures qui ne dépendent pas les unes des autres.
+  const resultats = await Promise.all(
+    envois.map(async (e) => [e.cle, await interrogerCloudflare(e, env.JETON_ANALYTIQUE_CF)]),
+  );
+  const reponses = Object.fromEntries(resultats);
+
+  // Quand TOUT échoue pour la même raison — jeton refusé, compte inconnu — une
+  // phrase vaut mieux que huit fois la même sous huit jauges vides.
+  const echecs = Object.values(reponses).filter((r) => r.erreur);
+  if (echecs.length === envois.length && new Set(echecs.map((r) => r.erreur)).size === 1) {
+    return erreur(echecs[0].erreur, 502, cors);
   }
 
-  // Les erreurs GraphQL arrivent dans un 200 : sans ce test, une réponse vide
-  // se lirait comme un compte à zéro. On rend le message de Cloudflare TEL
-  // QUEL, en anglais — il nomme le champ fautif, et c'est la seule chose qui
-  // permette de corriger la requête sans tâtonner.
-  if (Array.isArray(charge?.errors) && charge.errors.length) {
-    return erreur(`Cloudflare a rejeté la requête : ${charge.errors[0]?.message || 'raison inconnue'}`,
-      502, cors);
-  }
-
-  try {
-    return repondre(normaliser(charge, { releveLe: maintenant.toISOString() }), { cors });
-  } catch (souci) {
-    return erreur(souci.message, 502, cors);
-  }
+  return repondre(normaliser(reponses, { releveLe: maintenant.toISOString() }), { cors });
 }
 
 export default {

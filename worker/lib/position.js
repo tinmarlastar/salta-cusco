@@ -44,6 +44,79 @@ function versDate(instant) {
   return new Date(instant).toISOString().slice(0, 10);
 }
 
+/* L'heure à laquelle une journée bascule sur la suivante, dans le fuseau de la
+   ville où l'on ARRIVE ce soir-là.
+
+   20 h et non minuit : à minuit la frise nommait la ville d'arrivée alors que
+   la journée de route n'avait pas commencé. À 20 h, les motos sont posées, et
+   la phrase « Nous sommes à Humahuaca ! » dit quelque chose de vrai.
+
+   Le fuseau est celui de l'arrivée, pas du départ : c'est là qu'on est quand
+   la bascule a lieu. */
+const HEURE_BASCULE = 20;
+
+/* Le fuseau de la ville d'arrivée de chaque journée roulée.
+
+   Recopié de `data/etapes.json`, que ce service ne peut pas lire — c'est un
+   fichier du site. Un test compare les deux à chaque exécution
+   (`test/fuseaux.test.js`) : sans lui, une étape déplacée d'un pays à l'autre
+   laisserait cette table mentir en silence, et la frise changerait de jour à
+   la mauvaise heure pendant tout le voyage.
+
+   Les fuseaux sont NOMMÉS et non écrits en décalage horaire : le Chili passe à
+   l'heure d'été le premier dimanche de septembre, en plein voyage. */
+export const FUSEAU_PAR_JOUR = {
+  2: 'America/Argentina/Salta',
+  3: 'America/Argentina/Salta',
+  4: 'America/Santiago',
+  5: 'America/La_Paz',
+  6: 'America/La_Paz',
+  7: 'America/La_Paz',
+  8: 'America/La_Paz',
+  9: 'America/La_Paz',
+  10: 'America/La_Paz',
+  11: 'America/Lima',
+  12: 'America/Lima',
+  13: 'America/Lima',
+  14: 'America/Lima',
+  15: 'America/Lima',
+};
+
+/** L'instant réel où il est telle heure, tel jour, dans tel fuseau.
+
+    `Date` ne sait pas construire un instant à partir d'une heure locale dans un
+    fuseau arbitraire : il ne connaît que l'UTC et le fuseau de la machine — ici
+    celui d'un serveur Cloudflare, qui n'a rien à voir avec les Andes. On part
+    donc de l'instant UTC naïf, on demande à `Intl` quel décalage s'applique
+    LÀ-BAS à ce moment, et on corrige.
+
+    Deux passes : le décalage se lit à un instant, et l'instant dépend du
+    décalage. La première approximation suffit à tomber dans le bon jour, la
+    seconde règle le cas des quelques heures qui suivent un changement d'heure. */
+export function instantLocal(dateIso, heure, fuseau) {
+  const [annee, mois, jour] = dateIso.split('-').map(Number);
+  const naif = Date.UTC(annee, mois - 1, jour, heure);
+  let instant = naif;
+  for (let passe = 0; passe < 2; passe += 1) {
+    instant = naif - decalageFuseau(instant, fuseau);
+  }
+  return new Date(instant);
+}
+
+/* Le décalage d'un fuseau à un instant donné, en millisecondes. `en-CA` rend
+   une date en AAAA-MM-JJ, ce qui se recompose sans ambiguïté. */
+function decalageFuseau(instant, fuseau) {
+  const parties = new Intl.DateTimeFormat('en-CA', {
+    timeZone: fuseau,
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(new Date(instant));
+  const p = Object.fromEntries(parties.map((x) => [x.type, x.value]));
+  const local = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute, +p.second);
+  return local - instant;
+}
+
 /** Jours entiers entre deux dates AAAA-MM-JJ (positif si `arrivee` suit `depart`). */
 export function joursEntre(depart, arrivee) {
   return Math.round((versInstant(arrivee) - versInstant(depart)) / MS_PAR_JOUR);
@@ -75,10 +148,13 @@ export function dateDuJourVoyage({ depart, decalage = 0, jour }) {
     Ne rend JAMAIS J1 : voir `PREMIER_JOUR_ROULE`. Avant le départ la frise
     annonce la date à venir, elle ne prétend pas qu'on est déjà quelque part. */
 export function calculerPositionAuto({ depart, decalage = 0, maintenant = new Date() }) {
-  const aujourdhui = dateParisDuJour(maintenant);
-  const ecoules = joursEntre(depart, aujourdhui);
-  const jour = ecoules + PREMIER_JOUR_ROULE + decalage;
-  if (jour < PREMIER_JOUR_ROULE) return null;
-  if (jour > JOURS_VOYAGE) return JOURS_VOYAGE;
-  return jour;
+  // On descend depuis la fin : la journée à montrer est la DERNIÈRE dont
+  // l'heure de bascule est passée. Parcourir dans l'autre sens obligerait à
+  // regarder la journée suivante pour savoir si l'on s'arrête — et à gérer à
+  // part le bout du voyage, où il n'y en a pas.
+  for (let jour = JOURS_VOYAGE; jour >= PREMIER_JOUR_ROULE; jour -= 1) {
+    const date = dateDuJourVoyage({ depart, decalage, jour });
+    if (maintenant >= instantLocal(date, HEURE_BASCULE, FUSEAU_PAR_JOUR[jour])) return jour;
+  }
+  return null;
 }

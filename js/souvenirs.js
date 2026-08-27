@@ -16,7 +16,17 @@ const DELAI_RESEAU_MS = 15 * 1000;
 const DELAI_MEDIA_MS = 120 * 1000;
 
 /** Panne réseau ou service indisponible : un renvoi plus tard a du sens. */
-export class ErreurReseau extends Error {}
+export class ErreurReseau extends Error {
+  /* `statut` n'est renseigné que lorsque le SERVICE a répondu — un 5xx avec sa
+     phrase à lui. Une panne de transport le laisse indéfini, et c'est tout ce
+     qui sépare « les secrets ne sont pas posés » d'un « Failed to fetch » que
+     personne ne doit lire. L'appelant qui veut montrer la cause à l'écran
+     n'affiche le message que si ce statut existe. */
+  constructor(message, statut) {
+    super(message);
+    this.statut = statut;
+  }
+}
 
 /** Refus explicite du service (mot de passe, fichier trop lourd) : ne pas renvoyer. */
 export class ErreurService extends Error {
@@ -113,6 +123,7 @@ async function appeler(chemin, options = {}, delaiMs = DELAI_RESEAU_MS) {
   if (reponse.status >= 500) {
     throw new ErreurReseau(
       donnees.erreur ? `${donnees.erreur} (${reponse.status})` : `Service en erreur (${reponse.status})`,
+      reponse.status,
     );
   }
   if (!reponse.ok) {
@@ -320,6 +331,20 @@ export async function ecrirePosition({
 export async function listerTout(motDePasse) {
   const donnees = await appeler('/api/tout', { headers: { 'X-Mot-De-Passe': motDePasse } });
   return donnees.contributions || [];
+}
+
+/** Les compteurs Cloudflare, pour la page d'administration.
+
+    Rendus tels que le service les calcule : valeurs, plafonds de l'offre
+    gratuite et part consommée. Aucun seuil n'est connu de ce côté-ci — les
+    forfaits changent, et les avoir en deux endroits aurait garanti qu'un des
+    deux finisse périmé.
+
+    Le délai est celui des lectures ordinaires : le service interroge Cloudflare
+    de son côté avec sa propre limite, plus courte, et rend un message clair
+    plutôt que de laisser la page attendre. */
+export async function lireConsommation(motDePasse) {
+  return appeler('/api/consommation', { headers: { 'X-Mot-De-Passe': motDePasse } });
 }
 
 /** Vérifie la taille d'une vidéo avant tout envoi. */

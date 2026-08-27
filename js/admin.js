@@ -11,7 +11,7 @@
 
 import {
   chargerConfig, listerTout, supprimerContribution,
-  lireReglagesPosition, ecrirePosition, ErreurService,
+  lireReglagesPosition, ecrirePosition, lireConsommation, ErreurService,
 } from './souvenirs.js';
 import { gabaritGalerie, brancherVisionneuse } from './souvenirs-vue.js';
 
@@ -45,6 +45,12 @@ let position = {
 // quel. Remise à zéro à chaque rendu complet : un mode Automatique choisi
 // puis abandonné sans date ne doit pas survivre à un changement de module.
 let modeAffiche = null;
+
+// Les compteurs Cloudflare et, le cas échéant, la raison pour laquelle on ne
+// les a pas. Gardés hors de `afficher()` : ils se chargent après le premier
+// rendu, et se redessinent seuls quand la réponse arrive.
+let consommation = null;
+let soucisConsommation = null;
 
 /** Titres des étapes, pour nommer les journées des deux menus. */
 let titresEtapes = new Map();
@@ -255,12 +261,125 @@ function gabaritModuleModeration(contributions) {
   return menu + corps;
 }
 
+/* Giga-octets décimaux, et non les Mo binaires de `poidsLisible` côté site.
+   Ce n'est pas une inattention : les forfaits de Cloudflare sont annoncés en
+   « GB », et le module `consommation.js` les compte en 10⁹ pour rester du côté
+   prudent. Afficher 3,0 Gio à côté d'une part calculée sur 3,22 Go aurait fait
+   douter du calcul à chaque lecture. Une jauge et son chiffre doivent compter
+   dans la même unité. */
+function poidsDecimal(octets) {
+  // `toLocaleString` et non `toFixed` : la virgule est le séparateur décimal
+  // du français, et « 11.20 Go » au milieu d'une page qui écrit « 5 000 000 »
+  // avec des espaces insécables se lisait comme un chiffre venu d'ailleurs.
+  const ecrire = (valeur, decimales) => valeur.toLocaleString('fr-FR', {
+    minimumFractionDigits: decimales, maximumFractionDigits: decimales,
+  });
+  if (octets >= 1e9) return `${ecrire(octets / 1e9, 2)} Go`;
+  if (octets >= 1e6) return `${ecrire(octets / 1e6, 1)} Mo`;
+  return `${ecrire(Math.round(octets / 1e3), 0)} ko`;
+}
+
+const PERIODES = {
+  jour: 'aujourd\u2019hui',
+  mois: 'ce mois-ci',
+  instantane: 'en ce moment',
+};
+
+function gabaritMesure(mesure) {
+  const valeur = mesure.unite === 'octets'
+    ? poidsDecimal(mesure.valeur)
+    : mesure.valeur.toLocaleString('fr-FR');
+
+  // Une mesure sans plafond — le nombre de fichiers — se lit comme un simple
+  // renseignement : ni jauge, ni pourcentage, rien à dépasser.
+  if (!mesure.plafond) {
+    return `<div class="conso__mesure">
+      <p class="conso__libelle">${echapper(mesure.libelle)}</p>
+      <p class="conso__valeur">${echapper(valeur)}
+        <span class="conso__periode">${PERIODES[mesure.periode] || ''}</span></p>
+    </div>`;
+  }
+
+  const plafond = mesure.unite === 'octets'
+    ? poidsDecimal(mesure.plafond)
+    : mesure.plafond.toLocaleString('fr-FR');
+  const pourcent = mesure.part < 0.01 && mesure.valeur > 0
+    ? '<1 %'
+    : `${Math.round(mesure.part * 100)} %`;
+  // La barre s'arrête à 100 % même quand la valeur dépasse : au-delà, c'est le
+  // mot « dépassé » qui le dit, une barre plus longue que sa piste ne dirait
+  // rien de plus et déborderait de la carte.
+  const largeur = Math.min(1, mesure.part) * 100;
+  const alerte = { proche: 'proche du plafond', depasse: 'plafond dépassé' }[mesure.niveau];
+
+  return `<div class="conso__mesure est-${mesure.niveau}">
+    <p class="conso__libelle">${echapper(mesure.libelle)}
+      <span class="conso__periode">${PERIODES[mesure.periode] || ''}</span></p>
+    <p class="conso__valeur">${echapper(valeur)}
+      <span class="conso__plafond">sur ${echapper(plafond)} · ${pourcent}</span></p>
+    <div class="conso__jauge" role="img"
+         aria-label="${pourcent} du forfait ${echapper(mesure.libelle)}">
+      <span class="conso__part" style="width:${largeur.toFixed(1)}%"></span>
+    </div>
+    ${alerte ? `<p class="conso__alerte">${alerte}</p>` : ''}
+  </div>`;
+}
+
+function gabaritModuleConsommation() {
+  if (soucisConsommation) {
+    return `<p class="souvenirs__vide">${echapper(soucisConsommation)}</p>`;
+  }
+  if (!consommation) return '<p class="souvenirs__vide">Lecture des compteurs\u2026</p>';
+
+  const releve = new Date(consommation.releveLe).toLocaleString('fr-FR', {
+    dateStyle: 'long', timeStyle: 'short',
+  });
+  const services = (consommation.services || []).map((service) => `
+    <section class="conso__service">
+      <h2 class="conso__nom">${echapper(service.nom)}</h2>
+      ${service.mesures.map(gabaritMesure).join('')}
+    </section>`).join('');
+
+  return `<div class="conso">
+    ${services}
+    <p class="conso__pied">Relevé le ${echapper(releve)}. Les forfaits sont ceux de
+      l\u2019offre gratuite de Cloudflare ; les compteurs des Workers et de D1 se
+      remettent à zéro à minuit UTC, ceux de R2 au premier du mois.</p>
+  </div>`;
+}
+
+/** Va chercher les compteurs et redessine le module, s'il est encore à l'écran.
+
+    Lancée sans être attendue : la page ne doit pas retarder la modération pour
+    un chiffre. Le test sur l’onglet évite qu’une réponse lente ne vienne
+    écraser un module que l’on a quitté entre-temps. */
+async function chargerConsommation() {
+  try {
+    consommation = await lireConsommation(motDePasse);
+    soucisConsommation = null;
+  } catch (souci) {
+    // Le service répond déjà en français et nomme la cause — secret absent,
+    // jeton refusé, champ inconnu de Cloudflare. Le réécrire ici ferait perdre
+    // la seule information qui permette de corriger. Ce qu'on n'affiche pas,
+    // c'est une panne de TRANSPORT : elle ne porte qu'un « Failed to fetch »
+    // de navigateur. Le statut fait la différence — il n'existe que si le
+    // service a parlé (voir `ErreurReseau` dans souvenirs.js).
+    soucisConsommation = souci?.statut
+      ? souci.message
+      : 'Le service ne répond pas, réessaie plus tard.';
+  }
+  if (ongletAdmin !== 'consommation') return;
+  const contenu = racine.querySelector('.admin-contenu');
+  if (contenu) contenu.innerHTML = gabaritModuleConsommation();
+}
+
 function gabaritNav() {
   const entree = (cle, libelle) => `<button type="button" class="admin-nav__bouton"
     data-onglet-admin="${cle}" aria-pressed="${ongletAdmin === cle}">${libelle}</button>`;
   return `<nav class="admin-nav" aria-label="Modules de l'administration">
     ${entree('position', 'Où en sont les motos')}
     ${entree('souvenirs', 'Modération')}
+    ${entree('consommation', 'Consommation')}
   </nav>`;
 }
 
@@ -300,14 +419,20 @@ async function afficher() {
   position = await lireReglagesPosition().catch(() => position);
   modeAffiche = null; // un rendu complet oublie un mode choisi mais pas enregistré
 
-  const module = ongletAdmin === 'position'
-    ? gabaritModulePosition()
-    : gabaritModuleModeration(contributions);
+  let module;
+  if (ongletAdmin === 'position') module = gabaritModulePosition();
+  else if (ongletAdmin === 'consommation') module = gabaritModuleConsommation();
+  else module = gabaritModuleModeration(contributions);
 
   racine.innerHTML = `<div class="admin-mise-en-page">
     ${gabaritNav()}
     <div class="admin-contenu">${module}</div>
   </div>`;
+
+  // Volontairement non attendu : les compteurs arrivent après le reste et se
+  // posent d'eux-mêmes. Les attendre ici aurait fait patienter devant une page
+  // vide pour un chiffre dont la modération n'a que faire.
+  if (ongletAdmin === 'consommation') chargerConsommation();
 }
 
 /** Enregistre un réglage de position et rafraîchit seulement la note et le

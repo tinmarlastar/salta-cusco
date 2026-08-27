@@ -1686,6 +1686,100 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
 .position-mode__bouton:hover { color: var(--sel); }
 .position-mode__bouton[aria-pressed="true"] { background: var(--soufre); color: var(--sur-accent); }
 
+/* ------------------------------------------------------- consommation
+
+   Les compteurs Cloudflare : une carte par service, une jauge par mesure.
+
+   Aucune couleur nouvelle. L'alerte prend `--colorada`, le jeton d'alerte que
+   les quatre habillages définissent déjà — en inventer un cinquième aurait
+   obligé à le décliner quatre fois, et le premier oubli aurait laissé une
+   jauge invisible sur un habillage clair. Tant qu'on est loin du plafond, la
+   jauge est en `--soufre` comme tout ce qui compte sur ce site. */
+.conso { display: grid; gap: 1.5rem; }
+
+.conso__service { display: grid; gap: 1rem; }
+
+.conso__nom {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: .6875rem;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--poussiere);
+}
+
+.conso__mesure {
+  display: grid;
+  gap: .3125rem;
+  padding: .75rem .875rem;
+  background: var(--nuit-2);
+}
+
+.conso__libelle {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  align-items: baseline;
+  margin: 0;
+  font-size: .875rem;
+  color: var(--texte-2);
+}
+
+/* La période et le plafond se disent du même ton que les légendes du site :
+   ce sont des repères, pas la mesure elle-même. */
+.conso__periode, .conso__plafond {
+  font-family: var(--mono);
+  font-size: .625rem;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--poussiere);
+}
+
+.conso__valeur {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  align-items: baseline;
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--sel);
+}
+
+/* Trois pixels : assez pour se voir d'un coup d'œil, assez peu pour rester une
+   règle sous un chiffre plutôt qu'un objet de plus à regarder. */
+.conso__jauge {
+  height: 3px;
+  background: var(--nuit-3);
+  overflow: hidden;
+}
+.conso__part {
+  display: block;
+  height: 100%;
+  background: var(--soufre);
+  transition: width var(--transition);
+}
+
+.conso__alerte {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: .625rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--colorada);
+}
+
+/* Le dépassement se peint, l'approche se dit seulement. Une jauge rouge dès
+   80 % aurait crié pour un seuil qu'on franchit en marchant. */
+.conso__mesure.est-depasse .conso__part { background: var(--colorada); }
+
+.conso__pied {
+  margin: 0;
+  font-size: .8125rem;
+  line-height: 1.5;
+  color: var(--poussiere);
+}
+
 /* Choix de la journée à modérer. */
 .admin-filtre {
   display: flex;

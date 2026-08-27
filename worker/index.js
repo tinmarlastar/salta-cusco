@@ -4,6 +4,7 @@
 
 import { creerId, creerJeton, hacherJeton, memeSecret } from './lib/securite.js';
 import { calculerPositionAuto, dateDuJourVoyage } from './lib/position.js';
+import { requeteGraphQL, normaliser } from './lib/consommation.js';
 
 const TEXTE_MAX = 5000; // de quoi raconter une journée entière, pas seulement une légende
 const AUTEUR_MAX = 40;
@@ -779,6 +780,84 @@ async function listerTout(requete, env, cors) {
   }, { cors });
 }
 
+const GRAPHQL_CLOUDFLARE = 'https://api.cloudflare.com/client/v4/graphql';
+// Dix secondes : l'API analytique de Cloudflare répond en général en moins
+// d'une, et la page d'administration doit dire « je n'ai pas pu » plutôt que
+// de tourner. Rien ici n'est réessayé — un compteur n'a pas à insister.
+const DELAI_ANALYTIQUE_MS = 10_000;
+
+/** Les compteurs de consommation Cloudflare, pour la page d'administration.
+
+    Réservée à l'administration : ces chiffres portent sur le COMPTE entier,
+    pas seulement sur ce projet. Le jeton, lui, ne quitte jamais le service —
+    le navigateur reçoit des mesures déjà calculées, sans rien savoir ni du
+    secret ni de la forme GraphQL.
+
+    Les fenêtres de temps sont en UTC, et non à Paris comme le reste du site :
+    ce sont les forfaits de Cloudflare qu'on mesure, et c'est à minuit UTC
+    qu'ils se remettent à zéro. Les caler sur Paris aurait décalé les compteurs
+    d'une ou deux heures selon la saison, juste assez pour faire douter. */
+async function lireConsommation(requete, env, cors) {
+  if (!await adminAutorise(requete, env)) return erreur('Mot de passe incorrect', 401, cors);
+
+  if (!env.JETON_ANALYTIQUE_CF || !env.ID_COMPTE_CF) {
+    return erreur(
+      "Compteurs indisponibles : les secrets JETON_ANALYTIQUE_CF et ID_COMPTE_CF ne sont pas "
+      + 'posés sur le service. Voir le README, section « Suivre la consommation ».',
+      503, cors,
+    );
+  }
+
+  const maintenant = new Date();
+  const debutJour = new Date(Date.UTC(
+    maintenant.getUTCFullYear(), maintenant.getUTCMonth(), maintenant.getUTCDate(),
+  ));
+  const debutMois = new Date(Date.UTC(maintenant.getUTCFullYear(), maintenant.getUTCMonth(), 1));
+
+  const { query, variables } = requeteGraphQL({
+    idCompte: env.ID_COMPTE_CF,
+    debutJour: debutJour.toISOString(),
+    debutMois: debutMois.toISOString(),
+    maintenant: maintenant.toISOString(),
+  });
+
+  let charge;
+  try {
+    const reponse = await fetch(GRAPHQL_CLOUDFLARE, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${env.JETON_ANALYTIQUE_CF}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ query, variables }),
+      signal: AbortSignal.timeout(DELAI_ANALYTIQUE_MS),
+    });
+    if (!reponse.ok) {
+      return erreur(`Cloudflare a refusé la demande (${reponse.status}). Le jeton a-t-il bien `
+        + "la permission « Account Analytics : Read » ?", 502, cors);
+    }
+    charge = await reponse.json();
+  } catch (souci) {
+    console.error(souci);
+    return erreur("L'API de Cloudflare n'a pas répondu à temps.", 504, cors);
+  }
+
+  // Les erreurs GraphQL arrivent dans un 200 : sans ce test, une réponse vide
+  // se lirait comme un compte à zéro. On rend le message de Cloudflare TEL
+  // QUEL, en anglais — il nomme le champ fautif, et c'est la seule chose qui
+  // permette de corriger la requête sans tâtonner.
+  if (Array.isArray(charge?.errors) && charge.errors.length) {
+    return erreur(`Cloudflare a rejeté la requête : ${charge.errors[0]?.message || 'raison inconnue'}`,
+      502, cors);
+  }
+
+  try {
+    return repondre(normaliser(charge, { releveLe: maintenant.toISOString() }), { cors });
+  } catch (souci) {
+    return erreur(souci.message, 502, cors);
+  }
+}
+
 export default {
   async fetch(requete, env) {
     const cors = entetesCors(requete, env);
@@ -837,6 +916,10 @@ export default {
 
       if (chemin === '/api/tout' && requete.method === 'GET') {
         return await listerTout(requete, env, cors);
+      }
+
+      if (chemin === '/api/consommation' && requete.method === 'GET') {
+        return await lireConsommation(requete, env, cors);
       }
 
       return erreur('Route inconnue', 404, cors);

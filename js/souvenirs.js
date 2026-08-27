@@ -333,6 +333,17 @@ export async function listerTout(motDePasse) {
   return donnees.contributions || [];
 }
 
+/** Le calendrier prévisionnel des bascules, pour la page d'administration.
+
+    Le service rend des instants absolus et des noms de fuseaux ; c'est ici, et
+    seulement ici, qu'on les écrit en heure lisible. */
+export async function lireCalendrier(motDePasse) {
+  const donnees = await appeler('/api/position/calendrier', {
+    headers: { 'X-Mot-De-Passe': motDePasse },
+  });
+  return donnees.calendrier || [];
+}
+
 /** Signale une page vue au service. Voir `js/visites.js` pour ce qui est
     décidé chez le lecteur, et ce qui n'est délibérément jamais envoyé.
 

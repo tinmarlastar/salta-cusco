@@ -11,7 +11,8 @@
 
 import {
   chargerConfig, listerTout, supprimerContribution,
-  lireReglagesPosition, ecrirePosition, lireConsommation, lireVisites, ErreurService,
+  lireReglagesPosition, ecrirePosition, lireConsommation, lireVisites, lireCalendrier,
+  ErreurService,
 } from './souvenirs.js';
 import { gabaritGalerie, brancherVisionneuse } from './souvenirs-vue.js';
 import { brancherHabillages } from './habillage.js';
@@ -60,10 +61,21 @@ let soucisVisites = null;
 /** Titres des étapes, pour nommer les journées des deux menus. */
 let titresEtapes = new Map();
 
+/** Villes d'arrivée, pour le calendrier prévisionnel du mode automatique. */
+let villesArrivee = new Map();
+
+// Le calendrier des bascules, chargé après coup comme les autres tableaux :
+// il ne conditionne pas l'affichage du module.
+let calendrier = [];
+
 async function chargerTitres() {
   try {
     const donnees = await fetch('data/etapes.json').then((r) => r.json());
-    for (const etape of donnees.etapes || []) titresEtapes.set(etape.jour, etape.titre);
+    for (const etape of donnees.etapes || []) {
+      titresEtapes.set(etape.jour, etape.titre);
+      // La ville d'ARRIVÉE : c'est là qu'on est le soir où la journée bascule.
+      if (etape.arrivee?.nom) villesArrivee.set(etape.jour, etape.arrivee.nom);
+    }
   } catch {
     titresEtapes = new Map();
   }
@@ -202,6 +214,74 @@ function gabaritAuto() {
     </p>`;
 }
 
+/* Le calendrier prévisionnel du mode automatique : à quelle heure, et sur
+   quelle ville, la frise basculera chaque soir.
+
+   Il répond à la seule question qu'on se pose en réglant l'automatique — « le
+   site va-t-il suivre tout seul, et quand ? » — sans obliger à refaire le
+   calcul de tête, ce qui est impossible à travers quatre fuseaux et un
+   changement d'heure.
+
+   Deux heures par ligne : celle de la ville d'arrivée, qui dit quand la
+   bascule a lieu POUR CEUX QUI ROULENT, et l'heure française, qui la dit pour
+   ceux qui suivent depuis la maison. Le même instant, vu des deux bouts. */
+function gabaritCalendrier() {
+  if (!calendrier.length) return '';
+
+  const maintenant = Date.now();
+  const heure = (iso, fuseau) => new Intl.DateTimeFormat('fr-FR', {
+    timeZone: fuseau, weekday: 'short', day: '2-digit', month: '2-digit',
+    hour: '2-digit', minute: '2-digit',
+  }).format(new Date(iso));
+
+  // La prochaine bascule est la première encore à venir : c'est la ligne qu'on
+  // vient chercher, les autres sont du contexte.
+  const prochaine = calendrier.find((e) => new Date(e.bascule).getTime() > maintenant);
+
+  const lignes = calendrier.map((e) => {
+    const passee = new Date(e.bascule).getTime() <= maintenant;
+    const etat = passee ? ' est-passee' : (e === prochaine ? ' est-prochaine' : '');
+    const ville = villesArrivee.get(e.jour) || '';
+    return `<tr class="calendrier__ligne${etat}">
+      <th scope="row">J${e.jour}</th>
+      <td>${echapper(ville)}</td>
+      <td>${echapper(heure(e.bascule, e.fuseau))}</td>
+      <td>${echapper(heure(e.bascule, 'Europe/Paris'))}</td>
+    </tr>`;
+  }).join('');
+
+  return `<div class="calendrier">
+    <h2 class="conso__nom">Ce que la frise affichera</h2>
+    <div class="calendrier__defilement">
+      <table class="calendrier__table">
+        <caption class="calendrier__legende">La journée bascule à 20 h, heure de la ville d\u2019arrivée.</caption>
+        <thead>
+          <tr><th scope="col">Jour</th><th scope="col">Ville d\u2019arrivée</th>
+              <th scope="col">Sur place</th><th scope="col">En France</th></tr>
+        </thead>
+        <tbody>${lignes}</tbody>
+      </table>
+    </div>
+  </div>`;
+}
+
+/** Va chercher le calendrier et redessine le module s\'il est encore à l\'écran.
+
+    Lancé sans être attendu : le réglage doit s\'afficher tout de suite, le
+    prévisionnel peut arriver après. */
+async function chargerCalendrier() {
+  try {
+    calendrier = await lireCalendrier(motDePasse);
+  } catch {
+    // Le prévisionnel est un confort : son absence ne doit pas empêcher de
+    // régler la position, qui est le vrai travail de ce module.
+    calendrier = [];
+  }
+  if (ongletAdmin !== 'position') return;
+  const contenu = racine.querySelector('.admin-contenu');
+  if (contenu) contenu.innerHTML = gabaritModulePosition();
+}
+
 /** Module « Où en sont les motos » : Manuel/Automatique en tête, puis le
     formulaire du mode affiché — celui tout juste choisi s'il y en a un,
     sinon celui que le service donne. Toujours sans bouton : chaque champ
@@ -236,7 +316,8 @@ function gabaritModulePosition() {
               aria-pressed="${mode === 'auto'}">Automatique</button>
     </div>
     ${mode === 'manuel' ? gabaritJourManuel() : gabaritAuto()}
-    <p class="admin-position__note" id="position-note">${echapper(note)}</p>`;
+    <p class="admin-position__note" id="position-note">${echapper(note)}</p>
+    ${mode === 'auto' ? gabaritCalendrier() : ''}`;
 }
 
 /* Tout ce qui vient d'une contribution est de la donnée non modérée : auteur,
@@ -580,6 +661,7 @@ async function afficher() {
   // vide pour un chiffre dont la modération n'a que faire.
   if (ongletAdmin === 'consommation') chargerConsommation();
   if (ongletAdmin === 'visites') chargerVisites();
+  if (ongletAdmin === 'position') chargerCalendrier();
 }
 
 /** Enregistre un réglage de position et rafraîchit seulement la note et le

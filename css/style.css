@@ -1822,6 +1822,85 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
   color: var(--poussiere);
 }
 
+/* Le second membre du fil d'Ariane de la page d'administration : le nom du
+   voyage garde l'accent, la section se dit plus bas, comme le sous-titre
+   « de Salta à Cusco » du site. Sans ce contraste, les deux moitiés pesaient
+   pareil et le chevron se lisait comme une décoration. */
+.bandeau__section {
+  font-weight: 400;
+  font-stretch: 100%;
+  color: var(--poussiere);
+}
+
+/* --------------------------------------------------------- calendrier
+
+   Le prévisionnel du mode automatique. Un tableau et non des cartes : quatorze
+   lignes de quatre valeurs comparables, c'est exactement ce qu'un tableau sait
+   faire mieux que tout le reste — on lit une colonne du regard. */
+.calendrier { margin-top: 1.75rem; }
+
+/* Quatre colonnes dont deux dates : sur un téléphone, elles ne tiennent pas.
+   Le tableau défile dans sa propre boîte plutôt que de pousser la page entière
+   à déborder. */
+.calendrier__defilement { overflow-x: auto; }
+
+.calendrier__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .8125rem;
+}
+.calendrier__legende {
+  margin-bottom: .625rem;
+  font-family: var(--mono);
+  font-size: .625rem;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--poussiere);
+  text-align: left;
+  caption-side: top;
+}
+.calendrier__table th[scope="col"] {
+  padding: .375rem .625rem .375rem 0;
+  border-bottom: 1px solid var(--nuit-3);
+  font-family: var(--mono);
+  font-size: .625rem;
+  font-weight: 400;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--poussiere);
+  text-align: left;
+  white-space: nowrap;
+}
+.calendrier__table td,
+.calendrier__table th[scope="row"] {
+  padding: .4375rem .625rem .4375rem 0;
+  border-bottom: 1px solid var(--nuit-2);
+  color: var(--texte-2);
+  text-align: left;
+  white-space: nowrap;
+}
+.calendrier__table th[scope="row"] {
+  font-family: var(--mono);
+  font-weight: 400;
+  color: var(--poussiere);
+}
+
+/* Une bascule déjà passée s'efface sans disparaître : elle situe celles qui
+   restent. Sans ce dégradé, un tableau de quatorze lignes identiques n'aurait
+   pas dit où l'on en est. */
+.calendrier__ligne.est-passee th[scope="row"],
+.calendrier__ligne.est-passee td { color: var(--poussiere); }
+
+/* La prochaine est la ligne qu'on vient chercher. Elle se marque au trait, à
+   gauche, plutôt qu'au fond : une ligne pleine dans un tableau se lit comme une
+   sélection, et il n'y a rien à sélectionner ici. */
+.calendrier__ligne.est-prochaine th[scope="row"],
+.calendrier__ligne.est-prochaine td {
+  color: var(--sel);
+  font-weight: 600;
+  border-bottom-color: var(--soufre);
+}
+
 /* ------------------------------------------------------------ visites
 
    La fréquentation reprend les cartes de Consommation — même page, même geste,

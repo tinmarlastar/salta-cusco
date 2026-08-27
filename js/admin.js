@@ -155,9 +155,21 @@ function gabaritJourManuel() {
   // fait annoncer la date du départ. Voir `PREMIER_JOUR_ROULE` côté service.
   const jours = [...titresEtapes.keys()].sort((a, b) => a - b).filter((j) => j > 1);
   const valeurCourante = position.mode === 'manuel' ? position.jour : null;
-  const options = jours.map((jour) => {
+
+  // Une position enregistrée AVANT que J1 ne quitte ce menu reste dans la base.
+  // Sans cette ligne, aucune option ne lui correspondait et « Pas encore
+  // partis » ne portait pas `selected` non plus : le navigateur affichait donc
+  // la première option, le menu mentait sur l'état réel, et le premier
+  // changement écrivait `mode: null` — ce qui efface la position ET la date de
+  // départ. On remet donc la journée orpheline dans la liste, marquée comme
+  // telle : visible, et surtout quittable en connaissance de cause.
+  const orpheline = valeurCourante !== null && !jours.includes(valeurCourante)
+    ? valeurCourante : null;
+
+  const options = [...(orpheline === null ? [] : [orpheline]), ...jours].map((jour) => {
     const titre = titresEtapes.get(jour);
-    const libelle = titre ? `J${jour} · ${titre}` : `J${jour}`;
+    const nom = titre ? `J${jour} · ${titre}` : `J${jour}`;
+    const libelle = jour === orpheline ? `${nom} — réglage à remplacer` : nom;
     return `<option value="${jour}"${valeurCourante === jour ? ' selected' : ''}>${echapper(libelle)}</option>`;
   }).join('');
 

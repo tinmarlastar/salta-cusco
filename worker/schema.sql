@@ -54,3 +54,26 @@ CREATE TABLE IF NOT EXISTS reglages (
   valeur  TEXT NOT NULL,
   maj_le  TEXT NOT NULL
 );
+
+-- ---------------------------------------------------------------- visites
+-- Fréquentation du site. Deux compteurs plutôt qu'une ligne par visite : le
+-- carnet n'a que faire de l'historique d'une personne, et une table qui grossit
+-- d'une ligne à chaque page lue aurait fini par peser plus que les souvenirs
+-- eux-mêmes.
+--
+-- Rien ici n'identifie qui que ce soit : ni adresse IP, ni cookie, ni
+-- empreinte. C'est le navigateur qui retient chez lui qu'il a déjà été compté
+-- aujourd'hui, et qui n'envoie qu'un « +1 » anonyme.
+
+-- Un jour calendaire (heure de Paris, comme le reste du site) par ligne.
+CREATE TABLE IF NOT EXISTS visites_jour (
+  date       TEXT PRIMARY KEY,   -- AAAA-MM-JJ
+  visiteurs  INTEGER NOT NULL DEFAULT 0,
+  pages      INTEGER NOT NULL DEFAULT 0
+);
+
+-- Pages vues par journée du voyage ; 0 désigne l'accueil, le parcours entier.
+CREATE TABLE IF NOT EXISTS visites_etape (
+  etape  INTEGER PRIMARY KEY,    -- 0 à 15
+  pages  INTEGER NOT NULL DEFAULT 0
+);

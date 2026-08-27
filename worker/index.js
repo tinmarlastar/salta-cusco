@@ -3,7 +3,8 @@
    Le site reste statique ; seul le bloc « souvenirs » appelle ce service. */
 
 import { creerId, creerJeton, hacherJeton, memeSecret } from './lib/securite.js';
-import { calculerPositionAuto, dateDuJourVoyage } from './lib/position.js';
+import { calculerPositionAuto, dateDuJourVoyage, dateParisDuJour } from './lib/position.js';
+import { normaliserEtape, assemblerStatistiques } from './lib/visites.js';
 import { requetes, normaliser } from './lib/consommation.js';
 
 const TEXTE_MAX = 5000; // de quoi raconter une journée entière, pas seulement une légende
@@ -873,6 +874,67 @@ async function lireConsommation(requete, env, cors) {
   return repondre(normaliser(reponses, { releveLe: maintenant.toISOString() }), { cors });
 }
 
+/** Compte une page vue, et un visiteur si le navigateur dit en être un.
+
+    La route est PUBLIQUE — c'est un site public — mais réservée aux origines
+    déjà autorisées : sans ce garde, une boucle de `curl` gonflerait les
+    chiffres et mangerait le forfait d'écritures de D1 pour rien. Ce n'est pas
+    inviolable, une origine se forge ; c'est proportionné à un carnet que
+    suivent quelques dizaines de proches.
+
+    `visiteur` vient du navigateur, qui seul sait s'il a déjà été compté
+    aujourd'hui. Le service ne le vérifie pas et ne peut pas : il ne garde rien
+    qui permette de reconnaître un lecteur. C'est le prix — assumé — d'un
+    compteur qui n'espionne personne.
+
+    Le jour est celui de Paris, comme le reste du site : c'est le fuseau de ceux
+    qui suivent le voyage. */
+async function compterVisite(requete, env, cors) {
+  if (!cors['Access-Control-Allow-Origin']) return erreur('Origine non autorisée', 403, cors);
+
+  const corps = await requete.json().catch(() => ({}));
+  const etape = normaliserEtape(corps.etape);
+  if (etape === null) return erreur('Étape inconnue', 400, cors);
+
+  const nouveau = corps.visiteur === true ? 1 : 0;
+  const date = dateParisDuJour();
+
+  // `ON CONFLICT` plutôt qu'un SELECT suivi d'un INSERT ou d'un UPDATE : deux
+  // lecteurs qui ouvrent la page à la même seconde se seraient sinon écrasés
+  // l'un l'autre, et le compteur aurait perdu des visites sans que rien ne le
+  // signale.
+  await env.DB.batch([
+    env.DB.prepare(
+      `INSERT INTO visites_jour (date, visiteurs, pages) VALUES (?, ?, 1)
+       ON CONFLICT(date) DO UPDATE SET visiteurs = visiteurs + ?, pages = pages + 1`,
+    ).bind(date, nouveau, nouveau),
+    env.DB.prepare(
+      `INSERT INTO visites_etape (etape, pages) VALUES (?, 1)
+       ON CONFLICT(etape) DO UPDATE SET pages = pages + 1`,
+    ).bind(etape),
+  ]);
+
+  return repondre({ compte: true }, { cors });
+}
+
+/** Les statistiques de fréquentation, pour la page d'administration. */
+async function lireVisites(requete, env, cors) {
+  if (!await adminAutorise(requete, env)) return erreur('Mot de passe incorrect', 401, cors);
+
+  const [parJour, parEtape] = await Promise.all([
+    env.DB.prepare('SELECT date, visiteurs, pages FROM visites_jour ORDER BY date ASC').all(),
+    env.DB.prepare('SELECT etape, pages FROM visites_etape').all(),
+  ]);
+
+  return repondre(
+    assemblerStatistiques(
+      { jours: parJour.results || [], etapes: parEtape.results || [] },
+      { aujourdhui: dateParisDuJour() },
+    ),
+    { cors },
+  );
+}
+
 export default {
   async fetch(requete, env) {
     const cors = entetesCors(requete, env);
@@ -935,6 +997,14 @@ export default {
 
       if (chemin === '/api/consommation' && requete.method === 'GET') {
         return await lireConsommation(requete, env, cors);
+      }
+
+      if (chemin === '/api/visite' && requete.method === 'POST') {
+        return await compterVisite(requete, env, cors);
+      }
+
+      if (chemin === '/api/visites' && requete.method === 'GET') {
+        return await lireVisites(requete, env, cors);
       }
 
       return erreur('Route inconnue', 404, cors);

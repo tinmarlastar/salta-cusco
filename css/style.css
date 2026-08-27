@@ -1326,7 +1326,8 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
 .souvenir-form__titre {
   display: flex;
   align-items: center;
-  gap: .75rem;
+  flex-wrap: wrap;
+  gap: .25rem .75rem;
   margin: 2.25rem 0 1rem;
   font-family: var(--mono);
   font-size: .6875rem;
@@ -1334,9 +1335,28 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
   text-transform: uppercase;
   color: var(--accent-encre);
 }
+/* La mention se range du côté des légendes : elle qualifie le geste sans le
+   nommer. En pleine encre d'accent, elle aurait pesé autant que l'intitulé
+   lui-même, et l'interdiction se serait lue avant l'invitation. Interlettrage
+   resserré : la parenthèse porte plus de mots que le titre et se serait sinon
+   étalée jusqu'à manger le filet. */
+.souvenir-form__reserve {
+  letter-spacing: .08em;
+  color: var(--poussiere);
+  /* Elle passe à la ligne d'un bloc ou pas du tout : coupée en son milieu, sur
+     un écran de 320 px, on lisait « (RÉSERVÉ AUX » puis « MOTARDS) ». */
+  white-space: nowrap;
+}
+
+/* Le filet prend ce qui reste de la ligne — mais jamais moins de deux
+   centimètres : réduit à un moignon de douze pixels par la mention, il ne se
+   lisait plus comme une coupure, seulement comme un défaut. En dessous de cette
+   largeur il passe à la ligne suivante et la prend tout entière, ce qui marque
+   la séparation aussi bien. */
 .souvenir-form__titre::after {
   content: '';
   flex: 1 1 auto;
+  min-width: 2rem;
   height: 1px;
   background: var(--nuit-3);
 }

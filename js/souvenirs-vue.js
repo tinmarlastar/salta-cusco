@@ -501,7 +501,8 @@ export function monterSouvenirs(conteneur, jour, { surDecompte = null } = {}) {
   // Pas de titre au-dessus de la liste : l'onglet « Souvenirs » le dit déjà,
   // juste au-dessus, et le répéter volait une ligne au premier souvenir.
   conteneur.innerHTML = `<div class="souvenirs__liste">Chargement…</div>
-    <p class="souvenir-form__titre">Ajouter une note</p>
+    <p class="souvenir-form__titre">Ajouter une note
+      <span class="souvenir-form__reserve">(réservé aux motards)</span></p>
     ${gabaritFormulaire()}`;
 
   const liste = conteneur.querySelector('.souvenirs__liste');

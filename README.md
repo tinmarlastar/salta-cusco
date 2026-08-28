@@ -205,9 +205,11 @@ réseau fonctionne de nouveau, recharger la page suffit à relancer la file.
 
 **Regarder les photos** : un clic sur une photo l'ouvre en grand. Les flèches
 du clavier, les boutons à l'écran ou un glissé du pouce passent d'un fichier au
-suivant **à l'intérieur d'une même note**, et bouclent sur sa dernière
-photo. Enchaîner sur la note suivante ferait changer d'auteur et de moment
-sans que rien ne le signale. `Échap` referme. Photos et vidéos s'ouvrent du même geste : dans la grille,
+suivant **dans toute la journée** — les photos et vidéos de toutes les notes de
+l'étape se feuillettent d'affilée, quel qu'en soit l'auteur, et la série boucle
+sur la dernière. Les galeries de la fiche d'étape, elles, restent chacune leur
+propre série : on ne passe pas des photos d'un hébergement à celles d'un col.
+`Échap` referme. Photos et vidéos s'ouvrent du même geste : dans la grille,
 une vidéo est une vignette marquée d'un rond de lecture, sans commandes — elle
 se joue en grand, dans la visionneuse.
 

@@ -108,8 +108,12 @@ function serieDe(conteneur, selecteur) {
 }
 
 /** Rend cliquables les fichiers d'un conteneur : clic ou Entrée les ouvrent
-    en grand, et les flèches circulent dans les fichiers de LA PUBLICATION
-    cliquée — pas au-delà.
+    en grand, et les flèches circulent dans les fichiers du GROUPE cliqué.
+
+    `groupe` dit jusqu'où va la série : un sélecteur d'ancêtre pour s'arrêter à
+    une publication ou à une galerie, `null` pour parcourir le conteneur d'un
+    bout à l'autre. Le carnet de route prend cette seconde forme — sa série est
+    la journée entière, voir plus bas.
 
     Le conteneur ne sert qu'à la délégation : c'est un élément stable dont seul
     le contenu change, si bien que rien n'est à reposer après un rendu. */
@@ -119,11 +123,12 @@ export function brancherVisionneuse(conteneur, {
 } = {}) {
   function ouvrirDepuis(vise) {
     if (!vise) return;
-    // La série est celle du groupe qui entoure l'image — une publication pour
-    // les souvenirs, une galerie pour les photos du voyage. Repli sur le
-    // conteneur quand il n'y a pas de groupe : la visionneuse continue de
-    // fonctionner plutôt que de rester muette.
-    const bloc = vise.closest(groupe) || conteneur;
+    // La série est celle du groupe qui entoure l'image — une galerie pour les
+    // photos du voyage, une publication en modération. Sans groupe demandé,
+    // c'est le conteneur entier. Repli sur lui également quand l'ancêtre
+    // attendu manque : la visionneuse continue de fonctionner plutôt que de
+    // rester muette.
+    const bloc = (groupe && vise.closest(groupe)) || conteneur;
     const fichiers = serieDe(bloc, selecteur);
     const depart = fichiers.findIndex((f) => f.element === vise);
     if (depart >= 0) ouvrirVisionneuse(fichiers, depart);
@@ -369,11 +374,17 @@ function gabaritFormulaire() {
 
    Plein écran au clic sur un fichier, avec passage de l'un à l'autre.
 
-   La série parcourue est celle d'UNE publication : on feuillette les photos
-   d'un même souvenir, et l'on s'arrête à sa dernière. Enchaîner sur le
-   souvenir suivant ferait passer d'un auteur et d'un moment à un autre sans
-   que rien ne le signale, alors que le compteur laisse croire qu'on est
-   toujours dans la même série.
+   L'étendue de la série est celle du groupe passé à `brancherVisionneuse`.
+   Dans le carnet de route, c'est la JOURNÉE entière : on ouvre une photo et
+   l'on feuillette tout ce qui a été posté ce jour-là, quel qu'en soit
+   l'auteur. La série s'arrêtait autrefois à la publication cliquée, de peur
+   qu'un changement d'auteur ne passe inaperçu ; à l'usage, c'est l'inverse qui
+   gênait — les photos d'une même journée arrivent par petites notes de trois
+   ou quatre, et il fallait ressortir de la visionneuse à chaque fois pour
+   continuer à regarder la même étape.
+
+   Les galeries de la fiche d'étape, elles, gardent leur série propre : on ne
+   passe pas des photos d'un hôtel à celles d'un col.
 
    Un seul élément pour toute la page, créé au premier usage : quinze étapes
    consultées dans la soirée ne doivent pas laisser quinze visionneuses dans le
@@ -930,8 +941,11 @@ export function monterSouvenirs(conteneur, jour, { surDecompte = null } = {}) {
       ?.querySelector('button[data-action="reessayer"]')?.click();
   });
 
-  // Les flèches restent dans le souvenir cliqué : c'est lui qu'on regarde.
-  brancherVisionneuse(liste);
+  // `groupe: null` : les flèches parcourent toutes les photos et vidéos publiées
+  // ce jour-là — c'est l'étape qu'on regarde, pas la note. Les entrées encore
+  // en file d'attente n'en font pas partie : elles n'affichent que le nom de
+  // leur fichier, il n'y a rien à ouvrir.
+  brancherVisionneuse(liste, { groupe: null });
 
   // Les commandes d'un souvenir, déléguées à la liste : elle est reconstruite
   // à chaque rafraîchissement, brancher chaque carte reviendrait à rebrancher

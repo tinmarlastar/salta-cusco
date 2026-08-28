@@ -337,8 +337,14 @@ export async function listerTout(motDePasse) {
 
     Le service rend des instants absolus et des noms de fuseaux ; c'est ici, et
     seulement ici, qu'on les écrit en heure lisible. */
-export async function lireCalendrier(motDePasse) {
-  const donnees = await appeler('/api/position/calendrier', {
+export async function lireCalendrier(motDePasse, { depart = null, decalage = 0 } = {}) {
+  // Avec un départ, le service calcule un calendrier hypothétique sans rien
+  // enregistrer : c'est ce qui permet de montrer l'effet d'un réglage avant de
+  // le poser. Sans, il rend celui du réglage en vigueur.
+  const parametres = depart
+    ? `?depart=${encodeURIComponent(depart)}&decalage=${encodeURIComponent(decalage)}`
+    : '';
+  const donnees = await appeler(`/api/position/calendrier${parametres}`, {
     headers: { 'X-Mot-De-Passe': motDePasse },
   });
   return donnees.calendrier || [];

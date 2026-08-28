@@ -957,8 +957,29 @@ async function lireVisites(requete, env, cors) {
 
     Vide hors du mode automatique : en manuel, c'est la main qui décide, il n'y
     a rien à prévoir. */
-async function lireCalendrier(requete, env, cors) {
+async function lireCalendrier(requete, env, cors, url) {
   if (!await adminAutorise(requete, env)) return erreur('Mot de passe incorrect', 401, cors);
+
+  // Un départ passé en paramètre calcule un calendrier HYPOTHÉTIQUE, sans rien
+  // enregistrer : c'est ce qui permet à la page d'administration de montrer ce
+  // que la frise dira AVANT qu'on clique sur Enregistrer. Recalculer ces heures
+  // côté navigateur aurait voulu dire y recopier la table des fuseaux et le
+  // changement d'heure chilien — soit la dérive que le test anti-recopie existe
+  // précisément pour empêcher.
+  const departDemande = url.searchParams.get('depart');
+  if (departDemande) {
+    if (!DATE_ISO.test(departDemande)) {
+      return erreur('Date de départ attendue au format AAAA-MM-JJ', 400, cors);
+    }
+    const decalageBrut = Number(url.searchParams.get('decalage') ?? 0);
+    // Un décalage absurde ferait sortir les dates de tout calendrier plausible
+    // sans rien apprendre à personne ; on garde les bornes du champ de saisie.
+    const decalage = Number.isFinite(decalageBrut)
+      ? Math.max(-30, Math.min(30, Math.trunc(decalageBrut))) : 0;
+    return repondre({
+      calendrier: calendrierDesBascules({ depart: departDemande, decalage }),
+    }, { cors });
+  }
 
   const { results } = await env.DB
     .prepare('SELECT cle, valeur FROM reglages WHERE cle IN (?, ?, ?)')
@@ -1029,7 +1050,7 @@ export default {
       }
 
       if (chemin === '/api/position/calendrier' && requete.method === 'GET') {
-        return await lireCalendrier(requete, env, cors);
+        return await lireCalendrier(requete, env, cors, url);
       }
 
       if (chemin === '/api/decomptes' && requete.method === 'GET') {

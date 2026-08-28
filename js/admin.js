@@ -331,10 +331,13 @@ function gabaritCalendrier() {
   // La ligne d'avant le départ : ce que la frise dit MAINTENANT, en tête du
   // tableau. Sans elle, le prévisionnel commençait à J2 et ne montrait jamais
   // la phrase effectivement affichée au moment où on la règle.
-  const avant = position.departPrevuLe
+  // La date du départ se lit dans le calendrier lui-même — c'est la date de sa
+  // première entrée — et non dans le réglage enregistré : sinon cette ligne
+  // aurait annoncé l'ancienne date pendant qu'on en saisit une nouvelle.
+  const avant = calendrier.length
     ? `<tr class="calendrier__ligne${prochaine === calendrier[0] ? ' est-prochaine' : ''}">
         <th scope="row">—</th>
-        <td>${echapper(phrasePour({ jour: null, departPrevuLe: position.departPrevuLe }))}</td>
+        <td>${echapper(phrasePour({ jour: null, departPrevuLe: calendrier[0].date }))}</td>
         <td colspan="2">jusqu\u2019à la bascule ci-dessous</td>
       </tr>`
     : '';
@@ -358,9 +361,24 @@ function gabaritCalendrier() {
 
     Lancé sans être attendu : le réglage doit s\'afficher tout de suite, le
     prévisionnel peut arriver après. */
+let attenteCalendrier = null;
+
+/* Un temps de repos avant de demander le calendrier : taper une date déclenche
+   un `change` par chiffre sur certains navigateurs, et autant d'allers-retours
+   pour un tableau qu'on ne regarde qu'une fois la date finie. */
+function chargerCalendrierBientot() {
+  clearTimeout(attenteCalendrier);
+  attenteCalendrier = setTimeout(() => chargerCalendrier(), 350);
+}
+
 async function chargerCalendrier() {
   try {
-    calendrier = await lireCalendrier(motDePasse);
+    // Le brouillon plutôt que le réglage enregistré : le tableau doit montrer
+    // ce que fera la date qu'on est en train de saisir, pas celle d'avant.
+    const hypothese = brouillon?.mode === 'auto' && brouillon.depart
+      ? { depart: brouillon.depart, decalage: brouillon.decalage ?? 0 }
+      : {};
+    calendrier = await lireCalendrier(motDePasse, hypothese);
   } catch {
     // Le prévisionnel est un confort : son absence ne doit pas empêcher de
     // régler la position, qui est le vrai travail de ce module.
@@ -890,6 +908,7 @@ racine.addEventListener('change', async (evenement) => {
     const decalageBrut = racine.querySelector('#position-decalage').value;
     brouillon.decalage = decalageBrut === '' ? 0 : Number(decalageBrut);
     redessinerPosition();
+    chargerCalendrierBientot();
   }
 });
 

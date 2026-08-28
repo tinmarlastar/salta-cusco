@@ -1832,6 +1832,57 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
   color: var(--poussiere);
 }
 
+/* Le bouton d'enregistrement du module Position, et l'aveu qui va avec.
+
+   Ce module écrivait autrefois à chaque frappe ; il attend maintenant un clic.
+   La contrepartie d'un bouton, c'est qu'on peut l'oublier — d'où la mention à
+   côté, en toutes lettres, plutôt qu'un point de couleur qu'on ne lit pas. */
+.position-enregistrer {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: .75rem;
+  margin: 1.25rem 0 .75rem;
+}
+.position-enregistrer__bouton {
+  padding: .4375rem 1rem;
+  border: 0;
+  background: var(--soufre);
+  color: var(--sur-accent);
+  font-family: var(--mono);
+  font-size: .6875rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition);
+}
+/* Rien à enregistrer : le bouton s'efface au lieu de disparaître. Un bouton
+   qui va et vient déplace ce qu'il y a autour à chaque frappe. */
+.position-enregistrer__bouton:disabled {
+  background: var(--nuit-2);
+  color: var(--poussiere);
+  cursor: default;
+}
+.position-enregistrer__etat {
+  font-family: var(--mono);
+  font-size: .625rem;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--colorada);
+}
+
+/* L'aperçu du mode manuel : ce que la frise dira, mot pour mot. La phrase
+   prend l'encre d'accent — c'est elle qu'on vient lire, pas l'étiquette. */
+.apercu-frise {
+  margin: 1rem 0 0;
+  font-size: .875rem;
+  color: var(--poussiere);
+}
+.apercu-frise__phrase {
+  color: var(--accent-encre);
+  font-weight: 600;
+}
+
 /* --------------------------------------------------------- calendrier
 
    Le prévisionnel du mode automatique. Un tableau et non des cartes : quatorze

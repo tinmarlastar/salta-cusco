@@ -16,6 +16,7 @@ import {
 } from './souvenirs.js';
 import { gabaritGalerie, brancherVisionneuse } from './souvenirs-vue.js';
 import { brancherHabillages } from './habillage.js';
+import { motDeLaFrise } from './profil.js';
 
 const echapper = (texte) => String(texte ?? '').replace(/[&<>"]/g, (c) =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -41,12 +42,45 @@ let position = {
   departPrevuPose: null, arriveePosee: null, departPrevuLe: null, arriveeLe: null,
 };
 
-// Bascule Manuel/Automatique choisie à l'écran, tant qu'elle n'a pas encore
-// été enregistrée — passer sur « Automatique » n'écrit rien tant qu'aucune
-// date n'est posée (voir plus bas). `null` : suivre `position.mode` tel
-// quel. Remise à zéro à chaque rendu complet : un mode Automatique choisi
-// puis abandonné sans date ne doit pas survivre à un changement de module.
-let modeAffiche = null;
+/* Le réglage tel qu'il est À L'ÉCRAN, tant qu'on n'a pas cliqué Enregistrer.
+
+   Ce module écrivait autrefois dans le service au moindre `change` — six
+   endroits différents, jusqu'au bouton Manuel/Automatique. C'est ce qui a
+   effacé les réglages une heure avant le départ : un événement parti tout
+   seul. Rien ne part plus sans un clic.
+
+   Le brouillon se recharge depuis le service à chaque rendu complet du module :
+   ce qu'on n'a pas enregistré est abandonné en changeant d'onglet, ce qui est
+   le comportement attendu d'un formulaire qu'on quitte. */
+let brouillon = null;
+
+function ouvrirBrouillon() {
+  brouillon = {
+    mode: position.mode ?? 'manuel',
+    jour: position.jour,
+    depart: position.depart,
+    decalage: position.decalage ?? 0,
+    departPrevuLe: position.departPrevuPose,
+    arriveeLe: position.arriveePosee,
+  };
+}
+
+/* Vrai si le brouillon dit autre chose que ce qui est enregistré. Sert au
+   bouton — inutile de proposer d'enregistrer ce qui l'est déjà — et à la
+   mention « modifications non enregistrées », qui est le prix du bouton :
+   sans elle, on peut partir en croyant avoir enregistré. */
+function brouillonModifie() {
+  if (!brouillon) return false;
+  const enregistre = {
+    mode: position.mode ?? 'manuel',
+    jour: position.jour,
+    depart: position.depart,
+    decalage: position.decalage ?? 0,
+    departPrevuLe: position.departPrevuPose,
+    arriveeLe: position.arriveePosee,
+  };
+  return Object.keys(enregistre).some((cle) => (brouillon[cle] ?? null) !== (enregistre[cle] ?? null));
+}
 
 // Les compteurs Cloudflare et, le cas échéant, la raison pour laquelle on ne
 // les a pas. Gardés hors de `afficher()` : ils se chargent après le premier
@@ -61,8 +95,11 @@ let soucisVisites = null;
 /** Titres des étapes, pour nommer les journées des deux menus. */
 let titresEtapes = new Map();
 
-/** Villes d'arrivée, pour le calendrier prévisionnel du mode automatique. */
+/** Villes d'arrivée, pour le calendrier prévisionnel et les aperçus. */
 let villesArrivee = new Map();
+
+/** La ville d'où l'on part, que `motDeLaFrise` nomme avant le départ. */
+let villeDepart = null;
 
 // Le calendrier des bascules, chargé après coup comme les autres tableaux :
 // il ne conditionne pas l'affichage du module.
@@ -75,6 +112,7 @@ async function chargerTitres() {
       titresEtapes.set(etape.jour, etape.titre);
       // La ville d'ARRIVÉE : c'est là qu'on est le soir où la journée bascule.
       if (etape.arrivee?.nom) villesArrivee.set(etape.jour, etape.arrivee.nom);
+      if (etape.jour === 1 && etape.depart?.nom) villeDepart = etape.depart.nom;
     }
   } catch {
     titresEtapes = new Map();
@@ -143,11 +181,11 @@ function gabaritDateAnnoncee(jourManuel) {
   if (jourManuel === null) {
     id = 'position-depart-prevu';
     libelle = 'Date de départ de Salta';
-    valeur = position.departPrevuPose;
+    valeur = brouillon.departPrevuLe;
   } else if (jourManuel === derniere) {
     id = 'position-arrivee';
     libelle = 'Date de l\'arrivée';
-    valeur = position.arriveePosee;
+    valeur = brouillon.arriveeLe;
   } else {
     return '';
   }
@@ -166,7 +204,7 @@ function gabaritJourManuel() {
   // qu'on n'a pas quitté Salta, le réglage juste est « Pas encore partis », qui
   // fait annoncer la date du départ. Voir `PREMIER_JOUR_ROULE` côté service.
   const jours = [...titresEtapes.keys()].sort((a, b) => a - b).filter((j) => j > 1);
-  const valeurCourante = position.mode === 'manuel' ? position.jour : null;
+  const valeurCourante = brouillon.mode === 'manuel' ? brouillon.jour : null;
 
   // Une position enregistrée AVANT que J1 ne quitte ce menu reste dans la base.
   // Sans cette ligne, aucune option ne lui correspondait et « Pas encore
@@ -200,8 +238,8 @@ function gabaritJourManuel() {
     Pas de valeur inventée pour la date : tant qu'elle est vide, rien ne
     s'enregistre — voir le gestionnaire de `change` plus bas. */
 function gabaritAuto() {
-  const depart = position.depart || '';
-  const decalage = position.decalage ?? 0;
+  const depart = brouillon.depart || '';
+  const decalage = brouillon.decalage ?? 0;
 
   return `<p class="admin-filtre">
       <label for="position-depart">Date de départ de Salta</label>
@@ -225,6 +263,47 @@ function gabaritAuto() {
    Deux heures par ligne : celle de la ville d'arrivée, qui dit quand la
    bascule a lieu POUR CEUX QUI ROULENT, et l'heure française, qui la dit pour
    ceux qui suivent depuis la maison. Le même instant, vu des deux bouts. */
+/* Les villes telles que `motDeLaFrise` les attend. La ville « courante » est
+   celle d'ARRIVÉE de la journée : la position est au bout de l'étape. */
+function villesPour(jour) {
+  const jours = [...villesArrivee.keys()].sort((a, b) => a - b);
+  return {
+    depart: villeDepart,
+    arrivee: jours.length ? villesArrivee.get(jours[jours.length - 1]) : null,
+    courante: jour === null ? null : villesArrivee.get(jour) || null,
+  };
+}
+
+/** La phrase que la frise écrira pour un réglage donné.
+
+    Produite par `motDeLaFrise`, la fonction qui l'écrit RÉELLEMENT sur la
+    frise, importée de `js/profil.js`. Ce n'est donc pas une imitation de la
+    phrase, c'est la phrase : l'aperçu ne peut pas dériver de l'affichage, il
+    n'y a qu'un seul code pour les deux. */
+function phrasePour({ jour, departPrevuLe = null, arriveeLe = null }) {
+  return motDeLaFrise({
+    positionJour: jour,
+    departPrevuLe,
+    arriveeLe,
+    villes: villesPour(jour),
+  }).phrase;
+}
+
+/* L'aperçu du mode manuel : une ligne, mise à jour dès qu'on change de journée
+   dans le menu — avant même d'enregistrer. En manuel la position ne bouge pas
+   toute seule : il n'y a pas de « prochains jours » à prévoir, seulement un
+   état, et c'est celui-là qu'on montre. */
+function gabaritApercuManuel() {
+  const derniere = Math.max(...[...titresEtapes.keys()], 0);
+  const phrase = phrasePour({
+    jour: brouillon.jour,
+    departPrevuLe: brouillon.jour === null ? brouillon.departPrevuLe : null,
+    arriveeLe: brouillon.jour === derniere ? brouillon.arriveeLe : null,
+  });
+  return `<p class="apercu-frise">La frise dira :
+    <b class="apercu-frise__phrase">${echapper(phrase)}</b></p>`;
+}
+
 function gabaritCalendrier() {
   if (!calendrier.length) return '';
 
@@ -241,14 +320,24 @@ function gabaritCalendrier() {
   const lignes = calendrier.map((e) => {
     const passee = new Date(e.bascule).getTime() <= maintenant;
     const etat = passee ? ' est-passee' : (e === prochaine ? ' est-prochaine' : '');
-    const ville = villesArrivee.get(e.jour) || '';
     return `<tr class="calendrier__ligne${etat}">
       <th scope="row">J${e.jour}</th>
-      <td>${echapper(ville)}</td>
+      <td>${echapper(phrasePour({ jour: e.jour }))}</td>
       <td>${echapper(heure(e.bascule, e.fuseau))}</td>
       <td>${echapper(heure(e.bascule, 'Europe/Paris'))}</td>
     </tr>`;
   }).join('');
+
+  // La ligne d'avant le départ : ce que la frise dit MAINTENANT, en tête du
+  // tableau. Sans elle, le prévisionnel commençait à J2 et ne montrait jamais
+  // la phrase effectivement affichée au moment où on la règle.
+  const avant = position.departPrevuLe
+    ? `<tr class="calendrier__ligne${prochaine === calendrier[0] ? ' est-prochaine' : ''}">
+        <th scope="row">—</th>
+        <td>${echapper(phrasePour({ jour: null, departPrevuLe: position.departPrevuLe }))}</td>
+        <td colspan="2">jusqu\u2019à la bascule ci-dessous</td>
+      </tr>`
+    : '';
 
   return `<div class="calendrier">
     <h2 class="conso__nom">Ce que la frise affichera</h2>
@@ -256,10 +345,10 @@ function gabaritCalendrier() {
       <table class="calendrier__table">
         <caption class="calendrier__legende">La journée bascule à 20 h, heure de la ville d\u2019arrivée.</caption>
         <thead>
-          <tr><th scope="col">Jour</th><th scope="col">Ville d\u2019arrivée</th>
+          <tr><th scope="col">Jour</th><th scope="col">Message sur la frise</th>
               <th scope="col">Sur place</th><th scope="col">En France</th></tr>
         </thead>
-        <tbody>${lignes}</tbody>
+        <tbody>${avant}${lignes}</tbody>
       </table>
     </div>
   </div>`;
@@ -288,7 +377,8 @@ async function chargerCalendrier() {
     s'enregistre à son propre changement, et la note en bas tient lieu de
     confirmation. */
 function gabaritModulePosition() {
-  const mode = modeAffiche ?? position.mode ?? 'manuel';
+  if (!brouillon) ouvrirBrouillon();
+  const mode = brouillon.mode;
 
   const etat = position.majLe === null
     ? 'Aucune position indiquée : les motos attendent à Salta.'
@@ -316,6 +406,12 @@ function gabaritModulePosition() {
               aria-pressed="${mode === 'auto'}">Automatique</button>
     </div>
     ${mode === 'manuel' ? gabaritJourManuel() : gabaritAuto()}
+    ${mode === 'manuel' ? gabaritApercuManuel() : ''}
+    <p class="position-enregistrer">
+      <button type="button" class="position-enregistrer__bouton" data-action="enregistrer-position"
+              ${brouillonModifie() ? '' : 'disabled'}>Enregistrer</button>
+      <span class="position-enregistrer__etat">${brouillonModifie() ? 'modifications non enregistrées' : ''}</span>
+    </p>
     <p class="admin-position__note" id="position-note">${echapper(note)}</p>
     ${mode === 'auto' ? gabaritCalendrier() : ''}`;
 }
@@ -643,7 +739,10 @@ async function afficher() {
   // La position ne conditionne pas l'accès à la page : si sa lecture échoue,
   // on garde la dernière connue plutôt que de refuser d'afficher la page.
   position = await lireReglagesPosition().catch(() => position);
-  modeAffiche = null; // un rendu complet oublie un mode choisi mais pas enregistré
+  // Un rendu complet repart de ce que le service dit : les modifications non
+  // enregistrées sont abandonnées en changeant d'onglet, ce qui est le
+  // comportement attendu d'un formulaire qu'on quitte.
+  brouillon = null;
 
   let module;
   if (ongletAdmin === 'position') module = gabaritModulePosition();
@@ -664,24 +763,49 @@ async function afficher() {
   if (ongletAdmin === 'position') chargerCalendrier();
 }
 
-/** Enregistre un réglage de position et rafraîchit seulement la note et le
-    formulaire — un rendu complet ferait remonter la page en haut et
-    perdrait, dans le module Modération, la journée en cours d'examen. */
-async function enregistrerPosition(reglage) {
+/** Envoie le brouillon au service, en une seule requête.
+
+    Rafraîchit seulement le module, jamais la page entière : un rendu complet
+    ferait remonter en haut et perdrait, dans le module Modération, la journée
+    en cours d'examen.
+
+    Le corps dit l'intention entière plutôt qu'un champ isolé — c'est tout
+    l'intérêt du bouton. « Pas encore partis » vaut `mode: null`, qui efface la
+    position sans toucher aux dates annoncées. */
+async function enregistrerPosition() {
   const note = racine.querySelector('#position-note');
   if (note) note.textContent = 'Enregistrement…';
+
+  const derniere = Math.max(...[...titresEtapes.keys()], 0);
+  let reglage;
+  if (brouillon.mode === 'auto') {
+    reglage = { mode: 'auto', depart: brouillon.depart, decalage: brouillon.decalage ?? 0 };
+  } else if (brouillon.jour === null) {
+    reglage = { mode: null, departPrevuLe: brouillon.departPrevuLe || null };
+  } else {
+    reglage = { mode: 'manuel', jour: brouillon.jour };
+    if (brouillon.jour === derniere) reglage.arriveeLe = brouillon.arriveeLe || null;
+  }
+
   try {
     position = await ecrirePosition({ ...reglage, motDePasse });
-    modeAffiche = null;
+    brouillon = null; // rechargé depuis ce que le service vient de confirmer
     const contenu = racine.querySelector('.admin-contenu');
     if (contenu) contenu.innerHTML = gabaritModulePosition();
+    chargerCalendrier();
   } catch (souci) {
     if (note) {
-      note.textContent = souci instanceof ErreurService
+      note.textContent = souci?.statut
         ? souci.message
         : 'Le service ne répond pas : la position n\'a pas été enregistrée.';
     }
   }
+}
+
+/** Redessine le module depuis le brouillon, sans rien envoyer. */
+function redessinerPosition() {
+  const contenu = racine.querySelector('.admin-contenu');
+  if (contenu) contenu.innerHTML = gabaritModulePosition();
 }
 
 // Écouteur posé une seule fois, en dehors de `afficher()`, sur `racine` — un
@@ -698,21 +822,20 @@ racine.addEventListener('click', async (evenement) => {
 
   const boutonMode = evenement.target.closest('[data-mode-affiche]');
   if (boutonMode) {
-    const nouveauMode = boutonMode.dataset.modeAffiche;
-    if (nouveauMode === 'manuel') {
-      // Un point de départ raisonnable plutôt qu'un menu vide : la journée
-      // que l'automatique montre déjà, ou J1 si les motos n'étaient encore
-      // nulle part.
-      await enregistrerPosition({ mode: 'manuel', jour: position.jour ?? 1 });
-    } else if (position.depart) {
-      await enregistrerPosition({ mode: 'auto', depart: position.depart, decalage: position.decalage ?? 0 });
-    } else {
-      // Rien à enregistrer avant qu'une date ne soit choisie : on affiche
-      // juste le formulaire, à remplir.
-      modeAffiche = 'auto';
-      const contenu = racine.querySelector('.admin-contenu');
-      if (contenu) contenu.innerHTML = gabaritModulePosition();
-    }
+    // Ce bouton n'ENREGISTRE plus rien : il ne fait que montrer l'autre
+    // formulaire. C'est lui qui, en écrivant aussitôt, a effacé les réglages
+    // une heure avant le départ.
+    brouillon.mode = boutonMode.dataset.modeAffiche;
+    // Un point de départ raisonnable plutôt qu'un menu vide, quand on passe en
+    // manuel sans position : la journée que l'automatique montre déjà.
+    if (brouillon.mode === 'manuel' && brouillon.jour === undefined) brouillon.jour = position.jour;
+    redessinerPosition();
+    return;
+  }
+
+  const boutonEnregistrer = evenement.target.closest('[data-action="enregistrer-position"]');
+  if (boutonEnregistrer) {
+    await enregistrerPosition();
     return;
   }
 
@@ -738,36 +861,46 @@ racine.addEventListener('change', async (evenement) => {
     return;
   }
 
+  // Les champs de position ne font que nourrir le brouillon. Le menu des
+  // journées redessine le module : le champ de date annoncée n'existe qu'aux
+  // deux bouts du voyage, il doit donc apparaître ou disparaître. Les autres
+  // champs ne redessinent que l'aperçu et le bouton, pour ne pas voler le
+  // curseur pendant qu'on tape une date.
   if (evenement.target.matches('#position-jour')) {
     const valeur = evenement.target.value;
-    const jour = valeur === '' ? null : Number(valeur);
-    await enregistrerPosition(jour === null ? { mode: null } : { mode: 'manuel', jour });
+    brouillon.jour = valeur === '' ? null : Number(valeur);
+    redessinerPosition();
     return;
   }
 
-  // Les deux dates annoncées s'enregistrent chacune pour soi, sans toucher
-  // à la journée : le mode renvoyé est celui qui est déjà à l'écran — le
-  // champ n'existe pas ailleurs — et le service, lui, ne modifie que ce que
-  // la requête porte.
   if (evenement.target.matches('#position-depart-prevu')) {
-    await enregistrerPosition({ mode: null, departPrevuLe: evenement.target.value || null });
+    brouillon.departPrevuLe = evenement.target.value || null;
+    redessinerPosition();
     return;
   }
 
   if (evenement.target.matches('#position-arrivee')) {
-    await enregistrerPosition({
-      mode: 'manuel', jour: position.jour, arriveeLe: evenement.target.value || null,
-    });
+    brouillon.arriveeLe = evenement.target.value || null;
+    redessinerPosition();
     return;
   }
 
   if (evenement.target.matches('#position-depart, #position-decalage')) {
-    const depart = racine.querySelector('#position-depart').value;
-    if (!depart) return; // pas de date : rien à enregistrer
+    brouillon.depart = racine.querySelector('#position-depart').value || null;
     const decalageBrut = racine.querySelector('#position-decalage').value;
-    const decalage = decalageBrut === '' ? 0 : Number(decalageBrut);
-    await enregistrerPosition({ mode: 'auto', depart, decalage });
+    brouillon.decalage = decalageBrut === '' ? 0 : Number(decalageBrut);
+    redessinerPosition();
   }
+});
+
+/* Entrée dans un champ de date vaut clic sur Enregistrer : c'est le geste
+   qu'on fait sans y penser après avoir tapé une date, et ne rien enregistrer
+   alors se lit comme une panne. */
+racine.addEventListener('keydown', async (evenement) => {
+  if (evenement.key !== 'Enter') return;
+  if (!evenement.target.closest('#position-depart, #position-decalage, #position-depart-prevu, #position-arrivee')) return;
+  evenement.preventDefault();
+  if (brouillonModifie()) await enregistrerPosition();
 });
 
 // Un fichier s'ouvre en grand ici comme sur le site : voir une photo en

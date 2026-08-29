@@ -368,20 +368,6 @@ export async function lireVisites(motDePasse) {
   return appeler('/api/visites', { headers: { 'X-Mot-De-Passe': motDePasse } });
 }
 
-/** Les compteurs Cloudflare, pour la page d'administration.
-
-    Rendus tels que le service les calcule : valeurs, plafonds de l'offre
-    gratuite et part consommée. Aucun seuil n'est connu de ce côté-ci — les
-    forfaits changent, et les avoir en deux endroits aurait garanti qu'un des
-    deux finisse périmé.
-
-    Le délai est celui des lectures ordinaires : le service interroge Cloudflare
-    de son côté avec sa propre limite, plus courte, et rend un message clair
-    plutôt que de laisser la page attendre. */
-export async function lireConsommation(motDePasse) {
-  return appeler('/api/consommation', { headers: { 'X-Mot-De-Passe': motDePasse } });
-}
-
 /** Vérifie la taille d'une vidéo avant tout envoi. */
 export function verifierVideo(fichier) {
   if (fichier.size <= VIDEO_OCTETS_MAX) return null;

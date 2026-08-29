@@ -1706,15 +1706,15 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
 .position-mode__bouton:hover { color: var(--sel); }
 .position-mode__bouton[aria-pressed="true"] { background: var(--soufre); color: var(--sur-accent); }
 
-/* ------------------------------------------------------- consommation
+/* ------------------------------------------------------- cartes chiffrées
 
-   Les compteurs Cloudflare : une carte par service, une jauge par mesure.
+   Une carte par mesure, groupées par service : ce qui sert à la fréquentation
+   et au prévisionnel de la position. Le préfixe `conso` vient des compteurs
+   Cloudflare, retirés depuis ; le renommer aurait touché deux modules pour
+   ne rien changer à l'écran.
 
-   Aucune couleur nouvelle. L'alerte prend `--colorada`, le jeton d'alerte que
-   les quatre habillages définissent déjà — en inventer un cinquième aurait
-   obligé à le décliner quatre fois, et le premier oubli aurait laissé une
-   jauge invisible sur un habillage clair. Tant qu'on est loin du plafond, la
-   jauge est en `--soufre` comme tout ce qui compte sur ce site. */
+   Aucune couleur nouvelle : la jauge est en `--soufre` comme tout ce qui
+   compte sur ce site. */
 .conso { display: grid; gap: 1.5rem; }
 
 .conso__service { display: grid; gap: 1rem; }
@@ -1745,9 +1745,9 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
   color: var(--texte-2);
 }
 
-/* La période et le détail chiffré se disent du même ton que les légendes du
-   site : ce sont des repères, pas la réponse qu'on cherche. */
-.conso__periode, .conso__detail {
+/* La période se dit du même ton que les légendes du site : c'est un repère,
+   pas la réponse qu'on cherche. */
+.conso__periode {
   font-family: var(--mono);
   font-size: .625rem;
   letter-spacing: .06em;
@@ -1755,8 +1755,8 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
   color: var(--poussiere);
 }
 
-/* Le pourcentage porte la carte : c'est la seule chose qu'on vient lire ici.
-   Chiffres tabulaires pour que huit jauges empilées alignent leurs unités
+/* Le chiffre porte la carte : c'est la seule chose qu'on vient lire ici.
+   Chiffres tabulaires pour que plusieurs cartes empilées alignent leurs unités
    plutôt que de danser d'une ligne à l'autre. */
 .conso__valeur {
   display: flex;
@@ -1771,11 +1771,6 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
   color: var(--sel);
 }
 
-/* Le dépassement se peint jusque dans le chiffre — c'est là que l'œil tombe
-   d'abord. L'approche, elle, se dit toujours par le mot seul : du rouge dès
-   80 % crierait pour un seuil qu'on franchit en marchant. */
-.conso__mesure.est-depasse .conso__valeur { color: var(--colorada); }
-
 /* Trois pixels : assez pour se voir d'un coup d'œil, assez peu pour rester une
    règle sous un chiffre plutôt qu'un objet de plus à regarder. */
 .conso__jauge {
@@ -1789,31 +1784,6 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
   background: var(--soufre);
   transition: width var(--transition);
 }
-
-.conso__alerte {
-  margin: 0;
-  font-family: var(--mono);
-  font-size: .625rem;
-  letter-spacing: .08em;
-  text-transform: uppercase;
-  color: var(--colorada);
-}
-
-/* Le dépassement se peint, l'approche se dit seulement. Une jauge rouge dès
-   80 % aurait crié pour un seuil qu'on franchit en marchant. */
-.conso__mesure.est-depasse .conso__part { background: var(--colorada); }
-
-/* Une mesure que Cloudflare n'a pas rendue : elle reste dans la carte, en
-   retrait. Le message est celui de Cloudflare, souvent en anglais — il nomme le
-   champ fautif, seule chose qui permette de corriger. */
-.conso__souci {
-  margin: 0;
-  font-family: var(--mono);
-  font-size: .6875rem;
-  line-height: 1.45;
-  color: var(--poussiere);
-}
-.conso__mesure.est-muette .conso__libelle { color: var(--poussiere); }
 
 .conso__pied {
   margin: 0;
@@ -1954,11 +1924,10 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
 
 /* ------------------------------------------------------------ visites
 
-   La fréquentation reprend les cartes de Consommation — même page, même geste,
-   on vient y lire des chiffres — mais sans jauge de plafond : la fréquentation
-   n'en a pas, et une barre qui se remplit y aurait suggéré un quota inexistant.
-   Seules les barres de comparaison restent, qui rapportent chaque valeur à la
-   plus forte. */
+   La fréquentation reprend les cartes chiffrées `.conso__*`, mais sans jauge de
+   plafond : elle n'en a pas, et une barre qui se remplit y aurait suggéré un
+   quota inexistant. Seules les barres de comparaison restent, qui rapportent
+   chaque valeur à la plus forte. */
 
 /* La courbe des jours, en barres : c'est la forme d'une fréquentation, et elle
    répond du même coup à « est-ce que ça monte ? ». 4,5 rem de haut — assez pour

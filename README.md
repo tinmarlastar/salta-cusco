@@ -299,49 +299,6 @@ cd worker && npx wrangler d1 execute souvenirs --remote --file=schema.sql
 cd worker && npx wrangler deploy
 ```
 
-### Suivre la consommation
-
-La page d'administration a un troisième module, **Consommation** : où en est le
-compte Cloudflare par rapport à l'offre gratuite. Une carte par service —
-Workers, D1, R2 — et pour chaque mesure sa valeur, le forfait, la part
-consommée et le moment où le compteur repart de zéro. Au-delà de quatre
-cinquièmes du forfait la mesure se dit « proche du plafond » ; au-delà du
-plafond, la jauge passe au rouge.
-
-Ce module est **facultatif** : sans les deux secrets ci-dessous, il affiche une
-phrase qui le dit et rien d'autre ne change. Le carnet fonctionne sans lui.
-
-Les chiffres viennent de l'API GraphQL Analytics de Cloudflare, interrogée par
-le service — le jeton ne descend jamais dans le navigateur. Il faut donc deux
-secrets de plus, posés comme les mots de passe :
-
-```bash
-cd worker && npx wrangler secret put JETON_ANALYTIQUE_CF
-cd worker && npx wrangler secret put ID_COMPTE_CF
-```
-
-Le jeton se crée dans le tableau de bord Cloudflare (*My Profile → API Tokens →
-Create Token → Create Custom Token*) avec une seule permission :
-**Account · Account Analytics · Read**. L'identifiant de compte se lit dans
-l'URL du tableau de bord, ou sur la page d'accueil du compte. Il passe en
-secret plutôt qu'en variable de `wrangler.toml` : ce dépôt est public.
-
-Deux réserves à connaître :
-
-- **Les forfaits sont écrits en dur** dans `worker/lib/consommation.js`, relevés
-  dans la documentation Cloudflare en août 2026. Ils bougent, et rien ne les
-  vérifie. Si le module annonce un jour une marge qui ne correspond plus au
-  tableau de bord, c'est cette table qu'il faut revoir en premier.
-- **Le giga-octet y vaut 10⁹ octets et non 2³⁰.** Cloudflare écrit
-  « 10 GB-month » sans dire lequel des deux : on retient la lecture la plus
-  sévère, qui rend le forfait plus petit de 7 % et fait monter la jauge plus
-  vite. Se tromper de ce côté fait s'inquiéter un peu tôt ; se tromper de
-  l'autre ferait annoncer de la marge qui n'existe pas.
-
-Si Cloudflare refuse la demande ou renomme un champ, le module affiche le
-message de Cloudflare tel quel, en anglais : il nomme le champ fautif, et c'est
-la seule chose qui permette de corriger la requête sans tâtonner.
-
 ### Développer en local
 
 Le service tourne à côté du site, sur un port différent :
@@ -375,8 +332,8 @@ MOT_DE_PASSE_ADMIN=...
 > déploiement (étape « Poser les deux mots de passe » ci-dessous), deux mots
 > de passe différents de ceux-là.
 
-Tests des fonctions pures du service — autorisation, position, consommation,
-visites — et de la file d'attente hors-ligne (61 tests) :
+Tests des fonctions pures du service — autorisation, position, visites — et de
+la file d'attente hors-ligne (64 tests) :
 
 ```bash
 cd worker && node --test
@@ -446,9 +403,6 @@ le compte Cloudflare. Elles ne demandent qu'un compte gratuit.
    passe d'administration différent et plus long — **ni l'un ni l'autre ne
    doit reprendre `uyuni2026` ou `admin-de-test`**, utilisés dans le plan
    d'implémentation et donc déjà publics.
-
-   Deux autres secrets, facultatifs, ouvrent le module Consommation de la page
-   d'administration : voir « Suivre la consommation » plus bas.
 
 6. **Déployer** :
 

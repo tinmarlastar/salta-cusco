@@ -2,7 +2,7 @@
    étapes elles ouvrent.
 
    Fonctions pures, sans accès réseau ni base — testables directement, comme
-   lib/securite.js, lib/position.js et lib/consommation.js.
+   lib/securite.js et lib/position.js.
 
    Ce qui n'est PAS compté, et c'est délibéré : aucune adresse IP, aucun cookie,
    aucune empreinte de navigateur. Le navigateur retient chez lui qu'il a déjà

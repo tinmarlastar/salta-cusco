@@ -240,13 +240,13 @@ quinze journées du voyage avec le nombre de contributions de chacune, y
 compris celles restées vides : en modération, savoir qu'un jour n'a rien reçu
 est une information.
 
-La page a deux modules, choisis depuis un menu à gauche (en haut sur
-téléphone) : la modération elle-même, et « Où en sont les motos ». Ce second
-module pose la position affichée sur la carte et la frise du site, en
-manuel (une journée choisie à la main) ou en automatique (une date de
-départ, et le site avance tout seul de J1 à J15 — un décalage en jours
-corrige un retard ou une avance sans changer de mode). Le changement de
-journée automatique se fait à minuit heure de Paris.
+La page a trois modules, choisis depuis un menu à gauche (en haut sur
+téléphone) : la modération elle-même, « Où en sont les motos », et « Visites »
+— la fréquentation du site, décrite plus bas. Le deuxième pose la position
+affichée sur la carte et la frise du site, en manuel (une journée choisie à la
+main) ou en automatique (une date de départ, et le site avance tout seul de J1
+à J15 — un décalage en jours corrige un retard ou une avance sans changer de
+mode). Le changement de journée automatique se fait à minuit heure de Paris.
 
 Aux deux bouts du voyage, la frise annonce une date plutôt qu'un lieu :
 « Départ prévu le… » tant qu'on n'est pas partis, « Nous sommes arrivés

@@ -585,37 +585,82 @@ export function dessinerFrise(svg, {
 export function ajusterMotDeLaFrise(svg) {
   const groupe = svg.querySelector('.frise__ici-groupe');
   if (!groupe) return;
-  const boite = groupe.getBoundingClientRect();
-  const fenetre = svg.parentElement.getBoundingClientRect();
-  // Un demi-point de tolérance : les deux boîtes se comparent en pixels
-  // fractionnaires, et un mot pile au bord clignoterait d'un dessin à l'autre.
-  const tient = boite.left >= fenetre.left - .5 && boite.right <= fenetre.right + .5;
-  groupe.classList.toggle('est-hors-champ', !tient);
+  const defilement = svg.parentElement;
+  const fenetre = defilement.getBoundingClientRect();
+
+  /* Tenir dans la fenêtre ne suffit pas : le bord qui cache une suite s'estompe
+     sur 2,5 rem (voir `.frise__defilement[data-bords]`), et un mot qui s'arrête
+     pile au bord y perd ses dernières lettres dans le dégradé — « il est 22h24 »
+     s'y lisait « il est 22h ». La marge n'est réclamée qu'aux bords réellement
+     estompés, ceux que `majBordsFrise` vient de désigner : ailleurs, le mot a
+     le droit d'aller jusqu'au bout.
+
+     Un demi-point de tolérance en plus : les deux boîtes se comparent en pixels
+     fractionnaires, et un mot pile à la limite clignoterait d'un dessin à
+     l'autre. */
+  const bords = defilement.dataset.bords;
+  const estompe = 2.5 * parseFloat(getComputedStyle(document.documentElement).fontSize || 16);
+  const margeGauche = (bords === 'gauche' || bords === 'deux') ? estompe : 0;
+  const margeDroite = (bords === 'droite' || bords === 'deux') ? estompe : 0;
+  const tient = () => {
+    const boite = groupe.getBoundingClientRect();
+    return boite.left >= fenetre.left + margeGauche - .5
+      && boite.right <= fenetre.right - margeDroite + .5;
+  };
+
+  // Une seule ligne tant qu'elle tient. La coupe ne va que dans un sens, et
+  // seulement jusqu'au prochain dessin : sans ce cliquet, un mot juste à la
+  // limite passerait d'une ligne à deux et retour à chaque défilement du
+  // doigt, sous les yeux de celui qui fait défiler.
+  const mot = groupe.querySelector('.frise__ici');
+  if (mot?.dataset.lignes === '1' && !tient()) couperMotEnDeux(mot);
+
+  groupe.classList.toggle('est-hors-champ', !tient());
 }
 
-/* Écrit le mot sur une ou deux lignes.
+/* Écrit le mot d'un seul tenant : « Nous sommes à Humahuaca, il est 22h20 ».
 
-   L'heure va SOUS la phrase, jamais à la suite : mise bout à bout, la ligne
-   débordait de la frise sur un téléphone. Sous elle, la largeur du mot reste
-   celle de sa plus longue ligne.
+   C'est la forme la plus lisible, et celle qu'on lit d'un trait. Elle ne tient
+   pas partout — sur un téléphone, ces trente-trois signes débordent de la
+   frise — mais on ne peut pas le savoir ici : il faut avoir dessiné pour
+   mesurer, et la frise n'est recentrée qu'après. La coupe en deux lignes est
+   donc un second temps, décidé par `ajusterMotDeLaFrise` une fois tout en
+   place.
+
+   La phrase et l'heure sont gardées sur l'élément : c'est ce qui permet de
+   couper plus tard sans redemander la phrase à personne. */
+function ecrireMot(mot, phrase, heure, x) {
+  mot.dataset.phrase = phrase;
+  mot.dataset.heure = heure || '';
+  mot.dataset.ancre = x;
+  mot.dataset.lignes = '1';
+  mot.textContent = heure ? `${phrase} ${heure}` : phrase;
+}
+
+/* Repasse le mot sur deux lignes, l'heure sous la phrase.
 
    Sous et non au-dessus : le mot est déjà collé au haut du cadre (`yMot` vaut
    `marge.haut - 12`), une ligne de plus par-dessus sortirait du dessin. En
    dessous elle empiète sur le ciel que la frise garde au-dessus des crêtes —
    d'où le liseré de fond que `paint-order: stroke` pose autour des lettres,
-   qui les garde lisibles même quand une crête passe derrière. */
-function ecrireMot(mot, phrase, heure, x) {
+   qui les garde lisibles même quand une crête passe derrière.
+
+   Sur deux lignes, la largeur du mot n'est plus la somme des deux mais la plus
+   longue des deux : c'est tout l'intérêt quand la place manque. */
+function couperMotEnDeux(mot) {
+  const { phrase, heure, ancre } = mot.dataset;
+  if (!heure) return false;   // rien à mettre sur une seconde ligne
+
+  mot.dataset.lignes = '2';
   mot.textContent = '';
   const premiere = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
   premiere.textContent = phrase;
-  mot.append(premiere);
-  if (!heure) return;
-
   const seconde = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
-  seconde.setAttribute('x', x);
+  seconde.setAttribute('x', ancre);
   seconde.setAttribute('dy', '1em');
   seconde.textContent = heure;
-  mot.append(seconde);
+  mot.append(premiere, seconde);
+  return true;
 }
 
 /** Réécrit le mot de la frise sans redessiner la frise.
@@ -637,7 +682,9 @@ export function rafraichirMotDeLaFrise(svg, {
   const { phrase, heure, description } = motDeLaFrise({
     positionJour, departPrevuLe, arriveeLe, villes: villesDuMot(etapes, positionJour), fuseau,
   });
-  if (mot.textContent === `${phrase}${heure || ''}`) return false;
+  // Comparaison sur ce qui a été ÉCRIT, pas sur le texte affiché : celui-ci
+  // dépend de la coupe en deux lignes, décidée après coup.
+  if (mot.dataset.phrase === phrase && mot.dataset.heure === (heure || '')) return false;
 
   ecrireMot(mot, phrase, heure, mot.getAttribute('x'));
   mot.setAttribute('aria-label', description);

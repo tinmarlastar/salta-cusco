@@ -920,6 +920,9 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
 .frise {
   display: flex;
   align-items: center;
+  /* Ancre le repère du bord, qui se pose par-dessus la barre sans défiler
+     avec elle. */
+  position: relative;
   height: var(--frise-h);
   /* Symétrique en haut et en bas : sinon `align-items: center` centre dans une
      boîte qui ne l'est pas. Sur les côtés, la réserve de l'encoche — en
@@ -938,6 +941,39 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
 /* Le mot des motos hors de la fenêtre : effacé plutôt que coupé au bord (voir
    `ajusterMotDeLaFrise`). */
 .frise__ici-groupe.est-hors-champ { display: none; }
+
+/* Le repère qui remplace le mot effacé, et y ramène d'un clic.
+
+   Posé par-dessus la barre plutôt qu'à côté : la frise occupe déjà toute la
+   largeur, lui prendre une colonne aurait rogné le tracé sur tous les écrans
+   pour un bouton qui ne paraît presque jamais. Il est hors du conteneur
+   masqué, donc le dégradé du bord ne le mange pas — c'est tout l'intérêt de
+   l'avoir sorti du dessin.
+
+   Discret : c'est un rappel, pas une alarme. Ne rien voir est l'état normal. */
+.frise__repere {
+  position: absolute;
+  top: .5rem;
+  z-index: 1;
+  padding: .1875rem .4375rem;
+  border: 1px solid var(--nuit-3);
+  border-radius: 999px;
+  background: var(--nuit);
+  color: var(--poussiere);
+  font-family: var(--mono);
+  font-size: .5625rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color var(--transition), border-color var(--transition);
+}
+.frise__repere[hidden] { display: none; }
+/* Décalé de la réserve d'encoche, comme la barre elle-même : en paysage, un
+   bouton collé au bord passe sous l'arrondi de l'écran. */
+.frise__repere[data-cote="gauche"] { left: calc(.5rem + env(safe-area-inset-left, 0px)); }
+.frise__repere[data-cote="droite"] { right: calc(.5rem + env(safe-area-inset-right, 0px)); }
+.frise__repere:hover { border-color: var(--soufre); color: var(--accent-encre); }
 
 .frise__pastille { fill: var(--colorada); }
 .frise__pastille-texte {

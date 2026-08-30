@@ -581,10 +581,16 @@ export function dessinerFrise(svg, {
     l'on regarde encore où elles en sont.
 
     Appelée après chaque dessin (le recentrage a déjà eu lieu) et à chaque
-    défilement de la frise, y compris celui du doigt. */
+    défilement de la frise, y compris celui du doigt.
+
+    Rend le côté par lequel le mot est sorti — `'gauche'`, `'droite'`, ou
+    `null` s'il est visible. C'est ce qui permet à l'appelant de poser un
+    repère au bord : effacer le mot sans rien dire laissait le lecteur sans
+    aucun moyen de savoir où en sont les motos, ni où faire défiler pour les
+    retrouver. */
 export function ajusterMotDeLaFrise(svg) {
   const groupe = svg.querySelector('.frise__ici-groupe');
-  if (!groupe) return;
+  if (!groupe) return null;
   const defilement = svg.parentElement;
   const fenetre = defilement.getBoundingClientRect();
 
@@ -629,7 +635,17 @@ export function ajusterMotDeLaFrise(svg) {
   const mot = groupe.querySelector('.frise__ici');
   if (mot?.dataset.lignes === '1' && !bienLisible()) couperMotEnDeux(mot);
 
-  groupe.classList.toggle('est-hors-champ', !dansLaFenetre());
+  // Mesuré CLASSE RETIRÉE : un élément en `display: none` rend une boîte à
+  // zéro, et le mot resterait éternellement effacé une fois qu'il l'a été.
+  // Retirer puis reposer dans le même souffle ne se voit pas — rien n'est
+  // peint entre les deux.
+  groupe.classList.remove('est-hors-champ');
+  const cache = !dansLaFenetre();
+  const boite = groupe.getBoundingClientRect();
+  groupe.classList.toggle('est-hors-champ', cache);
+
+  if (!cache) return null;
+  return boite.left < fenetre.left ? 'gauche' : 'droite';
 }
 
 /* Écrit le mot d'un seul tenant : « Nous sommes à Humahuaca, il est 22h20 ».

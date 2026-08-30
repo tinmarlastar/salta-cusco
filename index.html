@@ -71,6 +71,12 @@
     <svg class="frise__svg" id="frise" role="img"
          aria-label="Profil d'altitude du voyage entier, du jour 1 au jour 15. Clique une étape pour la détailler."></svg>
   </div>
+  <!-- Le repère qui ramène aux motos, quand leur journée est sortie de l'écran.
+       Posé À CÔTÉ du conteneur qui défile, jamais dedans : dans le dessin il
+       défilerait avec lui, alors qu'il est justement là pour dire ce qui n'est
+       plus visible. Son libellé et son côté sont écrits par `js/app.js`, qui
+       seul sait où en sont les motos. -->
+  <button type="button" class="frise__repere" id="repere-motos" hidden></button>
 </nav>
 
 <main class="scene">

@@ -46,6 +46,7 @@ const elements = {
   titre: document.getElementById('titre-voyage'),
   panneau: document.getElementById('panneau'),
   frise: document.getElementById('frise'),
+  repereMotos: document.getElementById('repere-motos'),
   poignee: document.getElementById('poignee'),
   poigneeTexte: document.getElementById('poignee-texte'),
   boutonAccueil: document.getElementById('bouton-accueil'),
@@ -214,6 +215,36 @@ function decaler(pas) {
   if (cible !== undefined && cible !== null) choisir(cible);
 }
 
+/* Ajuste le mot des motos, et pose au bord le repère qui les rappelle.
+
+   Le mot est effacé dès qu'il ne tient plus dans la fenêtre : sur un
+   téléphone, la frise mesure le double de l'écran, et ouvrir J15 quand les
+   motos en sont à J2 emmène leur repère loin hors champ. L'effacer évitait un
+   bout de phrase collé au bord, mais laissait le lecteur sans rien — ni où ils
+   sont, ni de quel côté faire défiler pour le retrouver.
+
+   Le bouton dit le côté et y ramène d'un clic. Il ne paraît que quand le mot
+   s'efface : tant qu'on le lit, il ferait double emploi. */
+function ajusterFrise() {
+  const cote = ajusterMotDeLaFrise(elements.frise);
+  const repere = elements.repereMotos;
+  if (!repere) return;
+
+  const jour = etat.position.jour;
+  if (!cote || !jour) { repere.hidden = true; return; }
+
+  const titre = etat.etapes.find((e) => e.jour === jour)?.titre;
+  repere.hidden = false;
+  repere.dataset.cote = cote;
+  // La flèche montre le chemin, pas la direction du texte : à gauche elle
+  // précède, à droite elle suit.
+  repere.textContent = cote === 'gauche' ? '← les motos' : 'les motos →';
+  // L'œil ne lit que « les motos » ; la synthèse vocale, elle, doit dire vers
+  // quoi ce bouton emmène.
+  repere.setAttribute('aria-label',
+    `Revenir à la journée des motos, J${jour}${titre ? ` · ${titre}` : ''}`);
+}
+
 /* L'heure des motards avance toute seule sous la frise.
 
    Seul le texte du mot est réécrit — pas la frise entière : la redessiner à
@@ -242,7 +273,7 @@ function suivreLHeureDesMotards() {
     });
     // La phrase a changé de longueur : elle ne tient peut-être plus dans la
     // fenêtre de la frise.
-    if (change) ajusterMotDeLaFrise(elements.frise);
+    if (change) ajusterFrise();
   };
 
   minuterieHeure = setInterval(remettre, 30_000);
@@ -270,7 +301,7 @@ function redessinerFrise() {
   majBordsFrise();
   // Après le recentrage, jamais avant : c'est lui qui décide si « Nous sommes
   // ici ! » est resté dans la fenêtre.
-  ajusterMotDeLaFrise(elements.frise);
+  ajusterFrise();
 }
 
 // La minuterie qui fait avancer l'heure des motards, armée une seule fois.
@@ -820,13 +851,20 @@ function brancherInterface() {
 
   window.addEventListener('hashchange', () => choisir(jourDepuisAdresse(), { majAdresse: false }));
 
+  // Le repère du bord ramène là où sont les motos. `choisir` recentre la frise
+  // sur la journée, donc le mot revient dans le champ et le bouton s'efface de
+  // lui-même — c'est `ajusterFrise`, appelé en fin de redessin, qui le décide.
+  elements.repereMotos?.addEventListener('click', () => {
+    if (etat.position.jour) choisir(etat.position.jour);
+  });
+
   // Le dégradé des bords suit le doigt : `passive`, parce qu'on ne fait que
   // lire une position — rien à annuler, et le défilement ne doit pas attendre.
   elements.frise.parentElement.addEventListener('scroll', () => {
     majBordsFrise();
     // Le mot des motos suit le même sort que les bords : ce qui sort de la
     // fenêtre au doigt en sort tout autant que ce qui en sort au recentrage.
-    ajusterMotDeLaFrise(elements.frise);
+    ajusterFrise();
   }, { passive: true });
 
   let attente;

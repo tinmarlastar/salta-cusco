@@ -10,7 +10,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 import {
-  FUSEAU_PAR_JOUR, instantLocal, calculerPositionAuto, dateDuJourVoyage,
+  FUSEAU_PAR_JOUR, fuseauDuJour, instantLocal, calculerPositionAuto, dateDuJourVoyage,
 } from '../lib/position.js';
 
 /* Un instant réel : 20 h à Salta le 29 août 2026, c'est 23 h UTC le même jour
@@ -223,4 +223,32 @@ test('chaque bascule annoncée est bien celle que la position applique', async (
 test('le calendrier est vide sans date de départ', async () => {
   const { calendrierDesBascules } = await import('../lib/position.js');
   assert.deepEqual(calendrierDesBascules({ depart: null, decalage: 0 }), []);
+});
+
+// ------------------------------------------- le fuseau annoncé au site
+
+/* Le site affiche l'heure qu'il est chez les motards sous « Nous sommes ici »,
+   et reçoit le fuseau avec la position plutôt que de le déduire lui-même :
+   c'est ici qu'est la table, et un test la compare déjà à `data/etapes.json`.
+   Une troisième copie côté site aurait été la seule que rien ne surveille. */
+test('fuseauDuJour rend le fuseau de la ville où l\'on dort ce soir-là', () => {
+  assert.equal(fuseauDuJour(7), 'America/La_Paz');
+  assert.equal(fuseauDuJour(12), 'America/Lima');
+  assert.equal(fuseauDuJour(4), 'America/Santiago');
+});
+
+/* J1 est le rassemblement à Salta, pas une journée roulée : la table des
+   bascules commence à J2, mais les motards sont bien quelque part ce jour-là,
+   et la position manuelle permet de poser J1. Sans ce cas, la seule journée où
+   tout le monde regarde le site — la veille du départ — serait la seule sans
+   heure. */
+test('fuseauDuJour couvre J1, absent de la table des bascules', () => {
+  assert.equal(fuseauDuJour(1), 'America/Argentina/Salta');
+});
+
+test('fuseauDuJour rend null quand la journée est inconnue ou absente', () => {
+  assert.equal(fuseauDuJour(null), null);
+  assert.equal(fuseauDuJour(0), null);
+  assert.equal(fuseauDuJour(16), null);
+  assert.equal(fuseauDuJour('sept'), null);
 });

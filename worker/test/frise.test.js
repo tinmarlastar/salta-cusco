@@ -123,3 +123,117 @@ test('la version parlée ordonne le premier du mois', () => {
   });
   assert.match(description, /1er septembre/);
 });
+
+// ------------------------------------------- l'heure qu'il est chez eux
+
+/* « Nous sommes à Tahua, il est 7h20 » : l'heure LOCALE des motards, celle du
+   fuseau de la ville où ils arrivent ce soir-là.
+
+   Elle est calculée à partir d'un instant passé en paramètre, jamais de
+   `Date.now()` pris à l'intérieur : sans ça, la seule phrase du site qui
+   change toute seule serait aussi la seule qu'on ne saurait pas éprouver. */
+const INSTANT = new Date('2026-09-05T11:20:00Z'); // 7 h 20 à La Paz, 6 h 20 à Lima
+
+test('en chemin, la phrase dit l\'heure qu\'il est chez les motards', () => {
+  const { phrase, heure } = motDeLaFrise({
+    positionJour: 7, departPrevuLe: null, arriveeLe: null, villes: VILLES,
+    fuseau: 'America/La_Paz', maintenant: INSTANT,
+  });
+  // Deux champs, parce que le mot s'écrit sur deux lignes : mises bout à bout,
+  // ces trente-trois lettres débordaient de la frise sur un téléphone, où le
+  // garde-fou du hors-champ effaçait alors le mot entier. Sur deux lignes, la
+  // largeur du mot reste celle de sa plus longue ligne.
+  assert.equal(phrase, 'Nous sommes à Tahua,');
+  assert.equal(heure, 'il est 7h20');
+});
+
+test('sans ville connue, l\'heure s\'ajoute quand même à « ici »', () => {
+  const { phrase, heure } = motDeLaFrise({
+    positionJour: 7, departPrevuLe: null, arriveeLe: null,
+    villes: { depart: 'Salta', arrivee: 'Cusco', courante: null },
+    fuseau: 'America/La_Paz', maintenant: INSTANT,
+  });
+  assert.equal(phrase, 'Nous sommes ici,');
+  assert.equal(heure, 'il est 7h20');
+});
+
+test('l\'heure suit le fuseau, pas l\'instant seul', () => {
+  const aLima = motDeLaFrise({
+    positionJour: 12, departPrevuLe: null, arriveeLe: null, villes: VILLES,
+    fuseau: 'America/Lima', maintenant: INSTANT,
+  });
+  assert.equal(aLima.heure, 'il est 6h20');
+});
+
+/* Le Chili passe à l'heure d'été le premier dimanche de septembre, en plein
+   voyage. Un décalage écrit en dur se serait trompé d'une heure sur toute la
+   fin du raid : le fuseau est NOMMÉ, et c'est le navigateur qui sait. */
+test('l\'heure suit le changement d\'heure chilien', () => {
+  const avant = motDeLaFrise({
+    positionJour: 4, departPrevuLe: null, arriveeLe: null, villes: VILLES,
+    fuseau: 'America/Santiago', maintenant: new Date('2026-09-05T15:00:00Z'),
+  });
+  const apres = motDeLaFrise({
+    positionJour: 4, departPrevuLe: null, arriveeLe: null, villes: VILLES,
+    fuseau: 'America/Santiago', maintenant: new Date('2026-09-07T15:00:00Z'),
+  });
+  assert.equal(avant.heure, 'il est 11h00');
+  assert.equal(apres.heure, 'il est 12h00');
+});
+
+/* Les minutes gardent leur zéro, l'heure n'en prend pas : on écrit « 7h05 » et
+   « 0h20 », comme on le dit. */
+test('les minutes s\'écrivent sur deux chiffres, l\'heure sans zéro devant', () => {
+  const cinq = motDeLaFrise({
+    positionJour: 7, departPrevuLe: null, arriveeLe: null, villes: VILLES,
+    fuseau: 'America/La_Paz', maintenant: new Date('2026-09-05T11:05:00Z'),
+  });
+  const minuit = motDeLaFrise({
+    positionJour: 7, departPrevuLe: null, arriveeLe: null, villes: VILLES,
+    fuseau: 'America/La_Paz', maintenant: new Date('2026-09-05T04:20:00Z'),
+  });
+  assert.equal(cinq.heure, 'il est 7h05');
+  assert.equal(minuit.heure, 'il est 0h20');
+});
+
+test('la description lue à voix haute dit l\'heure aussi', () => {
+  const { description } = motDeLaFrise({
+    positionJour: 7, departPrevuLe: null, arriveeLe: null, villes: VILLES,
+    fuseau: 'America/La_Paz', maintenant: INSTANT,
+  });
+  assert.match(description, /7h20/);
+});
+
+/* Le fuseau arrive du service, qui peut être injoignable ou pas encore
+   redéployé. La phrase retombe alors exactement sur celle d'avant : pas de
+   « il est » suivi d'un blanc, ni d'heure du lecteur passée pour celle des
+   motards. */
+test('sans fuseau, la phrase reste celle d\'avant, sans seconde ligne', () => {
+  const { phrase, heure } = motDeLaFrise({
+    positionJour: 7, departPrevuLe: null, arriveeLe: null, villes: VILLES,
+    maintenant: INSTANT,
+  });
+  assert.equal(phrase, 'Nous sommes à Tahua !');
+  // Pas de seconde ligne du tout, pas même vide : une ligne blanche sous le
+  // mot décaleraient le dessin sans rien dire.
+  assert.ok(!heure);
+});
+
+/* Avant le départ et après l'arrivée, les motards sont chez eux : « chez nous
+   il est » y afficherait l'heure du lecteur lui-même, présentée comme la
+   leur. Ces deux phrases ne portent donc jamais d'heure, fuseau ou pas. */
+test('avant le départ, aucune heure ne s\'affiche', () => {
+  const { phrase } = motDeLaFrise({
+    positionJour: null, departPrevuLe: '2026-08-29', arriveeLe: null, villes: VILLES,
+    fuseau: 'America/Argentina/Salta', maintenant: INSTANT,
+  });
+  assert.equal(phrase, 'Départ de Salta le 29/08/26 !');
+});
+
+test('une fois arrivés, aucune heure ne s\'affiche', () => {
+  const { phrase } = motDeLaFrise({
+    positionJour: 15, departPrevuLe: null, arriveeLe: '2026-09-12', villes: VILLES,
+    fuseau: 'America/Lima', maintenant: INSTANT,
+  });
+  assert.equal(phrase, 'Nous sommes arrivés à Cusco le 12/09/26');
+});

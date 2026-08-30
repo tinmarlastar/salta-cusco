@@ -5,7 +5,10 @@
    vers un jour précis du voyage. */
 
 import { creerCarte } from './carte.js';
-import { ajusterMotDeLaFrise, assemblerVoyage, dessinerFrise, dessinerProfilEtape } from './profil.js';
+import {
+  ajusterMotDeLaFrise, assemblerVoyage, dessinerFrise, dessinerProfilEtape,
+  rafraichirMotDeLaFrise,
+} from './profil.js';
 import { monterSouvenirs, brancherVisionneuse } from './souvenirs-vue.js';
 import { listerDecomptes, lirePosition } from './souvenirs.js';
 import { brancherHabillages } from './habillage.js';
@@ -23,7 +26,11 @@ const etat = {
   // quand elle l'a été. `null` tant que personne ne l'a dite — les motos
   // attendent alors au kilomètre zéro, à Salta. `departPrevuLe` et `arriveeLe`
   // datent les deux bouts du voyage quand le service les connaît.
-  position: { jour: null, majLe: null, departPrevuLe: null, arriveeLe: null },
+  // `fuseau` est celui des motards, d'où l'heure écrite dans le mot de la
+  // frise ; `null` face à un service pas encore redéployé.
+  position: {
+    jour: null, majLe: null, departPrevuLe: null, arriveeLe: null, fuseau: null,
+  },
   // Onglet du panneau, et si l'on y est arrivé par un clic. Le défaut se
   // recalcule à chaque journée — souvenirs quand il y en a, étape sinon —,
   // mais un choix explicite tient jusqu'au changement de journée.
@@ -105,6 +112,7 @@ async function demarrer() {
     .then((position) => {
       etat.position = position;
       redessinerFrise();
+      suivreLHeureDesMotards();
     })
     .catch(() => {});
 
@@ -198,6 +206,43 @@ function decaler(pas) {
   if (cible !== undefined && cible !== null) choisir(cible);
 }
 
+/* L'heure des motards avance toute seule sous la frise.
+
+   Seul le texte du mot est réécrit — pas la frise entière : la redessiner à
+   la minute aurait recalculé tout le tracé et emporté le recentrage sur la
+   journée qu'on est en train de lire.
+
+   Toutes les trente secondes plutôt que soixante : à une minute pile, l'heure
+   affichée peut retarder de cinquante-neuf secondes sur celle du fuseau. La
+   fonction sort immédiatement quand la phrase n'a pas changé, ce qui est le
+   cas de presque tous les appels — c'est une comparaison de chaînes, pas un
+   dessin.
+
+   `visibilitychange` en plus de la minuterie : un téléphone qui s'endort gèle
+   ses minuteries, et rouvrir l'onglet montrerait une heure vieille de deux
+   heures — le seul cas où cet affichage mentirait franchement. */
+function suivreLHeureDesMotards() {
+  if (minuterieHeure) return;   // une seule, même si la position se relit
+  const remettre = () => {
+    if (!etat.voyage) return;
+    const change = rafraichirMotDeLaFrise(elements.frise, {
+      etapes: etat.etapes,
+      positionJour: etat.position.jour,
+      departPrevuLe: etat.position.departPrevuLe,
+      arriveeLe: etat.position.arriveeLe,
+      fuseau: etat.position.fuseau,
+    });
+    // La phrase a changé de longueur : elle ne tient peut-être plus dans la
+    // fenêtre de la frise.
+    if (change) ajusterMotDeLaFrise(elements.frise);
+  };
+
+  minuterieHeure = setInterval(remettre, 30_000);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) remettre();
+  });
+}
+
 function redessinerFrise() {
   if (!etat.voyage) return;
   dessinerFrise(elements.frise, {
@@ -211,6 +256,7 @@ function redessinerFrise() {
     positionJour: etat.position.jour,
     departPrevuLe: etat.position.departPrevuLe,
     arriveeLe: etat.position.arriveeLe,
+    fuseau: etat.position.fuseau,
   });
   amenerEtapeEnVue();
   majBordsFrise();
@@ -218,6 +264,9 @@ function redessinerFrise() {
   // ici ! » est resté dans la fenêtre.
   ajusterMotDeLaFrise(elements.frise);
 }
+
+// La minuterie qui fait avancer l'heure des motards, armée une seule fois.
+let minuterieHeure = null;
 
 /** Marque lequel des deux bords de la frise cache une suite.
 

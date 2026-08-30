@@ -129,11 +129,64 @@ const dateEnToutesLettres = (iso) => {
     Exporté pour les tests : quatre branches, des dates et des villes qui
     peuvent manquer, et c'est la seule phrase du site qui change toute seule,
     sans que personne ne la relise. */
-export function motDeLaFrise({ positionJour, departPrevuLe, arriveeLe, villes = {} }) {
+/* Les villes du mot, lues dans le contenu éditorial plutôt qu'écrites ici.
+   Celle du milieu est l'ARRIVÉE de la journée en cours : la position est au
+   bout de l'étape — dire « on en est à J7 » veut dire qu'elle est faite —
+   donc c'est la ville où l'on dort ce soir-là, pas celle d'où l'on est parti
+   le matin. Les deux bouts se prennent au premier et au dernier jour plutôt
+   qu'aux indices 0 et 15 : rien ne garantit que `etapes` soit trié, et une
+   étape ajoutée un jour le déferait sans prévenir.
+
+   Extrait de `dessinerFrise` parce que le rafraîchissement de l'heure, à la
+   minute, doit refaire exactement le même calcul — deux copies auraient fini
+   par se répondre différemment. */
+function villesDuMot(etapes, positionJour) {
+  const parJour = [...etapes].sort((a, b) => a.jour - b.jour);
+  return {
+    depart: parJour[0]?.depart?.nom || null,
+    arrivee: parJour[parJour.length - 1]?.arrivee?.nom || null,
+    courante: parJour.find((e) => e.jour === positionJour)?.arrivee?.nom || null,
+  };
+}
+
+/** L'heure qu'il est chez les motards — « 7h20 » — ou `null` sans fuseau.
+
+    Passée par `formatToParts` plutôt que par `format` : ce dernier rend
+    « 7:20 », avec le séparateur de la locale, et on veut le « h » qu'on
+    prononce. Les minutes gardent leur zéro, l'heure n'en prend pas, comme on
+    l'écrit à la main.
+
+    Le fuseau est NOMMÉ (`America/Santiago`) et non un décalage : le Chili
+    passe à l'heure d'été le premier dimanche de septembre, en plein voyage.
+    C'est le navigateur qui sait, pas nous.
+
+    Le `try` couvre un fuseau que le navigateur ne connaîtrait pas : la phrase
+    perd son heure plutôt que la frise son mot. */
+function heureChezEux(fuseau, maintenant) {
+  if (!fuseau) return null;
+  try {
+    const parties = new Intl.DateTimeFormat('fr-FR', {
+      timeZone: fuseau, hour: 'numeric', minute: '2-digit', hourCycle: 'h23',
+    }).formatToParts(maintenant);
+    const par = Object.fromEntries(parties.map((p) => [p.type, p.value]));
+    return par.hour && par.minute ? `${par.hour}h${par.minute}` : null;
+  } catch {
+    return null;
+  }
+}
+
+export function motDeLaFrise({
+  positionJour, departPrevuLe, arriveeLe, villes = {},
+  // Le fuseau vient du service, avec la position. `maintenant` est passé
+  // plutôt que pris ici : sans ça, la seule phrase du site qui change toute
+  // seule serait aussi la seule qu'on ne saurait pas éprouver.
+  fuseau = null, maintenant = new Date(),
+}) {
   if (arriveeLe) {
     const ou = villes.arrivee ? ` à ${villes.arrivee}` : '';
     return {
       phrase: `Nous sommes arrivés${ou} le ${dateCourte(arriveeLe)}`,
+      heure: null,
       description: `Nous sommes arrivés${ou} le ${dateEnToutesLettres(arriveeLe)}`,
     };
   }
@@ -143,10 +196,12 @@ export function motDeLaFrise({ positionJour, departPrevuLe, arriveeLe, villes = 
     return villes.depart
       ? {
         phrase: `Départ de ${villes.depart} le ${dateCourte(departPrevuLe)} !`,
+        heure: null,
         description: `Départ de ${villes.depart} le ${dateEnToutesLettres(departPrevuLe)}`,
       }
       : {
         phrase: `Départ prévu le ${dateCourte(departPrevuLe)} !`,
+        heure: null,
         description: `Départ prévu le ${dateEnToutesLettres(departPrevuLe)}`,
       };
   }
@@ -163,6 +218,7 @@ export function motDeLaFrise({ positionJour, departPrevuLe, arriveeLe, villes = 
   if (!positionJour) {
     return {
       phrase: 'Nous ne sommes pas encore partis !',
+      heure: null,
       description: villes.depart
         ? `Nous ne sommes pas encore partis : les motos attendent à ${villes.depart}`
         : 'Nous ne sommes pas encore partis',
@@ -171,21 +227,47 @@ export function motDeLaFrise({ positionJour, departPrevuLe, arriveeLe, villes = 
   // En chemin. La position est celle du BOUT de la journée — dire « on en est à
   // J7 » veut dire qu'elle est faite — donc la ville est celle où l'on arrive
   // ce soir-là, pas celle d'où l'on est parti le matin.
+  //
+  // L'heure est celle de LÀ-BAS, pas celle du lecteur : elle dit, d'un coup
+  // d'œil depuis la France, s'ils roulent, s'ils dînent ou s'ils dorment. Elle
+  // n'apparaît qu'ici, en chemin : avant le départ et après l'arrivée les
+  // motards sont chez eux, et « il est… » y afficherait l'heure du lecteur
+  // lui-même présentée comme la leur.
+  //
+  // Sans fuseau — service injoignable, ou pas encore redéployé — chaque phrase
+  // retombe exactement sur sa forme d'avant, plutôt qu'un « il est » suivi
+  // d'un blanc.
+  //
+  // L'heure est rendue à part parce qu'elle s'écrit sur une SECONDE LIGNE.
+  // Écrite à la suite, la phrase passait de « Nous sommes à Tahua ! » à
+  // « Nous sommes à Tahua, il est 20h32 » — une fois et demie plus longue —
+  // et débordait de la frise sur un téléphone, où elle se faisait alors
+  // effacer par `ajusterMotDeLaFrise`. Sur deux lignes, le mot reprend la
+  // largeur qu'il avait toujours eue : c'est la plus longue des deux qui
+  // compte, pas leur somme.
+  const heure = heureChezEux(fuseau, maintenant);
+
   if (!villes.courante) {
     return {
-      phrase: 'Nous sommes ici !',
-      description: `Nous sommes ici : les motos en sont au jour ${positionJour}`,
+      phrase: heure ? 'Nous sommes ici,' : 'Nous sommes ici !',
+      heure: heure && `il est ${heure}`,
+      description: heure
+        ? `Nous sommes ici, il est ${heure} sur place : les motos en sont au jour ${positionJour}`
+        : `Nous sommes ici : les motos en sont au jour ${positionJour}`,
     };
   }
   return {
-    phrase: `Nous sommes à ${villes.courante} !`,
-    description: `Nous sommes à ${villes.courante}, au jour ${positionJour} du voyage`,
+    phrase: heure ? `Nous sommes à ${villes.courante},` : `Nous sommes à ${villes.courante} !`,
+    heure: heure && `il est ${heure}`,
+    description: heure
+      ? `Nous sommes à ${villes.courante}, il est ${heure} sur place, au jour ${positionJour} du voyage`
+      : `Nous sommes à ${villes.courante}, au jour ${positionJour} du voyage`,
   };
 }
 
 export function dessinerFrise(svg, {
   voyage, etapes, jourActif, surChoixEtape, decomptes = {},
-  positionJour = null, departPrevuLe = null, arriveeLe = null,
+  positionJour = null, departPrevuLe = null, arriveeLe = null, fuseau = null,
   // Survoler une journée la désigne sur la carte sans rien choisir. Facultatif
   // — la frise se dessine aussi bien sans carte en face d'elle.
   surSurvolEtape = () => {}, surSortieEtape = () => {},
@@ -459,14 +541,9 @@ export function dessinerFrise(svg, {
     // est parti le matin. Les deux bouts se prennent au premier et au dernier
     // jour plutôt qu'aux indices 0 et 15 : rien ne garantit que `etapes` soit
     // trié, et une étape ajoutée un jour le déferait sans prévenir.
-    const parJour = [...etapes].sort((a, b) => a.jour - b.jour);
-    const villes = {
-      depart: parJour[0]?.depart?.nom || null,
-      arrivee: parJour[parJour.length - 1]?.arrivee?.nom || null,
-      courante: parJour.find((e) => e.jour === positionJour)?.arrivee?.nom || null,
-    };
-    const { phrase, description } = motDeLaFrise({
-      positionJour, departPrevuLe, arriveeLe, villes,
+    const villes = villesDuMot(etapes, positionJour);
+    const { phrase, heure, description } = motDeLaFrise({
+      positionJour, departPrevuLe, arriveeLe, villes, fuseau,
     });
 
     // Le mot porte seul l'information, maintenant que le pictogramme a quitté la
@@ -479,7 +556,7 @@ export function dessinerFrise(svg, {
       role: 'img',
       'aria-label': description,
     });
-    mot.textContent = phrase;
+    ecrireMot(mot, phrase, heure, xMotos + cote * 40);
 
     // Le mot et sa flèche voyagent ensemble : ils apparaissent et disparaissent
     // d'un bloc, une flèche seule ne désignant plus rien.
@@ -514,6 +591,59 @@ export function ajusterMotDeLaFrise(svg) {
   // fractionnaires, et un mot pile au bord clignoterait d'un dessin à l'autre.
   const tient = boite.left >= fenetre.left - .5 && boite.right <= fenetre.right + .5;
   groupe.classList.toggle('est-hors-champ', !tient);
+}
+
+/* Écrit le mot sur une ou deux lignes.
+
+   L'heure va SOUS la phrase, jamais à la suite : mise bout à bout, la ligne
+   débordait de la frise sur un téléphone. Sous elle, la largeur du mot reste
+   celle de sa plus longue ligne.
+
+   Sous et non au-dessus : le mot est déjà collé au haut du cadre (`yMot` vaut
+   `marge.haut - 12`), une ligne de plus par-dessus sortirait du dessin. En
+   dessous elle empiète sur le ciel que la frise garde au-dessus des crêtes —
+   d'où le liseré de fond que `paint-order: stroke` pose autour des lettres,
+   qui les garde lisibles même quand une crête passe derrière. */
+function ecrireMot(mot, phrase, heure, x) {
+  mot.textContent = '';
+  const premiere = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
+  premiere.textContent = phrase;
+  mot.append(premiere);
+  if (!heure) return;
+
+  const seconde = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
+  seconde.setAttribute('x', x);
+  seconde.setAttribute('dy', '1em');
+  seconde.textContent = heure;
+  mot.append(seconde);
+}
+
+/** Réécrit le mot de la frise sans redessiner la frise.
+
+    Appelée à la minute (et au retour dans l'onglet) pour que l'heure affichée
+    reste vraie. Seul le texte est touché : redessiner tout le SVG chaque
+    minute aurait coûté un recalcul complet du tracé, et emporté le
+    recentrage sur la journée qu'on est en train de lire.
+
+    Sort sans rien faire si la phrase n'a pas bougé, ce qui est le cas de
+    presque tous les appels : la minute n'a pas changé, ou l'on n'est pas en
+    chemin. Le mot ne clignote donc pas et rien n'est recalculé pour rien. */
+export function rafraichirMotDeLaFrise(svg, {
+  etapes = [], positionJour = null, departPrevuLe = null, arriveeLe = null, fuseau = null,
+}) {
+  const mot = svg.querySelector('.frise__ici');
+  if (!mot) return false;
+
+  const { phrase, heure, description } = motDeLaFrise({
+    positionJour, departPrevuLe, arriveeLe, villes: villesDuMot(etapes, positionJour), fuseau,
+  });
+  if (mot.textContent === `${phrase}${heure || ''}`) return false;
+
+  ecrireMot(mot, phrase, heure, mot.getAttribute('x'));
+  mot.setAttribute('aria-label', description);
+  // La phrase a changé de longueur : c'est à l'appelant de rejuger si elle
+  // tient encore dans la fenêtre (`ajusterMotDeLaFrise`).
+  return true;
 }
 
 // -------------------------------------------------------- profil d'une étape

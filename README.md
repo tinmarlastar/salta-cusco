@@ -315,6 +315,26 @@ a quelque chose à dater. Laissé vide, la frise dit « Nous ne sommes pas encor
 partis ! » avant le départ, et « Nous sommes ici ! » en chemin. Une date saisie
 n'est jamais perdue en changeant de journée : elle ressort le moment venu.
 
+**L'heure qu'il est chez eux.** En chemin, le mot de la frise la dit, sur deux
+lignes : « Nous sommes à Uyuni, » / « il est 7h20 ». Deux lignes et non une
+seule : bout à bout, la phrase devenait une fois et demie plus longue et
+débordait de la frise sur un téléphone, où le garde-fou du hors-champ effaçait
+alors le mot entier. C'est l'heure locale des motards, celle
+du fuseau de la ville où ils dorment ce soir-là, pas celle du lecteur — elle
+dit d'un coup d'œil depuis la France s'ils roulent, s'ils dînent ou s'ils
+dorment. Elle avance toute seule, et se remet à jour au retour dans l'onglet :
+un téléphone qui s'endort gèle ses minuteries, et rouvrir le site montrerait
+sinon une heure vieille de deux heures.
+
+Le fuseau vient du service, avec la position (`fuseauDuJour`, dans
+`worker/lib/position.js`) : c'est là qu'est la table des fuseaux, et un test la
+compare déjà aux pays de `data/etapes.json`. Une copie côté site aurait été la
+seule que rien ne surveille. Les fuseaux sont **nommés** (`America/Santiago`)
+et non écrits en décalage : le Chili passe à l'heure d'été le premier dimanche
+de septembre, en plein voyage. Avant le départ et après l'arrivée, aucune heure
+n'est affichée — les motards sont chez eux, et « il est… » y donnerait l'heure
+du lecteur pour la leur.
+
 ### Compter les visites
 
 La page d'administration a un module **Visites** : combien de personnes lisent

@@ -304,6 +304,10 @@ export async function lirePosition() {
     majLe: donnees.majLe ?? null,
     departPrevuLe: donnees.departPrevuLe ?? null,
     arriveeLe: donnees.arriveeLe ?? null,
+    // Le fuseau des motards, pour l'heure affichée sous la frise. `null` face
+    // à un service pas encore redéployé : la phrase retombe alors sur sa forme
+    // d'avant, sans heure.
+    fuseau: donnees.fuseau ?? null,
   };
 }
 

@@ -5,7 +5,7 @@
 import { creerId, creerJeton, hacherJeton, memeSecret } from './lib/securite.js';
 import {
   calculerPositionAuto, dateDuJourVoyage, dateParisDuJour, PREMIER_JOUR_ROULE,
-  calendrierDesBascules, normaliserJourVoyage,
+  calendrierDesBascules, fuseauDuJour, normaliserJourVoyage,
 } from './lib/position.js';
 import { normaliserEtape, assemblerStatistiques } from './lib/visites.js';
 import { interpreterVote, assemblerReactions } from './lib/reactions.js';
@@ -758,6 +758,10 @@ async function lirePosition(env, cors) {
   return repondre({
     jour, majLe, mode, depart, decalage,
     departPrevuLe, arriveeLe, departPrevuPose, arriveePosee,
+    // Le fuseau où sont les motards, pour que la frise dise l'heure qu'il est
+    // chez eux. Calculé ici plutôt que déduit côté site : la table des fuseaux
+    // vit dans ce service, et un test la compare déjà à `data/etapes.json`.
+    fuseau: fuseauDuJour(jour),
   }, { cors });
 }
 

@@ -98,6 +98,23 @@ export function normaliserJourVoyage(valeur) {
   return nombre >= 1 && nombre <= JOURS_VOYAGE ? nombre : null;
 }
 
+/** Le fuseau où sont les motards à la journée `jour`, ou `null`.
+
+    Annoncé au site avec la position : c'est lui qui écrit « Nous sommes à
+    Uyuni, il est 7h20 » sous la frise. Le site pourrait le déduire des pays de
+    `data/etapes.json`, mais ce serait une troisième copie de la même
+    correspondance — et la seule que rien ne surveillerait, alors que
+    `test/fuseaux.test.js` compare déjà cette table au contenu éditorial.
+
+    J1 est ajouté à la main : c'est le rassemblement à Salta, pas une journée
+    roulée, donc la table des bascules commence à J2. Les motards y sont
+    pourtant bien quelque part — et la modération peut poser J1 en manuel. */
+export function fuseauDuJour(jour) {
+  if (!Number.isInteger(jour)) return null;
+  if (jour === 1) return 'America/Argentina/Salta';
+  return FUSEAU_PAR_JOUR[jour] ?? null;
+}
+
 /** L'instant réel où il est telle heure, tel jour, dans tel fuseau.
 
     `Date` ne sait pas construire un instant à partir d'une heure locale dans un

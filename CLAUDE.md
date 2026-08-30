@@ -58,6 +58,14 @@ idempotent (`IF NOT EXISTS`, `INSERT OR IGNORE`), safe to rerun.
 The site itself has no deploy command to run by hand: pushing to `main`
 triggers `.github/workflows/pages.yml` (GitHub Pages, no compile step).
 
+Rebuilding `js/vendor/emojis.js` (only to follow a new Unicode version — the
+generated list is both what the emoji picker shows and what the worker accepts,
+so never edit it by hand):
+
+```bash
+python3 tools/construire_emojis.py
+```
+
 Rebuilding `data/parcours.geojson` (only if a route source changes):
 
 ```bash

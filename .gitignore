@@ -6,3 +6,4 @@ tools/.cache-parcours.json
 
 # Les arbres de travail créés par Claude Code : du transitoire, jamais du dépôt.
 .claude/worktrees/
+tools/.cache-emoji-test.txt

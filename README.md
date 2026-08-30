@@ -58,6 +58,7 @@ n'appelle aucune API : tout est figé sur disque.
 python3 -m pip install pypdf pillow
 python3 tools/extraire_photos.py "chemin/vers/brochure.pdf"
 python3 tools/construire_parcours.py
+python3 tools/construire_emojis.py
 ```
 
 `construire_parcours.py` calcule l'itinéraire route par route via OSRM, trace à
@@ -70,6 +71,15 @@ oublié. Le total actuel tombe à 1 % de l'annonce.
 
 Les réponses sont mises en cache dans `tools/.cache-parcours.json` ; `--refaire`
 l'ignore.
+
+`construire_emojis.py` écrit `js/vendor/emojis.js` depuis le fichier officiel
+d'Unicode (`emoji-test.txt`), celui-là même qui sert à valider les claviers
+d'emoji des systèmes d'exploitation : les neuf familles du sélecteur du carnet
+sont donc les siennes, dans son ordre. Les variantes de teinte de peau sont
+écartées — cinq fois la liste pour le même vocabulaire. Le fichier produit sert
+deux fois : au site pour peindre le sélecteur, et au service comme liste
+d'autorisation. À ne relancer que pour suivre une version d'Unicode ; la source
+est mise en cache dans `tools/.cache-emoji-test.txt`.
 
 ## Ce qu'il y a dans le dossier
 
@@ -85,7 +95,7 @@ data/etapes.json      le contenu éditorial des quinze jours
 data/parcours.geojson les traces et les relevés d'altitude
 data/config.json      l'adresse du service du carnet
 img/etapes/           les photos, extraites de la brochure
-tools/                les deux scripts de fabrication
+tools/                les trois scripts de fabrication
 worker/               le service Cloudflare du carnet (D1 + R2)
 ```
 
@@ -234,11 +244,10 @@ valable sur tout.
 
 **Modération** : la page `admin.html` (séparée du site, marquée `noindex` pour
 ne pas apparaître dans les moteurs de recherche), protégée par le mot de passe
-d'administration. Elle permet de supprimer n'importe quelle contribution, et
-porte un menu pour n'afficher qu'une journée à la fois. Le menu liste les
-quinze journées du voyage avec le nombre de contributions de chacune, y
-compris celles restées vides : en modération, savoir qu'un jour n'a rien reçu
-est une information.
+d'administration. Elle permet de supprimer n'importe quelle contribution, et porte un menu pour n'afficher qu'une journée à la fois. Le
+menu liste les quinze journées du voyage avec le nombre de contributions de
+chacune, y compris celles restées vides : en modération, savoir qu'un jour n'a
+rien reçu est une information.
 
 La page a trois modules, choisis depuis un menu à gauche (en haut sur
 téléphone) : la modération elle-même, « Où en sont les motos », et « Visites »

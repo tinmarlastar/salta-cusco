@@ -120,9 +120,34 @@ function oublierJeton(id) {
   localStorage.setItem(CLE_JETONS, JSON.stringify(tous));
 }
 
-const dateCourte = (iso) => new Date(iso).toLocaleDateString('fr-FR', {
-  day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
-});
+/** L'heure d'une note, lue dans le fuseau de l'étape à laquelle elle tient.
+
+    Le service enregistre l'instant en UTC. Rendu sans fuseau, il s'affichait
+    chez CELUI QUI REGARDE : une note écrite le 28 août à 21h34 sur le salar
+    s'affichait « 29 août, 03:34 » à un lecteur français. Elle semblait dater
+    du lendemain — et donc rangée dans la mauvaise journée, alors qu'elle était
+    à sa place. C'est la confusion que ce fuseau supprime : tout le monde lit
+    l'heure qu'il était là-bas quand elle a été écrite.
+
+    Sans fuseau — service pas encore redéployé — on retombe sur le fuseau du
+    lecteur, comme avant : une heure approximative vaut mieux que pas d'heure.
+    Le `try` couvre en plus un fuseau que le navigateur ne connaîtrait pas.
+
+    Exporté pour les tests : c'est une conversion qu'on ne peut pas relire à
+    l'œil, et elle décide de la journée apparente d'une note. */
+export function dateDeLaNote(iso, fuseau) {
+  // `!iso` avant tout : `new Date(null)` ne vaut pas une date invalide mais
+  // l'epoch, et une note sans horodatage se serait affichée « 31 déc., 20:00 ».
+  if (!iso) return '';
+  const instant = new Date(iso);
+  if (Number.isNaN(instant.getTime())) return '';
+  const options = { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' };
+  try {
+    return instant.toLocaleDateString('fr-FR', fuseau ? { ...options, timeZone: fuseau } : options);
+  } catch {
+    return instant.toLocaleDateString('fr-FR', options);
+  }
+}
 
 /** Un fichier d'un souvenir publié, avec sa croix de retrait pour son auteur. */
 function gabaritUnMedia(media, sien) {
@@ -235,7 +260,8 @@ function gabaritContribution(contribution) {
   return `<article class="souvenir" data-id="${echapper(contribution.id)}">
     <p class="souvenir__entete">
       <b>${echapper(contribution.auteur)}</b>
-      <time>${echapper(dateCourte(contribution.creeLe))}</time>
+      <time datetime="${echapper(contribution.creeLe)}"
+        title="Heure locale de l'étape">${echapper(dateDeLaNote(contribution.creeLe, contribution.fuseau))}</time>
       ${contribution.modifieLe ? '<em>modifié</em>' : ''}
     </p>
     ${corpsMedia}

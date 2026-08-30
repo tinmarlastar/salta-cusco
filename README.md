@@ -237,6 +237,18 @@ seul le fichier en cours est à recommencer : la carte en attente indique
 « 6 fichiers · 2 envoyés », et la reprise repart au troisième. Aucun fichier
 n'est jamais attaché deux fois, chacun portant sa propre clé d'idempotence.
 
+**L'heure d'une note est celle de l'étape**, pas celle du lecteur. Le service
+enregistre l'instant en UTC ; l'affichage le rend dans le fuseau de la journée
+à laquelle la note appartient (`fuseau`, joint à chaque note par le service).
+Une note écrite le 28 août à 21h34 sur le salar se lit « 28 août, 21:34 » à
+Paris comme à Uyuni.
+
+Auparavant elle s'affichait dans le fuseau de *celui qui regardait* : la même
+note se lisait « 29 août, 03:34 » depuis la France — elle semblait dater du
+lendemain, et donc rangée dans la mauvaise journée alors qu'elle était à sa
+place. L'attribut `datetime` de la balise `<time>` garde l'instant UTC exact,
+pour qui voudrait le relire.
+
 **Poser un smiley sur une note** : sous chaque note, une rangée de pastilles
 et un bouton `+`. Le `+` ouvre un sélecteur d'emoji complet — les mêmes neuf
 familles, dans le même ordre, que le clavier d'un téléphone, avec en tête les
@@ -292,11 +304,10 @@ récrit ce qu'elle raconte. Ce déplacement est réservé à la modération : un
 auteur corrige son texte, il ne range pas sa note dans le carnet d'une autre
 journée.
 
-**Attention à l'heure affichée sur une note** (« 29 août, 03:34 ») : elle est
-rendue dans le fuseau de *celui qui regarde*, pas dans celui où elle a été
-écrite. Une note postée le soir en Bolivie s'affiche donc après minuit pour un
-lecteur français, et semble dater du lendemain. C'est la première chose à
-vérifier avant de déplacer une note qui paraît mal rangée.
+L'heure affichée sur une note, ici comme sur le site, est celle du **fuseau de
+son étape** : la modération lit donc la même heure que celle qu'il était sur
+place quand la note a été écrite, ce qui est le bon repère pour juger si une
+note est rangée dans la bonne journée.
 
 La page a trois modules, choisis depuis un menu à gauche (en haut sur
 téléphone) : la modération elle-même, « Où en sont les motos », et « Visites »

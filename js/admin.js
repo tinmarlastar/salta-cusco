@@ -14,7 +14,7 @@ import {
   lireReglagesPosition, ecrirePosition, lireVisites, lireCalendrier,
   ErreurService,
 } from './souvenirs.js';
-import { gabaritGalerie, brancherVisionneuse } from './souvenirs-vue.js';
+import { gabaritGalerie, brancherVisionneuse, dateDeLaNote } from './souvenirs-vue.js';
 import { brancherHabillages } from './habillage.js';
 import { motDeLaFrise } from './profil.js';
 
@@ -450,7 +450,8 @@ function gabaritContribution(contribution) {
     data-texte="${echapper(contribution.texte || '')}">
     <p class="souvenir__entete">
       <b>${echapper(contribution.auteur)}</b>
-      <time>J${echapper(contribution.jour)} · ${echapper(new Date(contribution.creeLe).toLocaleString('fr-FR'))}</time>
+      <time datetime="${echapper(contribution.creeLe)}" title="Heure locale de l'étape"
+        >J${echapper(contribution.jour)} · ${echapper(dateDeLaNote(contribution.creeLe, contribution.fuseau))}</time>
     </p>
     ${apercu}
     ${contribution.texte ? `<p class="souvenir__texte">${echapper(contribution.texte)}</p>` : ''}

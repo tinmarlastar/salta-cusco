@@ -85,6 +85,11 @@ function versPublic(ligne, medias = [], reactions = []) {
     // réponses d'écriture (une note qu'on vient de poster n'en a aucune) : le
     // site lit le champ avec un repli sur la liste vide.
     reactions,
+    // Le fuseau de l'étape, pour que l'heure de la note se lise partout comme
+    // elle se lisait là-bas. Sans lui, le site la rendait dans le fuseau du
+    // lecteur : une note écrite le soir en Bolivie s'affichait après minuit en
+    // France, et semblait rangée dans la journée suivante.
+    fuseau: fuseauDuJour(ligne.jour),
     creeLe: ligne.cree_le,
     modifieLe: ligne.modifie_le,
   };

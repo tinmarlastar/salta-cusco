@@ -270,10 +270,33 @@ valable sur tout.
 
 **Modération** : la page `admin.html` (séparée du site, marquée `noindex` pour
 ne pas apparaître dans les moteurs de recherche), protégée par le mot de passe
-d'administration. Elle permet de supprimer n'importe quelle contribution, et porte un menu pour n'afficher qu'une journée à la fois. Le
+d'administration. Elle permet de supprimer **et de corriger** n'importe quelle
+contribution, et porte un menu pour n'afficher qu'une journée à la fois. Le
 menu liste les quinze journées du voyage avec le nombre de contributions de
 chacune, y compris celles restées vides : en modération, savoir qu'un jour n'a
 rien reçu est une information.
+
+« Modifier » ouvre une zone de saisie dans la carte elle-même, sous la photo
+qui accompagne la note : on corrige presque toujours en la regardant. La note
+corrigée porte la mention « modifié » sur le site, exactement comme si son
+auteur l'avait retouchée. Auparavant, rattraper une faute de frappe depuis la
+modération demandait de supprimer la note — et de perdre ses photos avec.
+
+La même zone porte un menu des quinze journées : **une note peut être déplacée
+d'un jour à l'autre**. Une note écrite au petit matin appartient presque
+toujours à la veille, et sa journée était jusqu'ici figée à la publication.
+Photos et smileys suivent la note — ils lui sont attachés, pas à la journée.
+Déplacer ne pose PAS la mention « modifié » : c'est un geste de rangement,
+invisible de l'auteur, et le marquer laisserait croire à ses lecteurs qu'on a
+récrit ce qu'elle raconte. Ce déplacement est réservé à la modération : un
+auteur corrige son texte, il ne range pas sa note dans le carnet d'une autre
+journée.
+
+**Attention à l'heure affichée sur une note** (« 29 août, 03:34 ») : elle est
+rendue dans le fuseau de *celui qui regarde*, pas dans celui où elle a été
+écrite. Une note postée le soir en Bolivie s'affiche donc après minuit pour un
+lecteur français, et semble dater du lendemain. C'est la première chose à
+vérifier avant de déplacer une note qui paraît mal rangée.
 
 La page a trois modules, choisis depuis un menu à gauche (en haut sur
 téléphone) : la modération elle-même, « Où en sont les motos », et « Visites »

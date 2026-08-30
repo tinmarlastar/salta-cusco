@@ -5,7 +5,7 @@
 import { creerId, creerJeton, hacherJeton, memeSecret } from './lib/securite.js';
 import {
   calculerPositionAuto, dateDuJourVoyage, dateParisDuJour, PREMIER_JOUR_ROULE,
-  calendrierDesBascules,
+  calendrierDesBascules, normaliserJourVoyage,
 } from './lib/position.js';
 import { normaliserEtape, assemblerStatistiques } from './lib/visites.js';
 import { interpreterVote, assemblerReactions } from './lib/reactions.js';
@@ -566,28 +566,53 @@ async function modifier(id, requete, env, cors) {
   const ligne = await env.DB
     .prepare('SELECT * FROM contributions WHERE id = ?').bind(id).first();
   if (!ligne) return erreur('Contribution introuvable', 404, cors);
-  if (!await auteurAutorise(requete, ligne)) {
-    return erreur("Seul l'auteur peut modifier cette contribution", 403, cors);
+
+  // Même règle que pour la suppression : la modération peut corriger une note
+  // comme elle peut l'effacer. Sans ça, la seule façon de rattraper une faute
+  // de frappe depuis l'administration était de supprimer la note — et de
+  // perdre ses photos avec.
+  //
+  // Les deux autorisations sont distinguées, et non plus court-circuitées
+  // ensemble : déplacer une note d'une journée à l'autre est réservé à la
+  // modération. Un auteur corrige son texte ; il n'a pas à ranger sa note dans
+  // le carnet d'une autre journée, qui n'est pas le sien.
+  const parAdmin = await adminAutorise(requete, env);
+  if (!parAdmin && !await auteurAutorise(requete, ligne)) {
+    return erreur('Modification non autorisée', 403, cors);
   }
 
   const corps = await requete.json().catch(() => ({}));
   const texte = assainir(corps.texte, TEXTE_MAX);
+
+  // La journée ne bouge que si elle est demandée : un `PATCH` qui ne parle que
+  // du texte — celui du site — doit laisser la note où elle est.
+  let jour = ligne.jour;
+  if (corps.jour !== undefined && corps.jour !== null) {
+    if (!parAdmin) return erreur('Seule la modération peut déplacer une note', 403, cors);
+    const vise = normaliserJourVoyage(corps.jour);
+    if (vise === null) return erreur('Journée inconnue', 400, cors);
+    jour = vise;
+  }
   // Une note vide n'a pas de sens ; la légende d'un média, si. On regarde les
   // fichiers réellement attachés plutôt que la seule colonne `type` : une
   // contribution créée comme note a pu recevoir des photos depuis.
   const porteDesFichiers = ligne.type === 'media' || (await mediasDe(id, env)).length > 0;
   if (!texte && !porteDesFichiers) return erreur('La note est vide', 400, cors);
 
-  const modifieLe = new Date().toISOString();
+  // « Modifié » ne se pose que si le TEXTE a changé. Déplacer une note d'une
+  // journée à l'autre est un geste de rangement, invisible de son auteur :
+  // marquer la note comme retouchée laisserait croire à ses lecteurs qu'on a
+  // récrit ce qu'elle raconte.
+  const modifieLe = texte !== ligne.texte ? new Date().toISOString() : ligne.modifie_le;
   await env.DB
-    .prepare('UPDATE contributions SET texte = ?, modifie_le = ? WHERE id = ?')
-    .bind(texte, modifieLe, id)
+    .prepare('UPDATE contributions SET texte = ?, jour = ?, modifie_le = ? WHERE id = ?')
+    .bind(texte, jour, modifieLe, id)
     .run();
 
   return repondre(
     {
       contribution: versPublic(
-        { ...ligne, texte, modifie_le: modifieLe },
+        { ...ligne, texte, jour, modifie_le: modifieLe },
         await mediasDe(id, env),
         await reactionsDe(id, env),
       ),

@@ -1234,6 +1234,26 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
 }
 .souvenir__actions button:hover { border-color: var(--soufre); color: var(--accent-encre); }
 
+/* Zone de correction d'une note, en modération (js/admin.js). */
+.souvenir__edition { margin-top: .5rem; }
+.souvenir__edition textarea { width: 100%; resize: vertical; }
+
+/* Le menu des journées, sous le texte : déplacer une note est un geste de
+   rangement, il vient après la correction, pas avant. */
+.souvenir__edition-jour {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  margin: .5rem 0 0;
+}
+.souvenir__edition-jour label {
+  font-family: var(--mono);
+  font-size: .5625rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--poussiere);
+}
+
 /* Réactions : les smileys posés sous une note, et le « + » qui ouvre le
    sélecteur. Aucune couleur en dur ici — que des `var(--...)`, sinon un
    habillage régresserait en silence. */

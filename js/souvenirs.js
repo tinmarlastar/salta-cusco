@@ -237,14 +237,39 @@ export async function envoyerMedia({
   }, DELAI_MEDIA_MS);
 }
 
-export async function modifierContribution({ id, texte, jeton }) {
+/** Réécrit le texte d'une note, et éventuellement la journée où elle se range.
+
+    Deux clés possibles, comme pour la suppression : le jeton de l'auteur
+    depuis le site, le mot de passe depuis la modération.
+
+    `jour` n'est envoyé que s'il est demandé — le service laisse la note où
+    elle est quand le corps n'en parle pas — et n'est accepté qu'avec le mot de
+    passe d'administration : un auteur corrige son texte, il ne range pas sa
+    note dans le carnet d'une autre journée. */
+export async function modifierContribution({ id, texte, jour, jeton, motDePasse }) {
+  const entetes = { 'Content-Type': 'application/json' };
+  if (jeton) entetes['X-Jeton'] = jeton;
+  if (motDePasse) entetes['X-Mot-De-Passe'] = motDePasse;
+  const corps = { texte };
+  if (jour !== undefined && jour !== null) corps.jour = jour;
   return appeler(`/api/contribution/${id}`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', 'X-Jeton': jeton },
-    body: JSON.stringify({ texte }),
+    headers: entetes,
+    body: JSON.stringify(corps),
   });
 }
 
+/** Pose, déplace ou retire un smiley sous une note.
+
+    `smiley` à `null` retire ; `precedent` est celui que ce navigateur avait
+    posé, qu'il est seul à connaître — le service ne garde rien qui permette de
+    reconnaître un lecteur. Rend la liste complète des réactions de la note,
+    telle que la base la voit après le vote.
+
+    Le délai est court, comme pour le compteur de visites : un smiley perdu ne
+    justifie pas de faire patienter. Il ne passe donc pas non plus par la file
+    d'attente hors-ligne, qui existe pour ne jamais perdre une photo prise dans
+    les Andes ; ici, le clic est simplement repeint dans l'état d'avant. */
 export async function reagir({ id, smiley, precedent }) {
   const donnees = await appeler(`/api/contribution/${id}/reaction`, {
     method: 'POST',

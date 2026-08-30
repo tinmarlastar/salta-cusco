@@ -10,7 +10,7 @@
    et jamais écrit dans le dépôt. */
 
 import {
-  chargerConfig, listerTout, supprimerContribution,
+  chargerConfig, listerTout, supprimerContribution, modifierContribution,
   lireReglagesPosition, ecrirePosition, lireVisites, lireCalendrier,
   ErreurService,
 } from './souvenirs.js';
@@ -442,15 +442,103 @@ function gabaritContribution(contribution) {
     ? contribution.medias
     : (contribution.media ? [contribution.media] : []);
   const apercu = gabaritGalerie(medias);
-  return `<article class="souvenir" data-id="${echapper(contribution.id)}">
+  // Le texte d'origine voyage sur l'article : c'est lui qu'on remet dans la
+  // zone de saisie à l'ouverture, et qu'on rétablit sur « Annuler », sans
+  // avoir à retrouver la contribution dans la liste chargée.
+  return `<article class="souvenir" data-id="${echapper(contribution.id)}"
+    data-jour="${echapper(contribution.jour)}"
+    data-texte="${echapper(contribution.texte || '')}">
     <p class="souvenir__entete">
       <b>${echapper(contribution.auteur)}</b>
       <time>J${echapper(contribution.jour)} · ${echapper(new Date(contribution.creeLe).toLocaleString('fr-FR'))}</time>
     </p>
     ${apercu}
     ${contribution.texte ? `<p class="souvenir__texte">${echapper(contribution.texte)}</p>` : ''}
-    <p class="souvenir__actions"><button type="button" data-action="supprimer">Supprimer</button></p>
+    <p class="souvenir__actions">
+      <button type="button" data-action="modifier">Modifier</button>
+      <button type="button" data-action="supprimer">Supprimer</button>
+    </p>
   </article>`;
+}
+
+/* Modifier une note depuis la modération.
+
+   La zone de saisie est posée DANS la carte, à la place du texte, plutôt que
+   dans une fenêtre par-dessus : on corrige presque toujours en regardant la
+   photo qui accompagne la note, et une fenêtre modale l'aurait cachée.
+
+   Le service accepte désormais le mot de passe d'administration sur cette
+   route, au même titre que le jeton de l'auteur — avant, la seule façon de
+   rattraper une faute de frappe depuis ici était de supprimer la note, et de
+   perdre ses photos avec. */
+function ouvrirEdition(carte) {
+  if (carte.querySelector('.souvenir__edition')) return;
+
+  const jourActuel = Number(carte.dataset.jour);
+  // Les quinze journées, titrées comme dans le menu de filtrage — « J7 · Uyuni
+  // → Tahua » plutôt qu'un numéro nu : c'est le titre qui permet de
+  // reconnaître la journée à laquelle une note appartient vraiment.
+  const journees = [...titresEtapes.keys()].sort((a, b) => a - b);
+  const options = (journees.length ? journees : [jourActuel]).map((jour) =>
+    `<option value="${jour}"${jour === jourActuel ? ' selected' : ''}>${echapper(nomEtape(jour))}</option>`,
+  ).join('');
+
+  const zone = document.createElement('div');
+  zone.className = 'souvenir__edition';
+  zone.innerHTML = `<textarea class="souvenir-form__champ" rows="4"
+      aria-label="Texte de la note">${echapper(carte.dataset.texte || '')}</textarea>
+    <p class="souvenir__edition-jour">
+      <label for="edition-jour">Journée</label>
+      <select id="edition-jour" class="admin-filtre__menu">${options}</select>
+    </p>
+    <p class="souvenir__actions">
+      <button type="button" data-action="enregistrer-note">Enregistrer</button>
+      <button type="button" data-action="annuler-note">Annuler</button>
+    </p>`;
+
+  carte.querySelector('.souvenir__texte')?.setAttribute('hidden', '');
+  carte.querySelector('.souvenir__actions').hidden = true;
+  carte.appendChild(zone);
+  const champ = zone.querySelector('textarea');
+  champ.focus();
+  // Curseur à la fin, pas au début : on vient le plus souvent compléter une
+  // phrase, pas récrire la note depuis son premier mot.
+  champ.setSelectionRange(champ.value.length, champ.value.length);
+}
+
+function fermerEdition(carte) {
+  carte.querySelector('.souvenir__edition')?.remove();
+  carte.querySelector('.souvenir__texte')?.removeAttribute('hidden');
+  const actions = carte.querySelector('.souvenir__actions');
+  if (actions) actions.hidden = false;
+}
+
+async function enregistrerEdition(carte) {
+  const champ = carte.querySelector('.souvenir__edition textarea');
+  if (!champ) return;
+  const texte = champ.value.trim();
+  const jour = Number(carte.querySelector('.souvenir__edition select')?.value ?? carte.dataset.jour);
+
+  // Rien n'a bougé : on referme sans rien demander au service. Les deux
+  // champs comptent — déplacer une note sans toucher à son texte est le geste
+  // le plus courant ici.
+  const memeTexte = texte === (carte.dataset.texte || '');
+  const memeJour = jour === Number(carte.dataset.jour);
+  if (memeTexte && memeJour) { fermerEdition(carte); return; }
+
+  try {
+    await modifierContribution({ id: carte.dataset.id, texte, jour, motDePasse });
+  } catch (souci) {
+    // Le refus le plus courant est « La note est vide » : le service interdit
+    // de vider une note qui ne porte aucune photo. Son message est déjà juste
+    // et en français, on l'affiche tel quel.
+    alert(souci instanceof ErreurService ? souci.message : 'Le service ne répond pas, réessaie plus tard.');
+    return;
+  }
+  // Rechargement complet, comme après une suppression : la note affiche
+  // désormais « modifié » sur le site, et c'est le service qui fait foi sur ce
+  // qu'elle contient.
+  afficher();
 }
 
 /** Module Modération : le menu de journée, puis la liste filtrée.
@@ -721,6 +809,24 @@ racine.addEventListener('click', async (evenement) => {
   const boutonEnregistrer = evenement.target.closest('[data-action="enregistrer-position"]');
   if (boutonEnregistrer) {
     await enregistrerPosition();
+    return;
+  }
+
+  const boutonModifier = evenement.target.closest('button[data-action="modifier"]');
+  if (boutonModifier) {
+    ouvrirEdition(boutonModifier.closest('[data-id]'));
+    return;
+  }
+
+  const boutonEnregistrerNote = evenement.target.closest('button[data-action="enregistrer-note"]');
+  if (boutonEnregistrerNote) {
+    await enregistrerEdition(boutonEnregistrerNote.closest('[data-id]'));
+    return;
+  }
+
+  const boutonAnnulerNote = evenement.target.closest('button[data-action="annuler-note"]');
+  if (boutonAnnulerNote) {
+    fermerEdition(boutonAnnulerNote.closest('[data-id]'));
     return;
   }
 

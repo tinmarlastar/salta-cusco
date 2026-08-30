@@ -1,7 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { dateParisDuJour, joursEntre, dateDuJourVoyage } from '../lib/position.js';
+import {
+  dateParisDuJour, joursEntre, dateDuJourVoyage, normaliserJourVoyage,
+} from '../lib/position.js';
 
 /* `calculerPositionAuto` n'est plus testée ici : depuis qu'elle bascule à 20 h
    dans le fuseau de la ville d'arrivée, son comportement ne se décrit plus par
@@ -55,3 +57,35 @@ test('dateDuJourVoyage recule la date quand le voyage a de l\'avance', () => {
 /* L'aller-retour entre les deux fonctions, sur TOUTES les journées roulées et
    non plus sur les deux bouts : J1 ayant quitté le domaine, autant balayer ce
    qui reste — quatorze journées coûtent le même temps que deux. */
+
+// -------------------------------------- la journée à laquelle une note tient
+
+/* La modération peut déplacer une note d'une journée à l'autre — une note
+   écrite au petit matin se range presque toujours dans la veille. Ce que le
+   menu envoie est une chaîne, et la route est ouverte à quiconque a le mot de
+   passe : la valeur doit être ramenée à une journée du voyage AVANT de toucher
+   la base. Une note rangée au jour 900 n'apparaîtrait plus nulle part, sans
+   qu'aucun écran ne puisse la retrouver pour la remettre en place. */
+test('normaliserJourVoyage accepte les quinze journées', () => {
+  assert.equal(normaliserJourVoyage(1), 1);
+  assert.equal(normaliserJourVoyage(7), 7);
+  assert.equal(normaliserJourVoyage(15), 15);
+});
+
+test('normaliserJourVoyage accepte le nombre écrit en chaîne, tel que l\'envoie un menu', () => {
+  assert.equal(normaliserJourVoyage('7'), 7);
+});
+
+test('normaliserJourVoyage refuse hors des quinze journées', () => {
+  assert.equal(normaliserJourVoyage(0), null);
+  assert.equal(normaliserJourVoyage(16), null);
+  assert.equal(normaliserJourVoyage(-3), null);
+});
+
+test('normaliserJourVoyage refuse ce qui n\'est pas un entier', () => {
+  assert.equal(normaliserJourVoyage(7.5), null);
+  assert.equal(normaliserJourVoyage('sept'), null);
+  assert.equal(normaliserJourVoyage(null), null);
+  assert.equal(normaliserJourVoyage(undefined), null);
+  assert.equal(normaliserJourVoyage(''), null);
+});

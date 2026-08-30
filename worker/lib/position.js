@@ -82,6 +82,22 @@ export const FUSEAU_PAR_JOUR = {
   15: 'America/Lima',
 };
 
+/** Ramène une journée reçue de l'extérieur à 1–15, ou `null`.
+
+    La modération peut déplacer une note d'un jour à l'autre ; ce que son menu
+    envoie est une chaîne, et la route est ouverte à quiconque a le mot de
+    passe. Sans ce bornage, une note rangée au jour 900 n'apparaîtrait plus sur
+    aucun écran — pas même sur celui qui permettrait de la remettre en place.
+
+    La chaîne numérique est acceptée (`'7'`), pas le texte : c'est la forme que
+    prend la valeur d'un `<select>`. */
+export function normaliserJourVoyage(valeur) {
+  if (valeur === null || valeur === undefined || valeur === '') return null;
+  const nombre = Number(valeur);
+  if (!Number.isInteger(nombre)) return null;
+  return nombre >= 1 && nombre <= JOURS_VOYAGE ? nombre : null;
+}
+
 /** L'instant réel où il est telle heure, tel jour, dans tel fuseau.
 
     `Date` ne sait pas construire un instant à partir d'une heure locale dans un

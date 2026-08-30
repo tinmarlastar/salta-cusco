@@ -588,21 +588,35 @@ export function ajusterMotDeLaFrise(svg) {
   const defilement = svg.parentElement;
   const fenetre = defilement.getBoundingClientRect();
 
-  /* Tenir dans la fenêtre ne suffit pas : le bord qui cache une suite s'estompe
-     sur 2,5 rem (voir `.frise__defilement[data-bords]`), et un mot qui s'arrête
-     pile au bord y perd ses dernières lettres dans le dégradé — « il est 22h24 »
-     s'y lisait « il est 22h ». La marge n'est réclamée qu'aux bords réellement
-     estompés, ceux que `majBordsFrise` vient de désigner : ailleurs, le mot a
-     le droit d'aller jusqu'au bout.
+  /* DEUX critères, et non un seul : les deux décisions qui suivent n'ont pas
+     les mêmes enjeux.
 
-     Un demi-point de tolérance en plus : les deux boîtes se comparent en pixels
-     fractionnaires, et un mot pile à la limite clignoterait d'un dessin à
-     l'autre. */
+     `dansLaFenetre` — le mot tient-il à l'écran, ne serait-ce que de justesse ?
+     C'est ce qui décide de l'EFFACER, et ça doit rester tolérant : un mot à
+     vingt points du bord se lit très bien, et l'effacer priverait le lecteur de
+     la seule chose qui dit où sont les motos.
+
+     `bienLisible` — reste-t-il en plus à l'écart du bord estompé ? C'est ce qui
+     décide de COUPER la phrase en deux, et là il faut être exigeant : le bord
+     qui cache une suite s'estompe sur 2,5 rem (voir
+     `.frise__defilement[data-bords]`), et la fin de « il est 22h24 » y
+     disparaît bien avant de sortir de la fenêtre. La marge n'est réclamée
+     qu'aux bords réellement estompés, ceux que `majBordsFrise` vient de
+     désigner.
+
+     Un demi-point de tolérance des deux côtés : les boîtes se comparent en
+     pixels fractionnaires, et un mot pile à la limite clignoterait d'un dessin
+     à l'autre. */
   const bords = defilement.dataset.bords;
   const estompe = 2.5 * parseFloat(getComputedStyle(document.documentElement).fontSize || 16);
   const margeGauche = (bords === 'gauche' || bords === 'deux') ? estompe : 0;
   const margeDroite = (bords === 'droite' || bords === 'deux') ? estompe : 0;
-  const tient = () => {
+
+  const dansLaFenetre = () => {
+    const boite = groupe.getBoundingClientRect();
+    return boite.left >= fenetre.left - .5 && boite.right <= fenetre.right + .5;
+  };
+  const bienLisible = () => {
     const boite = groupe.getBoundingClientRect();
     return boite.left >= fenetre.left + margeGauche - .5
       && boite.right <= fenetre.right - margeDroite + .5;
@@ -613,9 +627,9 @@ export function ajusterMotDeLaFrise(svg) {
   // limite passerait d'une ligne à deux et retour à chaque défilement du
   // doigt, sous les yeux de celui qui fait défiler.
   const mot = groupe.querySelector('.frise__ici');
-  if (mot?.dataset.lignes === '1' && !tient()) couperMotEnDeux(mot);
+  if (mot?.dataset.lignes === '1' && !bienLisible()) couperMotEnDeux(mot);
 
-  groupe.classList.toggle('est-hors-champ', !tient());
+  groupe.classList.toggle('est-hors-champ', !dansLaFenetre());
 }
 
 /* Écrit le mot d'un seul tenant : « Nous sommes à Humahuaca, il est 22h20 ».

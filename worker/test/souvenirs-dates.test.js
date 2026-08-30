@@ -13,7 +13,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { dateDeLaNote } from '../../js/souvenirs-vue.js';
+import { dateDeLaNote, journeeDesMotos } from '../../js/souvenirs-vue.js';
 
 // 28 août 2026, 21h34 sur le salar (UTC-4) ; 29 août, 03h34 à Paris.
 const INSTANT = '2026-08-29T01:34:00Z';
@@ -47,4 +47,30 @@ test('un fuseau inconnu ne fait pas tomber l\'affichage', () => {
 test('une date illisible ne rend rien plutôt qu\'« Invalid Date »', () => {
   assert.equal(dateDeLaNote(null, 'America/La_Paz'), '');
   assert.equal(dateDeLaNote('pas une date', 'America/La_Paz'), '');
+});
+
+// ------------------------------------- « tu écris sur la journée d'à côté »
+
+/* La journée d'une note est celle dont le carnet est ouvert — rien ne la
+   déduit d'une horloge. Un motard qui arrive par un lien gardé de la veille
+   écrit donc sur la veille sans s'en apercevoir, alors que le curseur a
+   basculé le soir même. Le formulaire le lui dit avant qu'il tape. */
+
+test('rien à signaler quand on écrit sur la journée où sont les motos', () => {
+  assert.equal(journeeDesMotos({ jour: 7, positionJour: 7 }), null);
+});
+
+/* Tant que personne n'a dit où sont les motos — avant le départ, ou service
+   injoignable — il n'y a rien à proposer : renvoyer sur une journée inconnue
+   serait pire que se taire. */
+test('rien à signaler quand la position est inconnue', () => {
+  assert.equal(journeeDesMotos({ jour: 7, positionJour: null }), null);
+});
+
+test('la journée des motos est signalée quand on écrit ailleurs', () => {
+  assert.deepEqual(journeeDesMotos({ jour: 7, positionJour: 8 }), { jour: 8 });
+});
+
+test('elle est signalée aussi quand on écrit sur une journée à venir', () => {
+  assert.deepEqual(journeeDesMotos({ jour: 9, positionJour: 8 }), { jour: 8 });
 });

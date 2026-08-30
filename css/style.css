@@ -1254,6 +1254,27 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
   color: var(--poussiere);
 }
 
+/* « Les motos en sont à J8 — écrire là plutôt ? » : la ligne qui rattrape un
+   motard sur le point d'écrire dans la mauvaise journée. Discrète — c'est un
+   garde-fou, pas une alerte : écrire sur une autre journée que celle du
+   curseur est parfaitement légitime, on rattrape souvent la veille. */
+.souvenir-form__ailleurs {
+  margin: -.25rem 0 .5rem;
+  font-size: .75rem;
+  color: var(--poussiere);
+}
+.souvenir-form__ailleurs[hidden] { display: none; }
+
+.souvenir-form__ailleurs button {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent-encre);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 /* Réactions : les smileys posés sous une note, et le « + » qui ouvre le
    sélecteur. Aucune couleur en dur ici — que des `var(--...)`, sinon un
    habillage régresserait en silence. */

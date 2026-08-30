@@ -120,6 +120,24 @@ function oublierJeton(id) {
   localStorage.setItem(CLE_JETONS, JSON.stringify(tous));
 }
 
+/** La journée où sont les motos, si l'on écrit sur une autre. `null` sinon.
+
+    La journée d'une note est celle dont le carnet est ouvert : rien ne la
+    déduit d'une horloge, et rien à l'écran ne disait laquelle c'était. Un
+    motard qui arrive par un lien gardé de la veille — ou par le bouton
+    « Précédent » — écrit sur la veille sans s'en apercevoir, alors que le
+    curseur a basculé le soir même à 20h locale.
+
+    Tant que personne n'a dit où sont les motos, on se tait : renvoyer vers une
+    journée inconnue serait pire que de ne rien proposer.
+
+    Exporté pour les tests, et parce que c'est la seule décision de cette
+    proposition : le reste n'est que du texte. */
+export function journeeDesMotos({ jour, positionJour }) {
+  if (!positionJour || positionJour === jour) return null;
+  return { jour: positionJour };
+}
+
 /** L'heure d'une note, lue dans le fuseau de l'étape à laquelle elle tient.
 
     Le service enregistre l'instant en UTC. Rendu sans fuseau, il s'affichait
@@ -609,16 +627,62 @@ function fermerVisionneuse() {
   elementRendu = null;
 }
 
-export function monterSouvenirs(conteneur, jour, { surDecompte = null } = {}) {
+/** Libellé d'une journée : « J7 · Uyuni → Tahua », ou « J7 » si le titre
+    manque. `libellePourJour` est fourni par l'appelant, seul à tenir le
+    contenu éditorial.
+
+    Sert à nommer la journée des MOTOS, celle qu'on n'a pas sous les yeux. Le
+    titre du formulaire, lui, se contente du numéro : il est écrit en capitales
+    et en chasse fixe, où le nom entier de l'étape prenait trois lignes — et
+    ce nom est déjà le titre du panneau, deux paragraphes plus haut. */
+function libelleDe(jour, libellePourJour) {
+  const titre = libellePourJour?.(jour);
+  return titre ? `J${jour} · ${titre}` : `J${jour}`;
+}
+
+export function monterSouvenirs(conteneur, jour, {
+  surDecompte = null,
+  // La journée où sont les motos, et de quoi la nommer et s'y rendre : le
+  // formulaire dit sur quelle journée on écrit, et propose l'autre quand ce
+  // n'est pas la bonne.
+  libellePourJour = null,
+  positionJour = null,
+  surAllerAJour = null,
+} = {}) {
+  const libelleJour = (n) => libelleDe(n, libellePourJour);
   // Le formulaire porte son propre intitulé : rien ne le séparait de la liste,
   // si bien que la ligne « vous publiez en tant que… » se lisait comme la
   // suite du dernier souvenir plutôt que comme le début d'un geste nouveau.
   // Pas de titre au-dessus de la liste : l'onglet « Souvenirs » le dit déjà,
   // juste au-dessus, et le répéter volait une ligne au premier souvenir.
   conteneur.innerHTML = `<div class="souvenirs__liste">Chargement…</div>
-    <p class="souvenir-form__titre">Ajouter une note
+    <p class="souvenir-form__titre">Ajouter une note à J${echapper(jour)}
       <span class="souvenir-form__reserve">(réservé aux motards)</span></p>
+    <p class="souvenir-form__ailleurs" hidden></p>
     ${gabaritFormulaire()}`;
+
+  const ailleurs = conteneur.querySelector('.souvenir-form__ailleurs');
+
+  /* Dit au motard que les motos en sont ailleurs, et lui propose d'y aller.
+
+     Réécrite plutôt que remontée avec tout le bloc : la position arrive du
+     service après le premier dessin, parfois longtemps après sur le réseau
+     visé. Remonter le carnet pour ça effacerait la note en cours de saisie —
+     exactement au moment où elle compte le plus. */
+  function direOuSontLesMotos(ou) {
+    const autre = journeeDesMotos({ jour, positionJour: ou });
+    ailleurs.hidden = !autre;
+    if (!autre) { ailleurs.innerHTML = ''; return; }
+    ailleurs.innerHTML = `Les motos en sont à ${echapper(libelleJour(autre.jour))} —
+      <button type="button" data-action="aller-aux-motos">écrire là plutôt ?</button>`;
+  }
+
+  direOuSontLesMotos(positionJour);
+  ailleurs.addEventListener('click', (evenement) => {
+    if (!evenement.target.closest('[data-action="aller-aux-motos"]')) return;
+    const autre = journeeDesMotos({ jour, positionJour });
+    if (autre && surAllerAJour) surAllerAJour(autre.jour);
+  });
 
   const liste = conteneur.querySelector('.souvenirs__liste');
   const formulaire = conteneur.querySelector('.souvenir-form');
@@ -1228,4 +1292,13 @@ export function monterSouvenirs(conteneur, jour, { surDecompte = null } = {}) {
   // ses boutons Modifier/Supprimer une fois l'entrée passée par la file.
   demarrerRenvoi({ surChangement: rafraichir, memoriserJeton: retenirJeton });
   rafraichir();
+
+  // Rendu à l'appelant : la position des motos arrive du service après ce
+  // montage, et c'est le seul moyen de la faire entrer sans tout redessiner.
+  return {
+    majPositionMotos(ou) {
+      positionJour = ou;
+      direOuSontLesMotos(ou);
+    },
+  };
 }

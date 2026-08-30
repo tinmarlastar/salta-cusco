@@ -31,6 +31,9 @@ const etat = {
   position: {
     jour: null, majLe: null, departPrevuLe: null, arriveeLe: null, fuseau: null,
   },
+  // Le carnet de la journée ouverte, tant qu'il en est monté un. `null` sur
+  // l'accueil, qui n'en porte pas.
+  carnet: null,
   // Onglet du panneau, et si l'on y est arrivé par un clic. Le défaut se
   // recalcule à chaque journée — souvenirs quand il y en a, étape sinon —,
   // mais un choix explicite tient jusqu'au changement de journée.
@@ -113,6 +116,11 @@ async function demarrer() {
       etat.position = position;
       redessinerFrise();
       suivreLHeureDesMotards();
+      // La position arrive après le premier dessin : le carnet déjà monté doit
+      // l'apprendre. Il réécrit sa seule ligne concernée plutôt que d'être
+      // remonté — un remontage effacerait une note en cours de saisie, et sur
+      // le réseau des Andes cette réponse peut arriver très tard.
+      etat.carnet?.majPositionMotos(position.jour);
     })
     .catch(() => {});
 
@@ -334,6 +342,9 @@ function amenerEtapeEnVue() {
 // ------------------------------------------------------------------ panneau
 
 function afficherPanneau(etape) {
+  // Le carnet de la journée précédente s'en va avec le panneau : le garder
+  // ferait écrire la position des motos dans un bloc que plus rien n'affiche.
+  etat.carnet = null;
   elements.panneau.innerHTML = etape ? gabaritFiche(etape) : gabaritAccueil(etat.accueil);
   elements.panneau.scrollTop = 0;
   afficherNavigation(etape);
@@ -349,7 +360,13 @@ function afficherPanneau(etape) {
     }
     const blocSouvenirs = elements.panneau.querySelector('#souvenirs-etape');
     if (blocSouvenirs) {
-      monterSouvenirs(blocSouvenirs, etape.jour, {
+      etat.carnet = monterSouvenirs(blocSouvenirs, etape.jour, {
+        // Le formulaire dit sur quelle journée on écrit, et propose celle des
+        // motos quand ce n'est pas la même. Le contenu éditorial reste ici :
+        // la vue des souvenirs ne lit pas `data/etapes.json`.
+        libellePourJour: (jour) => etat.etapes.find((e) => e.jour === jour)?.titre || '',
+        positionJour: etat.position.jour,
+        surAllerAJour: (jour) => choisir(jour),
         // Le décompte vient de la vue des souvenirs, seule à connaître le
         // nombre réellement publié pour cette journée. Il corrige la pastille
         // de la frise dès qu'un souvenir est publié ou supprimé, sans

@@ -237,6 +237,17 @@ seul le fichier en cours est à recommencer : la carte en attente indique
 « 6 fichiers · 2 envoyés », et la reprise repart au troisième. Aucun fichier
 n'est jamais attaché deux fois, chacun portant sa propre clé d'idempotence.
 
+**Le formulaire dit sur quelle journée on écrit** — « Ajouter une note à J7 » —
+et, quand ce n'est pas celle où en sont les motos, propose l'autre : « Les
+motos en sont à J8 · Uyuni → Oruro — écrire là plutôt ? ». Un clic y emmène.
+
+C'est un garde-fou, pas une alerte : écrire sur une autre journée que celle du
+curseur est parfaitement légitime — on rattrape souvent la veille. Mais rien ne
+le disait, et la journée d'une note est simplement celle dont le carnet est
+ouvert : un motard arrivant par un lien gardé de la veille écrivait sur la
+veille sans s'en apercevoir, alors que le curseur avait basculé à 20h locale.
+La modération peut de toute façon déplacer une note après coup.
+
 **L'heure d'une note est celle de l'étape**, pas celle du lecteur. Le service
 enregistre l'instant en UTC ; l'affichage le rend dans le fuseau de la journée
 à laquelle la note appartient (`fuseau`, joint à chaque note par le service).

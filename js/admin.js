@@ -14,7 +14,9 @@ import {
   lireReglagesPosition, ecrirePosition, lireVisites, lireCalendrier,
   ErreurService,
 } from './souvenirs.js';
-import { gabaritGalerie, brancherVisionneuse, dateDeLaNote } from './souvenirs-vue.js';
+import {
+  gabaritGalerie, brancherVisionneuse, dateDeLaNote, paysDeLaJournee,
+} from './souvenirs-vue.js';
 import { brancherHabillages } from './habillage.js';
 import { motDeLaFrise } from './profil.js';
 
@@ -93,6 +95,10 @@ let titresEtapes = new Map();
 
 /** Villes d'arrivée, pour le calendrier prévisionnel et les aperçus. */
 let villesArrivee = new Map();
+/* Le pays d'arrivée de chaque journée, drapeau compris. La modération mélange
+   les quinze journées dans une même liste : contrairement au carnet du site,
+   il faut donc pouvoir le retrouver note par note. */
+let paysArrivee = new Map();
 
 /** La ville d'où l'on part, que `motDeLaFrise` nomme avant le départ. */
 let villeDepart = null;
@@ -108,10 +114,13 @@ async function chargerTitres() {
       titresEtapes.set(etape.jour, etape.titre);
       // La ville d'ARRIVÉE : c'est là qu'on est le soir où la journée bascule.
       if (etape.arrivee?.nom) villesArrivee.set(etape.jour, etape.arrivee.nom);
+      const pays = paysDeLaJournee(donnees.etapes, donnees.voyage?.pays, etape.jour);
+      if (pays) paysArrivee.set(etape.jour, pays);
       if (etape.jour === 1 && etape.depart?.nom) villeDepart = etape.depart.nom;
     }
   } catch {
     titresEtapes = new Map();
+    paysArrivee = new Map();
   }
 }
 
@@ -435,6 +444,7 @@ function gabaritModulePosition() {
    position d'attribut ou d'URL — c'est cette page qui en a le plus besoin,
    puisqu'elle affiche justement ce que la modération n'a pas encore vu. */
 function gabaritContribution(contribution) {
+  const pays = paysArrivee.get(contribution.jour) || null;
   // Tous les fichiers, pas seulement le premier : supprimer une contribution
   // emporte tout ce qu'elle porte. `media` au singulier reste le repli pour
   // un service pas encore redéployé.
@@ -450,8 +460,10 @@ function gabaritContribution(contribution) {
     data-texte="${echapper(contribution.texte || '')}">
     <p class="souvenir__entete">
       <b>${echapper(contribution.auteur)}</b>
-      <time datetime="${echapper(contribution.creeLe)}" title="Heure locale de l'étape"
-        >J${echapper(contribution.jour)} · ${echapper(dateDeLaNote(contribution.creeLe, contribution.fuseau))}</time>
+      <time datetime="${echapper(contribution.creeLe)}"
+        title="Heure locale de l'étape${pays ? ` (${echapper(pays.nom)})` : ''}"
+        >J${echapper(contribution.jour)} · ${echapper(dateDeLaNote(contribution.creeLe, contribution.fuseau))}</time>${
+        pays ? ` <span class="souvenir__pays" aria-hidden="true">${pays.drapeau}</span>` : ''}
     </p>
     ${apercu}
     ${contribution.texte ? `<p class="souvenir__texte">${echapper(contribution.texte)}</p>` : ''}

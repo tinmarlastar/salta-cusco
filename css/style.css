@@ -1311,6 +1311,11 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
   cursor: pointer;
 }
 
+/* Le drapeau du pays d'arrivée, contre l'heure de la note. Un cran plus grand
+   que la date qui le précède : à la taille de la chasse fixe, un drapeau
+   devient une tache de deux couleurs indéchiffrable. */
+.souvenir__pays { font-size: .8125rem; line-height: 1; }
+
 /* Réactions : les smileys posés sous une note, et le « + » qui ouvre le
    sélecteur. Aucune couleur en dur ici — que des `var(--...)`, sinon un
    habillage régresserait en silence. */

@@ -13,7 +13,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { dateDeLaNote, journeeDesMotos } from '../../js/souvenirs-vue.js';
+import { dateDeLaNote, journeeDesMotos, paysDeLaJournee } from '../../js/souvenirs-vue.js';
 
 // 28 août 2026, 21h34 sur le salar (UTC-4) ; 29 août, 03h34 à Paris.
 const INSTANT = '2026-08-29T01:34:00Z';
@@ -73,4 +73,43 @@ test('la journée des motos est signalée quand on écrit ailleurs', () => {
 
 test('elle est signalée aussi quand on écrit sur une journée à venir', () => {
   assert.deepEqual(journeeDesMotos({ jour: 9, positionJour: 8 }), { jour: 8 });
+});
+
+// ------------------------------------------ le drapeau posé sur une note
+
+/* Chaque note porte le drapeau du pays où la journée ARRIVE — celui où l'on
+   dort ce soir-là, donc celui dont l'heure est affichée juste à côté. Une
+   journée qui franchit une frontière en porte deux dans `data/etapes.json` :
+   J4 part d'Argentine et arrive au Chili, et c'est le Chili qui compte.
+
+   Le drapeau et le nom viennent du contenu éditorial, jamais d'une table
+   écrite dans le code : `data/etapes.json` les tient déjà pour l'en-tête des
+   fiches d'étape. */
+const ETAPES = [
+  { jour: 1, pays: ['AR'] },
+  { jour: 4, pays: ['AR', 'CL'] },
+  { jour: 11, pays: ['BO', 'PE'] },
+  { jour: 13, pays: [] },
+];
+const PAYS = [
+  { code: 'AR', nom: 'Argentine', drapeau: '🇦🇷' },
+  { code: 'CL', nom: 'Chili', drapeau: '🇨🇱' },
+  { code: 'PE', nom: 'Pérou', drapeau: '🇵🇪' },
+];
+
+test('le pays d\'une journée est celui où elle arrive', () => {
+  assert.equal(paysDeLaJournee(ETAPES, PAYS, 1).nom, 'Argentine');
+  assert.equal(paysDeLaJournee(ETAPES, PAYS, 4).nom, 'Chili');
+  assert.equal(paysDeLaJournee(ETAPES, PAYS, 11).drapeau, '🇵🇪');
+});
+
+/* `data/etapes.json` se modifie à la main : une journée inconnue, une liste de
+   pays vide ou un code absent de la table ne doivent pas produire « undefined »
+   sous une note. Pas de drapeau vaut mieux qu'un faux. */
+test('pas de pays trouvé ne rend rien plutôt qu\'un drapeau faux', () => {
+  assert.equal(paysDeLaJournee(ETAPES, PAYS, 99), null);
+  assert.equal(paysDeLaJournee(ETAPES, PAYS, 13), null);
+  assert.equal(paysDeLaJournee(ETAPES, [], 1), null);
+  assert.equal(paysDeLaJournee(null, PAYS, 1), null);
+  assert.equal(paysDeLaJournee(ETAPES, null, 1), null);
 });

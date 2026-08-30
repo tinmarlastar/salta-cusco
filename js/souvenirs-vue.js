@@ -120,6 +120,27 @@ function oublierJeton(id) {
   localStorage.setItem(CLE_JETONS, JSON.stringify(tous));
 }
 
+/** Le pays où ARRIVE une journée : `{ code, nom, drapeau }`, ou `null`.
+
+    Celui où l'on dort ce soir-là, donc celui dont l'heure s'affiche sur les
+    notes — d'où le drapeau posé juste à côté. Une journée qui franchit une
+    frontière porte deux pays dans `data/etapes.json` : J4 part d'Argentine et
+    arrive au Chili, et c'est le Chili qui compte, comme pour le fuseau.
+
+    Le drapeau vient du contenu éditorial, jamais d'une table écrite dans le
+    code : `data/etapes.json` le tient déjà pour l'en-tête des fiches d'étape,
+    et une conversion « code pays vers emoji » aurait été une seconde source de
+    vérité pour la même chose.
+
+    Rend `null` plutôt qu'un drapeau faux : le fichier se modifie à la main, et
+    « undefined » sous une note serait pire que pas de drapeau du tout. */
+export function paysDeLaJournee(etapes, pays, jour) {
+  const etape = (etapes || []).find((e) => e.jour === jour);
+  const code = etape?.pays?.[etape.pays.length - 1];
+  if (!code) return null;
+  return (pays || []).find((p) => p.code === code) || null;
+}
+
 /** La journée où sont les motos, si l'on écrit sur une autre. `null` sinon.
 
     La journée d'une note est celle dont le carnet est ouvert : rien ne la
@@ -265,7 +286,16 @@ export function brancherVisionneuse(conteneur, {
   });
 }
 
-function gabaritContribution(contribution) {
+/** Le drapeau du pays d'arrivée, posé contre l'heure qu'il y était.
+
+    `aria-hidden` : la synthèse vocale lit déjà le pays dans l'infobulle de
+    l'heure juste à côté, et un drapeau annoncé « drapeau de l'Argentine »
+    entre l'auteur et la date couperait la phrase en deux. */
+function gabaritDrapeau(pays) {
+  return pays ? ` <span class="souvenir__pays" aria-hidden="true">${pays.drapeau}</span>` : '';
+}
+
+function gabaritContribution(contribution, pays) {
   const sien = Boolean(jetons()[contribution.id]);
   // `medias` depuis que plusieurs fichiers sont possibles ; `media` au
   // singulier reste le repli pour une réponse servie par un service pas
@@ -279,7 +309,8 @@ function gabaritContribution(contribution) {
     <p class="souvenir__entete">
       <b>${echapper(contribution.auteur)}</b>
       <time datetime="${echapper(contribution.creeLe)}"
-        title="Heure locale de l'étape">${echapper(dateDeLaNote(contribution.creeLe, contribution.fuseau))}</time>
+        title="Heure locale de l'étape${pays ? ` (${echapper(pays.nom)})` : ''}"
+        >${echapper(dateDeLaNote(contribution.creeLe, contribution.fuseau))}</time>${gabaritDrapeau(pays)}
       ${contribution.modifieLe ? '<em>modifié</em>' : ''}
     </p>
     ${corpsMedia}
@@ -648,6 +679,10 @@ export function monterSouvenirs(conteneur, jour, {
   libellePourJour = null,
   positionJour = null,
   surAllerAJour = null,
+  // Le pays d'arrivée de CETTE journée : toutes les notes du carnet la
+  // partagent, il n'y a donc rien à chercher note par note ici — contrairement
+  // à la modération, qui les mélange toutes.
+  pays = null,
 } = {}) {
   const libelleJour = (n) => libelleDe(n, libellePourJour);
   // Le formulaire porte son propre intitulé : rien ne le séparait de la liste,
@@ -785,7 +820,7 @@ export function monterSouvenirs(conteneur, jour, {
     // où l'on cherche à vérifier que sa note est bien partie.
     liste.innerHTML = publiees.length || attente.length
       ? attente.map((e) => gabaritEnAttente(e, progressionEnvoi())).join('')
-        + publiees.map(gabaritContribution).join('')
+        + publiees.map((c) => gabaritContribution(c, pays)).join('')
       : '<p class="souvenirs__vide">Aucune note pour cette étape. Sois le premier.</p>';
 
     // Le décompte sort du MÊME chargement que la liste : le recalculer ailleurs

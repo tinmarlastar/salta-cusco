@@ -248,6 +248,15 @@ ouvert : un motard arrivant par un lien gardé de la veille écrivait sur la
 veille sans s'en apercevoir, alors que le curseur avait basculé à 20h locale.
 La modération peut de toute façon déplacer une note après coup.
 
+**Chaque note porte le drapeau du pays où sa journée arrive**, contre l'heure :
+« 29 août, 18:50 🇦🇷 ». Celui où l'on dort ce soir-là, donc celui dont l'heure
+est affichée juste à côté — une journée qui franchit une frontière prend le
+drapeau de son arrivée, comme pour le fuseau. Drapeau et nom viennent de
+`data/etapes.json`, qui les tient déjà pour l'en-tête des fiches d'étape ;
+aucune table « code pays vers emoji » n'a été écrite dans le code. Le nom
+complet du pays est dans l'infobulle de l'heure, pour qui ne reconnaît pas un
+drapeau à cette taille.
+
 **L'heure d'une note est celle de l'étape**, pas celle du lecteur. Le service
 enregistre l'instant en UTC ; l'affichage le rend dans le fuseau de la journée
 à laquelle la note appartient (`fuseau`, joint à chaque note par le service).

@@ -9,7 +9,7 @@ import {
   ajusterMotDeLaFrise, assemblerVoyage, dessinerFrise, dessinerProfilEtape,
   rafraichirMotDeLaFrise,
 } from './profil.js';
-import { monterSouvenirs, brancherVisionneuse } from './souvenirs-vue.js';
+import { monterSouvenirs, brancherVisionneuse, paysDeLaJournee } from './souvenirs-vue.js';
 import { listerDecomptes, lirePosition } from './souvenirs.js';
 import { brancherHabillages } from './habillage.js';
 import { signalerVisite } from './visites.js';
@@ -396,6 +396,13 @@ function afficherPanneau(etape) {
         // motos quand ce n'est pas la même. Le contenu éditorial reste ici :
         // la vue des souvenirs ne lit pas `data/etapes.json`.
         libellePourJour: (jour) => etat.etapes.find((e) => e.jour === jour)?.titre || '',
+        // Le drapeau du pays où la journée arrive, posé contre l'heure de
+        // chaque note. Lu dans le contenu éditorial, que seul l'orchestrateur
+        // tient : la vue des souvenirs ne connaît pas `data/etapes.json`.
+        // `etat.accueil` et non `etat.voyage` : le second est la géométrie du
+        // profil rendue par `assemblerVoyage`, le premier le bloc éditorial du
+        // fichier, celui qui porte les pays et leurs drapeaux.
+        pays: paysDeLaJournee(etat.etapes, etat.accueil?.pays, etape.jour),
         positionJour: etat.position.jour,
         surAllerAJour: (jour) => choisir(jour),
         // Le décompte vient de la vue des souvenirs, seule à connaître le

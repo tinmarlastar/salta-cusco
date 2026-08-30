@@ -90,6 +90,7 @@ js/app.js             état, panneau, navigation entre étapes
 js/carte.js           carte Leaflet : fonds, traces, jalons
 js/profil.js          la frise et les profils d'altitude, en SVG
 js/souvenirs*.js      le carnet de route : service, file d'attente, affichage
+js/emojis-vue.js      le sélecteur d'emoji des réactions
 admin.html, js/admin.js  la modération, hors du site public
 data/etapes.json      le contenu éditorial des quinze jours
 data/parcours.geojson les traces et les relevés d'altitude
@@ -235,6 +236,31 @@ Chaque fichier part dans sa propre requête. Sur un lien qui lâche à mi-course
 seul le fichier en cours est à recommencer : la carte en attente indique
 « 6 fichiers · 2 envoyés », et la reprise repart au troisième. Aucun fichier
 n'est jamais attaché deux fois, chacun portant sa propre clé d'idempotence.
+
+**Poser un smiley sur une note** : sous chaque note, une rangée de pastilles
+et un bouton `+`. Le `+` ouvre un sélecteur d'emoji complet — les mêmes neuf
+familles, dans le même ordre, que le clavier d'un téléphone, avec en tête les
+emoji récemment choisis sur cet appareil. Les 1 906 emoji sont **embarqués**
+(`js/vendor/emojis.js`, 18 Kio), engendrés depuis le fichier officiel
+d'Unicode : rien n'est appelé à distance, et le fichier n'est chargé qu'à la
+première ouverture du sélecteur.
+
+Réagir ne demande **aucun mot de passe** : c'est le geste des proches qui
+suivent le voyage de chez eux. Un smiley par personne et par note — en choisir
+un autre déplace le sien, recliquer le sien le reprend. La rangée se lit du
+plus posé au moins posé.
+
+Rien n'est enregistré sur qui réagit : la base ne connaît qu'un compteur par
+couple (note, smiley), comme le compteur de visites plus bas. C'est le
+navigateur qui retient chez lui le smiley qu'il a posé, pour pouvoir le
+déplacer ; vider ses données du site rend simplement ses votes anonymes et
+définitifs. Il s'ensuit qu'un même lecteur peut réagir depuis deux navigateurs
+— le prix, assumé, de réactions qui n'espionnent personne.
+
+Le clic est peint sans attendre le réseau, puis confirmé par le service. S'il
+ne répond pas, le bouton revient dans l'état d'avant sans alerte : un smiley
+perdu ne passe pas par la file d'attente hors-ligne, réservée à ce qui ne doit
+jamais l'être — les notes et les photos.
 
 **Chacun peut modifier ou supprimer ses propres notes**, y compris leur
 ajouter une photo après coup ou en retirer une seule : les boutons

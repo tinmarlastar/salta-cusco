@@ -1234,6 +1234,143 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
 }
 .souvenir__actions button:hover { border-color: var(--soufre); color: var(--accent-encre); }
 
+/* Réactions : les smileys posés sous une note, et le « + » qui ouvre le
+   sélecteur. Aucune couleur en dur ici — que des `var(--...)`, sinon un
+   habillage régresserait en silence. */
+.souvenir__reactions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .25rem;
+  margin: .5rem 0 0;
+}
+
+.souvenir__reaction {
+  display: inline-flex;
+  align-items: center;
+  gap: .25rem;
+  padding: .125rem .4375rem;
+  border: 1px solid var(--nuit-3);
+  border-radius: 999px;
+  background: none;
+  /* La taille du texte, pas celle des commandes : un emoji rendu en .5625rem
+     devient une tache indéchiffrable, et c'est lui l'information. */
+  font-size: .8125rem;
+  line-height: 1.4;
+  color: var(--texte-2);
+  cursor: pointer;
+  transition: border-color var(--transition), background var(--transition);
+}
+.souvenir__reaction:hover { border-color: var(--soufre); }
+
+/* Le sien : c'est le seul état qu'il faut pouvoir lire d'un coup d'œil pour
+   savoir si on a déjà réagi — d'où l'accent, et pas seulement une bordure un
+   peu plus claire. */
+.souvenir__reaction--mien {
+  border-color: var(--soufre);
+  background: var(--accent-voile-fort);
+}
+
+.souvenir__reaction-compte {
+  font-family: var(--mono);
+  font-size: .625rem;
+  color: var(--poussiere);
+}
+.souvenir__reaction--mien .souvenir__reaction-compte { color: var(--accent-encre); }
+
+.souvenir__reaction--ouvrir {
+  font-family: var(--mono);
+  color: var(--poussiere);
+  /* Le « + » est un signe étroit : sans ce minimum, sa pastille est deux fois
+     plus petite que les autres et devient difficile à viser au pouce. */
+  min-width: 1.875rem;
+  justify-content: center;
+}
+
+/* ------------------------------------------------------------- sélecteur
+   Le panneau d'emoji (js/emojis-vue.js). Ancré sous son bouton sur un écran
+   large, feuille venue du bas sur un téléphone — c'est là que le clavier
+   d'emoji du système apparaît, et le pouce l'y cherche. */
+.emojis { position: fixed; inset: 0; z-index: 2100; }
+.emojis[hidden] { display: none; }
+
+.emojis__voile { position: absolute; inset: 0; background: var(--voile-media); }
+
+.emojis__panneau {
+  position: absolute;
+  width: 20rem;
+  max-height: 21.25rem;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--nuit-3);
+  border-radius: .5rem;
+  background: var(--nuit-2);
+  box-shadow: 0 .75rem 2rem var(--ombre);
+  overflow: hidden;
+}
+
+.emojis--feuille .emojis__panneau {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  top: auto;
+  width: auto;
+  max-height: 60vh;
+  border-radius: .75rem .75rem 0 0;
+  /* Le bas des téléphones sans bouton physique : sans cette réserve, la
+     dernière rangée d'emoji passe sous la barre d'accueil. */
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.emojis__onglets {
+  display: flex;
+  gap: .125rem;
+  padding: .25rem;
+  border-bottom: 1px solid var(--nuit-3);
+  overflow-x: auto;
+}
+
+.emojis__onglet {
+  flex: 0 0 auto;
+  padding: .25rem .375rem;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: none;
+  font-size: 1rem;
+  cursor: pointer;
+  opacity: .55;
+}
+.emojis__onglet--ouvert { border-bottom-color: var(--soufre); opacity: 1; }
+
+.emojis__corps { overflow-y: auto; padding: .375rem .5rem .5rem; }
+
+.emojis__famille {
+  margin: .25rem 0 .375rem;
+  font-family: var(--mono);
+  font-size: .5625rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--poussiere);
+}
+
+/* `auto-fill` et non `auto-fit` : avec `auto-fit`, une famille qui ne
+   remplirait pas une rangée verrait ses emoji s'étirer sur toute la largeur. */
+.emojis__grille {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(2rem, 1fr));
+  gap: .125rem;
+}
+
+.emojis__emoji {
+  aspect-ratio: 1;
+  border: none;
+  border-radius: .25rem;
+  background: none;
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.emojis__emoji:hover { background: var(--accent-voile-fort); }
+
 /* Galerie : une photo seule garde toute la largeur, plusieurs passent en
    grille. `minmax(0, 1fr)` et non `1fr` — sans le zéro, une image large force
    la colonne à sa taille naturelle et fait déborder le panneau. */

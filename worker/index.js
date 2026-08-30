@@ -8,6 +8,7 @@ import {
   calendrierDesBascules,
 } from './lib/position.js';
 import { normaliserEtape, assemblerStatistiques } from './lib/visites.js';
+import { interpreterVote, assemblerReactions } from './lib/reactions.js';
 
 const TEXTE_MAX = 5000; // de quoi raconter une journée entière, pas seulement une légende
 const AUTEUR_MAX = 40;
@@ -53,7 +54,7 @@ function erreur(message, statut, cors) {
 }
 
 /** Transforme une ligne de la base en objet public, sans le jeton. */
-function versPublic(ligne, medias = []) {
+function versPublic(ligne, medias = [], reactions = []) {
   const liste = medias.map((m) => ({
     id: m.id, cle: m.cle, genre: m.genre, octets: m.octets,
   }));
@@ -80,6 +81,10 @@ function versPublic(ligne, medias = []) {
     // encore ouverte sur l'ancienne version du site continue d'afficher
     // quelque chose au lieu de rien, jusqu'à son prochain rechargement.
     media: liste[0] || null,
+    // Les smileys posés sous la note, du plus au moins nombreux. Absent des
+    // réponses d'écriture (une note qu'on vient de poster n'en a aucune) : le
+    // site lit le champ avec un repli sur la liste vide.
+    reactions,
     creeLe: ligne.cree_le,
     modifieLe: ligne.modifie_le,
   };
@@ -118,8 +123,20 @@ async function listerEtape(jour, env, cors) {
   ).bind(jour).all();
   const parContribution = grouperMedias(medias);
 
+  // Même jointure, même raison que pour les médias : un `IN (...)` construit
+  // depuis les identifiants dépasserait le plafond de paramètres liés de D1
+  // sur une étape bien remplie.
+  const { results: reactions } = await env.DB.prepare(
+    `SELECT r.* FROM reactions r
+       JOIN contributions c ON c.id = r.contribution_id
+      WHERE c.jour = ?`,
+  ).bind(jour).all();
+  const parReactions = assemblerReactions(reactions);
+
   return repondre({
-    contributions: results.map((l) => versPublic(l, parContribution.get(l.id) || [])),
+    contributions: results.map((l) => versPublic(
+      l, parContribution.get(l.id) || [], parReactions.get(l.id) || [],
+    )),
   }, { cors });
 }
 
@@ -140,6 +157,15 @@ async function mediasDe(contributionId, env) {
     .bind(contributionId)
     .all();
   return results;
+}
+
+/** Réactions d'une contribution, prêtes à afficher. */
+async function reactionsDe(contributionId, env) {
+  const { results } = await env.DB
+    .prepare('SELECT * FROM reactions WHERE contribution_id = ?')
+    .bind(contributionId)
+    .all();
+  return assemblerReactions(results).get(contributionId) || [];
 }
 
 /** Vrai si la requête porte le mot de passe de groupe.
@@ -414,7 +440,7 @@ async function creerMedia(jour, requete, env, cors) {
 
   return repondre(
     {
-      contribution: versPublic(ligne, await mediasDe(ligne.id, env)),
+      contribution: versPublic(ligne, await mediasDe(ligne.id, env), await reactionsDe(ligne.id, env)),
       jeton: (deja || jetonFourni) ? null : jeton,
     },
     { statut: deja ? 200 : 201, cors },
@@ -462,7 +488,13 @@ async function ajouterMedia(id, requete, env, cors) {
   }
 
   return repondre(
-    { contribution: versPublic({ ...ligne, type: 'media' }, await mediasDe(ligne.id, env)) },
+    {
+      contribution: versPublic(
+        { ...ligne, type: 'media' },
+        await mediasDe(ligne.id, env),
+        await reactionsDe(ligne.id, env),
+      ),
+    },
     { cors },
   );
 }
@@ -490,7 +522,7 @@ async function supprimerMedia(idMedia, requete, env, cors) {
   });
 
   return repondre(
-    { contribution: versPublic(ligne, await mediasDe(ligne.id, env)) },
+    { contribution: versPublic(ligne, await mediasDe(ligne.id, env), await reactionsDe(ligne.id, env)) },
     { cors },
   );
 }
@@ -557,6 +589,7 @@ async function modifier(id, requete, env, cors) {
       contribution: versPublic(
         { ...ligne, texte, modifie_le: modifieLe },
         await mediasDe(id, env),
+        await reactionsDe(id, env),
       ),
     },
     { cors },
@@ -588,6 +621,7 @@ async function supprimer(id, requete, env, cors) {
 
   await env.DB.prepare('DELETE FROM contributions WHERE id = ?').bind(id).run();
   await env.DB.prepare('DELETE FROM medias WHERE contribution_id = ?').bind(id).run();
+  await env.DB.prepare('DELETE FROM reactions WHERE contribution_id = ?').bind(id).run();
   for (const cle of cles) {
     await env.MEDIAS.delete(cle).catch((souci) => {
       console.error('Nettoyage du média après suppression impossible :', souci);
@@ -781,6 +815,59 @@ async function ecrirePosition(requete, env, cors) {
 }
 
 /** Liste toutes les contributions, pour la page de modération. */
+/** Pose, déplace ou retire un smiley sous une note.
+
+    La route est PUBLIQUE — n'importe quel lecteur du site peut réagir, sans le
+    mot de passe du groupe : c'est tout l'intérêt, un proche qui suit le voyage
+    depuis chez lui n'a pas de mot de passe et doit pouvoir dire qu'il a aimé.
+    Elle est en revanche réservée aux origines déjà autorisées, comme le
+    compteur de visites : sans ce garde, une boucle de `curl` gonflerait les
+    compteurs et mangerait le forfait d'écritures de D1. Ce n'est pas
+    inviolable — une origine se forge — c'est proportionné à un carnet que
+    suivent quelques dizaines de proches.
+
+    Rien n'est enregistré sur qui réagit. Le couple (smiley voulu, smiley
+    précédent) vient du navigateur, seul à savoir ce qu'il a déjà posé ; le
+    service ne peut ni le vérifier, ni distinguer deux lecteurs. C'est le prix
+    — assumé — de réactions qui n'espionnent personne. */
+async function reagir(id, requete, env, cors) {
+  if (!cors['Access-Control-Allow-Origin']) return erreur('Origine non autorisée', 403, cors);
+
+  const vote = interpreterVote(await requete.json().catch(() => ({})));
+  if (!vote) return erreur('Smiley inconnu', 400, cors);
+
+  const existe = await env.DB
+    .prepare('SELECT id FROM contributions WHERE id = ?').bind(id).first();
+  if (!existe) return erreur('Contribution introuvable', 404, cors);
+
+  // Les deux écritures partent ensemble : un déplacement de vote qui
+  // n'appliquerait que le retrait ferait disparaître une réaction sans en
+  // reposer aucune, et l'écran du lecteur montrerait alors l'inverse de ce
+  // qu'il vient de cliquer.
+  const ordres = [];
+  if (vote.retirer) {
+    // `MAX(..., 0)` plutôt qu'une simple soustraction : deux retraits partis
+    // en même temps depuis deux onglets feraient passer le compteur sous zéro,
+    // et un compteur négatif ne remonte jamais tout seul.
+    ordres.push(env.DB.prepare(
+      'UPDATE reactions SET compte = MAX(compte - 1, 0) WHERE contribution_id = ? AND smiley = ?',
+    ).bind(id, vote.retirer));
+  }
+  if (vote.poser) {
+    ordres.push(env.DB.prepare(
+      `INSERT INTO reactions (contribution_id, smiley, compte) VALUES (?, ?, 1)
+         ON CONFLICT (contribution_id, smiley) DO UPDATE SET compte = compte + 1`,
+    ).bind(id, vote.poser));
+  }
+  if (ordres.length) await env.DB.batch(ordres);
+
+  // On renvoie l'état complet des réactions de la note, pas seulement le
+  // compteur touché : le navigateur a peint son clic sans attendre, et c'est
+  // cette réponse qui le remet d'accord avec la base si quelqu'un d'autre a
+  // réagi entre-temps.
+  return repondre({ reactions: await reactionsDe(id, env) }, { cors });
+}
+
 async function listerTout(requete, env, cors) {
   if (!await adminAutorise(requete, env)) return erreur('Mot de passe incorrect', 401, cors);
   const { results } = await env.DB
@@ -938,6 +1025,11 @@ export default {
         const id = contribution[1];
         if (requete.method === 'PATCH') return await modifier(id, requete, env, cors);
         if (requete.method === 'DELETE') return await supprimer(id, requete, env, cors);
+      }
+
+      const reaction = chemin.match(/^\/api\/contribution\/([0-9a-z]+)\/reaction$/);
+      if (reaction && requete.method === 'POST') {
+        return await reagir(reaction[1], requete, env, cors);
       }
 
       const ajout = chemin.match(/^\/api\/contribution\/([0-9a-z]+)\/media$/);

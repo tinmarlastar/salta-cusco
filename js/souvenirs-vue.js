@@ -4,17 +4,24 @@
    souvenirs.js et souvenirs-file.js. */
 
 import {
-  listerEtape, modifierContribution, supprimerContribution, supprimerFichier,
+  listerEtape, modifierContribution, supprimerContribution, supprimerFichier, reagir,
   compresserImage, verifierVideo, urlMedia, creerCleIdempotence, creerJetonAuteur, ErreurService,
 } from './souvenirs.js';
 import {
   mettreEnFile, listerFile, viderEntree, demarrerRenvoi, renvoyerMaintenant, reprendreEntree,
   progressionEnvoi,
 } from './souvenirs-file.js';
+import { ouvrirSelecteur } from './emojis-vue.js';
 
 const CLE_AUTEUR = 'souvenirs.auteur';
 const CLE_MOT_DE_PASSE = 'souvenirs.motDePasse';
 const CLE_JETONS = 'souvenirs.jetons';
+// Le smiley que CE navigateur a posé sur chaque note. Il ne vit qu'ici : le
+// service compte les réactions sans savoir de qui elles viennent, c'est donc
+// au navigateur de se souvenir du sien pour pouvoir le déplacer ou le
+// reprendre. Effacer ses données du site rend simplement les votes anonymes et
+// définitifs — un compteur de plus, sans personne derrière.
+const CLE_REACTIONS = 'souvenirs.reactions';
 
 // Nombre d'échecs au-delà duquel une entrée cesse de se dire passagère. Trois,
 // et non un : sur le réseau visé, les deux premiers ratés sont la normale, et
@@ -26,6 +33,72 @@ const echapper = (texte) => String(texte ?? '').replace(/[&<>"]/g, (c) =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 const jetons = () => JSON.parse(localStorage.getItem(CLE_JETONS) || '{}');
+
+const reactionsPosees = () => {
+  try {
+    return JSON.parse(localStorage.getItem(CLE_REACTIONS) || '{}');
+  } catch {
+    return {};
+  }
+};
+
+function retenirReaction(id, smiley) {
+  const toutes = reactionsPosees();
+  if (smiley) toutes[id] = smiley; else delete toutes[id];
+  try {
+    localStorage.setItem(CLE_REACTIONS, JSON.stringify(toutes));
+  } catch {
+    // Stockage plein ou refusé : le vote est parti au service quand même, il
+    // n'y a que la mémoire du sien qui manquera au prochain chargement.
+  }
+}
+
+/** La rangée de smileys d'une note après un clic, avant que le service ait
+    répondu.
+
+    Le clic est peint sans attendre le réseau — un bouton qui met deux secondes
+    à s'allumer donne envie de recliquer. Le navigateur refait donc ici le même
+    calcul que le service : décrémenter le smiley repris, incrémenter celui
+    qu'on pose, remettre la rangée du plus posé au moins posé, l'emoji
+    lui-même départageant les égalités (voir `assemblerReactions`, côté
+    service). Les deux ordres doivent coïncider, sans quoi les boutons
+    sauteraient de place à la réponse.
+
+    La liste reçue n'est pas modifiée : c'est encore celle de l'affichage, et
+    c'est elle qu'on repeint si le service refuse le vote. */
+export function appliquerVote(liste, precedent, vise) {
+  const comptes = new Map((liste || []).map((r) => [r.smiley, r.compte]));
+  if (precedent && comptes.has(precedent)) comptes.set(precedent, comptes.get(precedent) - 1);
+  if (vise) comptes.set(vise, (comptes.get(vise) || 0) + 1);
+
+  return [...comptes.entries()]
+    .filter(([, compte]) => compte > 0)
+    .map(([smiley, compte]) => ({ smiley, compte }))
+    .sort((a, b) => b.compte - a.compte
+      || (a.smiley < b.smiley ? -1 : a.smiley > b.smiley ? 1 : 0));
+}
+
+/** La rangée de smileys d'une note, et le « + » qui ouvre le sélecteur.
+
+    Seuls les smileys réellement posés ont un bouton : une palette figée aurait
+    demandé de choisir six emoji pour tout le monde, alors que ce qu'on a envie
+    de poser sur la photo d'un col à 4 800 m n'est pas ce qu'on pose sur une
+    panne de fourche. */
+function gabaritReactions(contribution) {
+  const mien = reactionsPosees()[contribution.id] || null;
+  return `<p class="souvenir__reactions">${gabaritBoutonsReactions(contribution.reactions, mien)}</p>`;
+}
+
+function gabaritBoutonsReactions(reactions, mien) {
+  const boutons = (reactions || []).map((r) => {
+    const sien = r.smiley === mien;
+    return `<button type="button" class="souvenir__reaction${sien ? ' souvenir__reaction--mien' : ''}"
+      data-action="reagir" data-smiley="${echapper(r.smiley)}" aria-pressed="${sien}"
+      >${r.smiley}<span class="souvenir__reaction-compte">${r.compte}</span></button>`;
+  });
+  return `${boutons.join('')}<button type="button" class="souvenir__reaction souvenir__reaction--ouvrir"
+    data-action="choisir-smiley" aria-label="Poser un smiley">+</button>`;
+}
 
 // Rappel passé à `demarrerRenvoi` : c'est `traiterEntree`, dans
 // souvenirs-file.js, qui l'appelle sur tout envoi en file d'attente réussi,
@@ -167,6 +240,7 @@ function gabaritContribution(contribution) {
     </p>
     ${corpsMedia}
     ${contribution.texte ? `<p class="souvenir__texte">${echapper(contribution.texte)}</p>` : ''}
+    ${gabaritReactions(contribution)}
     ${sien ? `<p class="souvenir__actions">
       <button type="button" data-action="ajouter-media">Ajouter une photo</button>
       <button type="button" data-action="modifier">Modifier</button>
@@ -952,11 +1026,77 @@ export function monterSouvenirs(conteneur, jour, { surDecompte = null } = {}) {
   // sans fin. Cet écouteur a été supprimé par inadvertance avec la mosaïque
   // (c635086), qui vivait juste au-dessus : ×, Ajouter, Modifier, Supprimer,
   // Réessayer et Abandonner s'affichaient alors sans plus rien faire.
+  /* Un vote, peint tout de suite puis confirmé par le service.
+
+     La rangée est relue dans le DOM plutôt que gardée en mémoire à côté : elle
+     est reconstruite à chaque `rafraichir()`, et un état parallèle aurait dû
+     être tenu en phase avec ces reconstructions — deux sources de vérité pour
+     une poignée de compteurs.
+
+     La carte est retrouvée par son identifiant au moment de peindre, jamais
+     conservée d'un bout à l'autre : entre le clic et la réponse du service,
+     un rafraîchissement a pu remplacer toute la liste, et écrire dans
+     l'ancienne carte n'aurait rien affiché du tout. */
+  function rangeeDe(id) {
+    return liste.querySelector(`[data-id="${CSS.escape(id)}"] .souvenir__reactions`);
+  }
+
+  function lireRangee(rangee) {
+    return [...rangee.querySelectorAll('[data-smiley]')].map((b) => ({
+      smiley: b.dataset.smiley,
+      compte: Number(b.querySelector('.souvenir__reaction-compte')?.textContent || 0),
+    }));
+  }
+
+  function peindreRangee(id, reactions, mien) {
+    const rangee = rangeeDe(id);
+    if (rangee) rangee.innerHTML = gabaritBoutonsReactions(reactions, mien);
+  }
+
+  async function voter(id, choisi) {
+    const rangee = rangeeDe(id);
+    if (!rangee) return;
+
+    const precedent = reactionsPosees()[id] || null;
+    // Recliquer le smiley qu'on a soi-même posé le reprend : c'est le geste
+    // qu'on essaie d'instinct pour annuler, et il n'y a pas de place pour un
+    // second bouton « retirer » sous une note.
+    const vise = choisi === precedent ? null : choisi;
+    const avant = lireRangee(rangee);
+
+    retenirReaction(id, vise);
+    peindreRangee(id, appliquerVote(avant, precedent, vise), vise);
+
+    try {
+      // La réponse porte l'état complet de la note : c'est elle qui remet
+      // l'affichage d'accord avec la base si quelqu'un d'autre a réagi
+      // pendant ce temps.
+      peindreRangee(id, await reagir({ id, smiley: vise, precedent }), vise);
+    } catch {
+      // Un smiley perdu ne justifie ni la file d'attente hors-ligne, ni une
+      // alerte : le bouton revient simplement dans l'état d'avant le clic, et
+      // le lecteur voit que ça n'a pas pris.
+      retenirReaction(id, precedent);
+      peindreRangee(id, avant, precedent);
+    }
+  }
+
   liste.addEventListener('click', async (evenement) => {
     const bouton = evenement.target.closest('button[data-action]');
     if (!bouton) return;
     const carte = bouton.closest('[data-id], [data-local]');
     const action = bouton.dataset.action;
+
+    if (action === 'reagir') {
+      await voter(carte.dataset.id, bouton.dataset.smiley);
+      return;
+    }
+
+    if (action === 'choisir-smiley') {
+      const id = carte.dataset.id;
+      ouvrirSelecteur(bouton, (emoji) => voter(id, emoji));
+      return;
+    }
 
     if (action === 'abandonner') {
       await viderEntree(carte.dataset.local);

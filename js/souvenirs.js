@@ -245,6 +245,15 @@ export async function modifierContribution({ id, texte, jeton }) {
   });
 }
 
+export async function reagir({ id, smiley, precedent }) {
+  const donnees = await appeler(`/api/contribution/${id}/reaction`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ smiley, precedent }),
+  });
+  return donnees.reactions || [];
+}
+
 export async function supprimerContribution({ id, jeton, motDePasse }) {
   const entetes = {};
   if (jeton) entetes['X-Jeton'] = jeton;

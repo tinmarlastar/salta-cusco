@@ -79,3 +79,23 @@ CREATE TABLE IF NOT EXISTS visites_etape (
   etape  INTEGER PRIMARY KEY,    -- 0 à 15
   pages  INTEGER NOT NULL DEFAULT 0
 );
+
+-- --------------------------------------------------------------- réactions
+-- Les smileys posés sous une note. Un compteur par couple (note, smiley),
+-- comme les visites comptent par journée : rien ici ne dit QUI a réagi, ni ne
+-- permet de savoir que le même lecteur est revenu. C'est le navigateur qui
+-- retient chez lui le smiley qu'il a posé, pour pouvoir le déplacer ou le
+-- reprendre.
+--
+-- Retirer une réaction décrémente le compteur sans supprimer la ligne : le
+-- vote suivant n'a ainsi jamais à choisir entre insérer et mettre à jour. Une
+-- ligne à zéro reste donc en base ; c'est l'affichage qui l'écarte.
+CREATE TABLE IF NOT EXISTS reactions (
+  contribution_id  TEXT NOT NULL,
+  smiley           TEXT NOT NULL,
+  compte           INTEGER NOT NULL DEFAULT 0,
+  -- La clé primaire sert aussi d'index de lecture : les réactions se
+  -- cherchent toujours par note, qui en est la colonne de tête. Pas d'index
+  -- supplémentaire à créer.
+  PRIMARY KEY (contribution_id, smiley)
+);

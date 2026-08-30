@@ -35,7 +35,7 @@ npx wrangler d1 execute souvenirs --local --file=schema.sql
 npx wrangler dev --local --port 8787
 ```
 
-Worker tests (61 tests, plain `node:test`, no other test runner in the repo).
+Worker tests (74 tests, plain `node:test`, no other test runner in the repo).
 Pass no path: `node --test test/` worked on Node 20 but Node 22 reads the
 directory as a module and fails. Bare `--test` discovers the same files under
 both:
@@ -101,6 +101,9 @@ third party except the map tiles:
   (built for the Andes' unreliable network — nothing is lost, it retries on
   its own); `souvenirs-vue.js` owns the DOM for the "Carnet de route" tab and is the
   only one of the three allowed to read/write `localStorage`.
+- `emojis-vue.js` — the emoji picker behind the `+` under every note. Owns its
+  own DOM, knows nothing of the network; `import()`s the generated list on
+  first open so the 18 KB never load for a reader who doesn't react.
 - `admin.js` — separate moderation page (`admin.html`, `noindex`), gated by its
   own session-only password, can list/delete any contribution across all days.
 

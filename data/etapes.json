@@ -9,9 +9,9 @@
     "hebergement": "Standard",
     "pension": "Pension complète",
     "moto": "Royal Enfield Himalayan 450",
-    "distanceKm": 3036,
-    "pisteKm": 875,
-    "altitudeMaxM": 5152,
+    "distanceKm": 3129,
+    "pisteKm": 695,
+    "altitudeMaxM": 4854,
     "photo": "img/etapes/hero-piste-andes.jpg",
     "presentation": "Une aventure moto à travers les merveilles andines de l'Amérique du Sud : quatre pays de haute altitude en quinze jours. Au départ de Salta, en Argentine, on traverse les paysages grandioses du nord chilien et du désert d'Atacama, puis le sud de la Bolivie et ses lagunes colorées, jusqu'à l'unique Salar de Uyuni, le plus vaste désert de sel du monde. Le périple continue en Bolivie avant d'atteindre les rives mystiques du lac Titicaca, le plus haut lac navigable de la planète, puis traverse le sud du Pérou pour s'achever à Cusco, porte d'entrée inca du monde andin.",
     "pays": [
@@ -83,48 +83,44 @@
     },
     {
       "jour": 4,
-      "titre": "Susques → San Pedro de Atacama",
+      "titre": "Susques → Jama",
       "ride": true,
-      "pays": ["AR", "CL"],
-      "km": 274,
+      "pays": ["AR"],
+      "km": 115,
       "kmPiste": 0,
       "depart": { "nom": "Susques", "lat": -23.3992, "lon": -66.3676, "altitudeM": 3609 },
-      "arrivee": { "nom": "San Pedro de Atacama", "lat": -22.9110, "lon": -68.2005, "altitudeM": 2444 },
+      "arrivee": { "nom": "Jama", "lat": -23.2399, "lon": -67.0176, "altitudeM": 4094 },
       "recit": "Aujourd'hui on passe au Chili. La première frontière du voyage, El Paso de Jama, à 4 200 mètres d'altitude, nous attend afin de traverser la cordillère des Andes d'est en ouest. Une zone totalement désolée où nous ne croiserons aucune âme pendant plus de 200 kilomètres à travers la montagne. L'arrivée au Chili par le désert d'Atacama est tout simplement splendide : une immensité comme peu d'endroits dans le monde, une vue à plus de 250 kilomètres à la ronde. Bienvenue dans le désert le plus aride du monde.",
-      "points": [
-        { "nom": "Paso de Jama", "lat": -23.2350, "lon": -67.0300, "altitudeM": 4200, "note": "Première frontière du voyage, Argentine → Chili.", "frontiere": true }
-      ],
+      "points": [],
       "photos": ["img/etapes/j04-paso-de-jama.jpg"]
     },
     {
       "jour": 5,
-      "titre": "San Pedro de Atacama → Laguna Colorada",
+      "titre": "Jama → Ollagüe",
       "ride": true,
-      "pays": ["CL", "BO"],
-      "km": 145,
-      "kmPiste": 100,
-      "depart": { "nom": "San Pedro de Atacama", "lat": -22.9110, "lon": -68.2005, "altitudeM": 2444 },
-      "arrivee": { "nom": "Laguna Colorada", "lat": -22.2063, "lon": -67.7794, "altitudeM": 4288 },
+      "pays": ["AR", "CL"],
+      "km": 454,
+      "kmPiste": 0,
+      "depart": { "nom": "Jama", "lat": -23.2399, "lon": -67.0176, "altitudeM": 4094 },
+      "arrivee": { "nom": "Ollagüe", "lat": -21.2242, "lon": -68.2535, "altitudeM": 3704 },
       "recit": "D'Atacama au Sud Lipez. Nous prenons de la hauteur aujourd'hui et rentrons en Bolivie dès le matin. Nouveau paysage de frontière à plus de 4 400 mètres d'altitude, et s'ouvrent devant nous les grandes lagunes colorées du sud bolivien. Une piste sablonneuse et poussiéreuse de plus de 100 kilomètres nous attend cet après-midi. Un bon niveau off-road est nécessaire pour réaliser cette étape qui nous emmène dans l'un des recoins les plus isolés des Andes. Un spectacle pour les yeux et un vrai plaisir de pilotage sur ces pistes de haute montagne, avec des passages à plus de 5 000 mètres. Nous dormons dans un refuge à 4 400 mètres : rustique, mais authentique.",
       "points": [
-        { "nom": "Hito Cajón", "lat": -22.8807, "lon": -67.7986, "altitudeM": 4483, "note": "Deuxième frontière : Chili → Bolivie, à 4 480 mètres.", "frontiere": true },
-        { "nom": "Laguna Verde", "lat": -22.7830, "lon": -67.8180, "altitudeM": 4355, "note": "Au pied du volcan Licancabur." },
-        { "nom": "Sol de Mañana", "lat": -22.4300, "lon": -67.7500, "altitudeM": 4885, "note": "Champ de geysers et de fumerolles, point haut de l'étape." }
+        { "nom": "Paso de Jama", "lat": -23.2350, "lon": -67.0300, "altitudeM": 4200, "note": "Première frontière du voyage, Argentine → Chili.", "frontiere": true }
       ],
       "photos": ["img/etapes/j05-laguna-colorada.jpg", "img/etapes/j05-lagunes-vue-aerienne.jpg"]
     },
     {
       "jour": 6,
-      "titre": "Laguna Colorada → Uyuni",
+      "titre": "Ollagüe → Uyuni",
       "ride": true,
-      "pays": ["BO"],
-      "km": 285,
-      "kmPiste": 200,
-      "depart": { "nom": "Laguna Colorada", "lat": -22.2063, "lon": -67.7794, "altitudeM": 4288 },
+      "pays": ["CL", "BO"],
+      "km": 228,
+      "kmPiste": 120,
+      "depart": { "nom": "Ollagüe", "lat": -21.2242, "lon": -68.2535, "altitudeM": 3704 },
       "arrivee": { "nom": "Uyuni", "lat": -20.4628, "lon": -66.8239, "altitudeM": 3675 },
       "recit": "La traversée du Grand Sud Lipez continue vers le nord, à travers les déserts et les volcans à plus de 5 500 mètres. Nous sommes seuls au monde. Nous croiserons sur notre chemin le mythique arbre de pierre bolivien, une incroyable formation rocheuse dessinée par les vents de ces dix derniers millions d'années. Une piste intense ce matin : de la tôle ondulée, du sable, de la poussière, jusqu'à retrouver la route nationale 5 qui nous conduira à la ville d'Uyuni, où nous passerons la nuit.",
       "points": [
-        { "nom": "Árbol de Piedra", "lat": -22.0517, "lon": -67.8829, "altitudeM": 4576, "note": "Formation rocheuse sculptée par le vent, au milieu du désert de Siloli." }
+        { "nom": "Avaroa", "lat": -21.2049, "lon": -68.2119, "altitudeM": 3702, "note": "Deuxième frontière : Chili → Bolivie, au bord du salar de Chiguana.", "frontiere": true }
       ],
       "photos": ["img/etapes/j06-arbol-de-piedra.jpg"]
     },

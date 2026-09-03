@@ -90,7 +90,7 @@
       "kmPiste": 0,
       "depart": { "nom": "Susques", "lat": -23.3992, "lon": -66.3676, "altitudeM": 3609 },
       "arrivee": { "nom": "Jama", "lat": -23.2399, "lon": -67.0176, "altitudeM": 4094 },
-      "recit": "Aujourd'hui on passe au Chili. La première frontière du voyage, El Paso de Jama, à 4 200 mètres d'altitude, nous attend afin de traverser la cordillère des Andes d'est en ouest. Une zone totalement désolée où nous ne croiserons aucune âme pendant plus de 200 kilomètres à travers la montagne. L'arrivée au Chili par le désert d'Atacama est tout simplement splendide : une immensité comme peu d'endroits dans le monde, une vue à plus de 250 kilomètres à la ronde. Bienvenue dans le désert le plus aride du monde.",
+      "recit": "L'étape devait mener à San Pedro de Atacama. Elle s'arrêtera 115 kilomètres après Susques : le vent souffle à 70 km/h sur le Paso de Jama, il fait −15 °C là-haut, et le poste frontière chilien est fermé. On monte quand même la Ruta 52 jusqu'à Jama, dernier hameau argentin avant le col, à 4 094 mètres — et on y reste. Vingt-quatre heures d'attente ; la frontière doit rouvrir demain matin. Le soir, on espère encore rattraper la Laguna Colorada mardi. Courte journée de moto, longue leçon d'altiplano : ici ce n'est pas la carte qui décide, c'est le temps qu'il fait.",
       "points": [],
       "photos": ["img/etapes/j04-paso-de-jama.jpg"]
     },
@@ -103,9 +103,12 @@
       "kmPiste": 0,
       "depart": { "nom": "Jama", "lat": -23.2399, "lon": -67.0176, "altitudeM": 4094 },
       "arrivee": { "nom": "Ollagüe", "lat": -21.2242, "lon": -68.2535, "altitudeM": 3704 },
-      "recit": "D'Atacama au Sud Lipez. Nous prenons de la hauteur aujourd'hui et rentrons en Bolivie dès le matin. Nouveau paysage de frontière à plus de 4 400 mètres d'altitude, et s'ouvrent devant nous les grandes lagunes colorées du sud bolivien. Une piste sablonneuse et poussiéreuse de plus de 100 kilomètres nous attend cet après-midi. Un bon niveau off-road est nécessaire pour réaliser cette étape qui nous emmène dans l'un des recoins les plus isolés des Andes. Un spectacle pour les yeux et un vrai plaisir de pilotage sur ces pistes de haute montagne, avec des passages à plus de 5 000 mètres. Nous dormons dans un refuge à 4 400 mètres : rustique, mais authentique.",
+      "recit": "Le vent est tombé, il ne fait plus que −9 °C : la frontière rouvre. Il faut rattraper la journée perdue, et c'est le Sud Lipez qui en fait les frais — on renonce aux lagunes pour filer plein nord. Ce sera la plus longue étape du voyage : 490 kilomètres. Le Paso de Jama d'abord, franchi à 4 900 mètres, puis l'immense descente sur le désert d'Atacama, une vue à 250 kilomètres à la ronde. On traverse San Pedro, on contourne Calama et son cuivre, on remonte le long du salar d'Ascotán. Arrivée en fin de journée à Ollagüe, sous le volcan du même nom, la Bolivie à quelques kilomètres.",
       "points": [
-        { "nom": "Paso de Jama", "lat": -23.2350, "lon": -67.0300, "altitudeM": 4200, "note": "Première frontière du voyage, Argentine → Chili.", "frontiere": true }
+        { "nom": "Paso de Jama", "lat": -23.2350, "lon": -67.0300, "altitudeM": 4200, "note": "Première frontière du voyage, Argentine → Chili. Rouverte au matin après vingt-quatre heures de fermeture.", "frontiere": true },
+        { "nom": "San Pedro de Atacama", "lat": -22.9110, "lon": -68.2005, "altitudeM": 2444, "note": "Le désert le plus aride du monde. L'étape d'origine devait y dormir ; on ne fait qu'y passer." },
+        { "nom": "Calama (contournée)", "lat": -22.4544, "lon": -68.9294, "altitudeM": 2302, "note": "La ville du cuivre, laissée de côté." },
+        { "nom": "Salar d'Ascotán", "lat": -21.5706, "lon": -68.2755, "altitudeM": 3724, "note": "Le lac salé que la route longe en remontant vers l'altiplano." }
       ],
       "photos": ["img/etapes/j05-laguna-colorada.jpg", "img/etapes/j05-lagunes-vue-aerienne.jpg"]
     },
@@ -118,9 +121,11 @@
       "kmPiste": 120,
       "depart": { "nom": "Ollagüe", "lat": -21.2242, "lon": -68.2535, "altitudeM": 3704 },
       "arrivee": { "nom": "Uyuni", "lat": -20.4628, "lon": -66.8239, "altitudeM": 3675 },
-      "recit": "La traversée du Grand Sud Lipez continue vers le nord, à travers les déserts et les volcans à plus de 5 500 mètres. Nous sommes seuls au monde. Nous croiserons sur notre chemin le mythique arbre de pierre bolivien, une incroyable formation rocheuse dessinée par les vents de ces dix derniers millions d'années. Une piste intense ce matin : de la tôle ondulée, du sable, de la poussière, jusqu'à retrouver la route nationale 5 qui nous conduira à la ville d'Uyuni, où nous passerons la nuit.",
+      "recit": "Troisième pays. La douane bolivienne se passe à Avaroa, à quelques kilomètres d'Ollagüe, et la piste commence aussitôt : le salar de Chiguana s'ouvre devant nous, blanc et plat jusqu'à l'horizon. Étape mixte, 120 kilomètres de piste et le reste d'asphalte, à travers l'altiplano du Nor Lípez. On traverse San Cristóbal, village entier déplacé pierre à pierre à la fin des années 1990 pour laisser la place à sa mine, avant de retrouver la route qui mène à Uyuni. Bel hôtel à l'arrivée — pour une fois, ça change.",
       "points": [
-        { "nom": "Avaroa", "lat": -21.2049, "lon": -68.2119, "altitudeM": 3702, "note": "Deuxième frontière : Chili → Bolivie, au bord du salar de Chiguana.", "frontiere": true }
+        { "nom": "Avaroa", "lat": -21.2049, "lon": -68.2119, "altitudeM": 3702, "note": "Deuxième frontière : Chili → Bolivie.", "frontiere": true },
+        { "nom": "Salar de Chiguana", "lat": -21.1479, "lon": -68.1915, "altitudeM": 3700, "note": "Longé dès la sortie de la douane : le premier salar bolivien du voyage." },
+        { "nom": "San Cristóbal", "lat": -21.1540, "lon": -67.1662, "altitudeM": 3762, "note": "Village déplacé en entier pour laisser la place à la mine d'argent." }
       ],
       "photos": ["img/etapes/j06-arbol-de-piedra.jpg"]
     },

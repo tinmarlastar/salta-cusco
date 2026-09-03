@@ -68,8 +68,8 @@ const HEURE_BASCULE = 20;
 export const FUSEAU_PAR_JOUR = {
   2: 'America/Argentina/Salta',
   3: 'America/Argentina/Salta',
-  4: 'America/Santiago',
-  5: 'America/La_Paz',
+  4: 'America/Argentina/Salta',
+  5: 'America/Santiago',
   6: 'America/La_Paz',
   7: 'America/La_Paz',
   8: 'America/La_Paz',

@@ -234,7 +234,7 @@ test('le calendrier est vide sans date de départ', async () => {
 test('fuseauDuJour rend le fuseau de la ville où l\'on dort ce soir-là', () => {
   assert.equal(fuseauDuJour(7), 'America/La_Paz');
   assert.equal(fuseauDuJour(12), 'America/Lima');
-  assert.equal(fuseauDuJour(4), 'America/Santiago');
+  assert.equal(fuseauDuJour(5), 'America/Santiago');
 });
 
 /* J1 est le rassemblement à Salta, pas une journée roulée : la table des

@@ -9,9 +9,9 @@ aucune API : tout ce que ce script produit est figé sur disque.
 
 Chaque étape est une suite de segments. Un segment « route » est calculé par
 OSRM, qui suit le vrai bitume. Un segment « piste » est tracé à la main : là où
-le voyage quitte le réseau routier — la piste du Sud Lipez et la traversée du
-salar d'Uyuni — OSRM propose un détour de plusieurs dizaines de kilomètres par
-la route nationale, ce qui ne ressemble en rien au trajet réel.
+le voyage quitte le réseau routier — la traversée du salar d'Uyuni — OSRM
+propose un détour de plusieurs dizaines de kilomètres par la route nationale,
+ce qui ne ressemble en rien au trajet réel.
 
 Les altitudes viennent d'OpenTopoData (modèle SRTM 90 m) et sont écrites comme
 troisième coordonnée de chaque point, ce qui alimente le profil d'altitude.
@@ -47,8 +47,8 @@ PAS_ALTITUDE = 2.0
 SALTA = (-24.7859, -65.4117)
 HUMAHUACA = (-23.2044, -65.3489)
 SUSQUES = (-23.3992, -66.3676)
-SAN_PEDRO = (-22.9110, -68.2005)
-LAGUNA_COLORADA = (-22.2063, -67.7794)
+JAMA = (-23.2399, -67.0176)
+OLLAGUE = (-21.2242, -68.2535)
 UYUNI = (-20.4628, -66.8239)
 TAHUA = (-19.9800, -67.6200)
 ORURO = (-17.9696, -67.1147)
@@ -58,23 +58,8 @@ MACUSANI = (-14.0572, -70.4570)
 QUINCE_MIL = (-13.2308, -70.7543)
 CUSCO = (-13.5168, -71.9788)
 
-HITO_CAJON = (-22.8807, -67.7986)
 COLCHANI = (-20.3000, -66.9333)
 INCAHUASI = (-20.2426, -67.6256)
-
-# Piste du Sud Lipez, du poste frontière bolivien jusqu'au refuge de la Laguna
-# Colorada, par les lagunes et les geysers. Tracé à la main faute de route.
-PISTE_SUD_LIPEZ = [
-    HITO_CAJON,
-    (-22.7970, -67.8330),   # Laguna Blanca
-    (-22.7830, -67.8180),   # Laguna Verde, au pied du Licancabur
-    (-22.7200, -67.7500),
-    (-22.6300, -67.6900),   # Desierto de Dalí
-    (-22.5300, -67.6600),   # Termas de Polques
-    (-22.4300, -67.7500),   # Sol de Mañana
-    (-22.3000, -67.8000),
-    LAGUNA_COLORADA,
-]
 
 # Traversée du salar d'Uyuni. « Ici on roule à la boussole, direction
 # Nord-Ouest » : des lignes droites, ce que le réseau routier ne sait pas dire.
@@ -86,13 +71,28 @@ ETAPES = [
                    (-23.1974, -65.1935), HUMAHUACA])]},
     {"jour": 3, "km_brochure": 217, "segments": [
         ("route", [HUMAHUACA, (-23.7466, -65.4992), (-23.5964, -65.8823), SUSQUES])]},
-    {"jour": 4, "km_brochure": 274, "segments": [
-        ("route", [SUSQUES, SAN_PEDRO])]},
-    {"jour": 5, "km_brochure": 145, "segments": [
-        ("route", [SAN_PEDRO, HITO_CAJON]),
-        ("piste", PISTE_SUD_LIPEZ)]},
-    {"jour": 6, "km_brochure": 285, "segments": [
-        ("route", [LAGUNA_COLORADA, (-22.0517, -67.8829), UYUNI])]},
+    # Étapes 4, 5 et 6 : itinéraire modifié en cours de voyage. San Pedro de
+    # Atacama et la piste du Sud Lipez sont tombés, remplacés par une nuit à
+    # Jama au pied du col, une longue liaison jusqu'à Ollagüe et l'entrée en
+    # Bolivie par Avaroa. Ces trois étapes n'ont donc plus de brochure à qui se
+    # comparer : `km_brochure` y répète la distance calculée, arrondie, et
+    # l'écart imprimé — nul par construction — n'y sert plus de garde-fou. Le
+    # laisser vide aurait été plus franc, mais il faudrait alors une exception
+    # dans la boucle et dans les propriétés du geojson, pour trois lignes de
+    # données ; les neuf autres étapes gardent un écart qui veut dire quelque
+    # chose, et c'est là que se joue la vérification.
+    {"jour": 4, "km_brochure": 115, "segments": [
+        ("route", [SUSQUES, JAMA])]},
+    # La liaison la plus longue du voyage : le Paso de Jama, la descente sur
+    # l'Atacama, puis plein nord jusqu'à Ollagüe. Aucun point de passage forcé —
+    # il n'existe qu'une route, OSRM la trouve seul.
+    {"jour": 5, "km_brochure": 454, "segments": [
+        ("route", [JAMA, OLLAGUE])]},
+    # Plus de segment tracé à la main ici : la piste Avaroa – Alota – San
+    # Cristóbal est cartographiée dans OSM, et OSRM la suit au lieu de proposer
+    # le détour par la nationale qui avait motivé les tracés manuels.
+    {"jour": 6, "km_brochure": 228, "segments": [
+        ("route", [OLLAGUE, UYUNI])]},
     {"jour": 7, "km_brochure": 140, "segments": [
         ("route", [UYUNI, COLCHANI]),
         ("piste", PISTE_SALAR)]},

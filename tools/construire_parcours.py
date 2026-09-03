@@ -75,18 +75,22 @@ ETAPES = [
     # Atacama et la piste du Sud Lipez sont tombés, remplacés par une nuit à
     # Jama au pied du col, une longue liaison jusqu'à Ollagüe et l'entrée en
     # Bolivie par Avaroa. Ces trois étapes n'ont donc plus de brochure à qui se
-    # comparer : `km_brochure` y répète la distance calculée, arrondie, et
-    # l'écart imprimé — nul par construction — n'y sert plus de garde-fou. Le
-    # laisser vide aurait été plus franc, mais il faudrait alors une exception
-    # dans la boucle et dans les propriétés du geojson, pour trois lignes de
-    # données ; les neuf autres étapes gardent un écart qui veut dire quelque
-    # chose, et c'est là que se joue la vérification.
+    # comparer, et leur `km_brochure` ne vient plus d'elle. Le jour 5 porte le
+    # relevé du compteur d'un motard, écrit le soir même dans le carnet de
+    # route : c'est une mesure du terrain, l'écart imprimé y vérifie donc
+    # encore quelque chose. Les jours 4 et 6 n'ont rien de tel et répètent la
+    # distance calculée, arrondie ; leur écart est nul par construction et ne
+    # vérifie rien. Laisser le champ vide aurait été plus franc, mais il
+    # faudrait alors une exception dans la boucle et dans les propriétés du
+    # geojson, pour deux lignes de données ; les neuf autres étapes gardent un
+    # écart qui veut dire quelque chose, et c'est là que se joue la
+    # vérification.
     {"jour": 4, "km_brochure": 115, "segments": [
         ("route", [SUSQUES, JAMA])]},
     # La liaison la plus longue du voyage : le Paso de Jama, la descente sur
     # l'Atacama, puis plein nord jusqu'à Ollagüe. Aucun point de passage forcé —
     # il n'existe qu'une route, OSRM la trouve seul.
-    {"jour": 5, "km_brochure": 454, "segments": [
+    {"jour": 5, "km_brochure": 490, "segments": [
         ("route", [JAMA, OLLAGUE])]},
     # Plus de segment tracé à la main ici : la piste Avaroa – Alota – San
     # Cristóbal est cartographiée dans OSM, et OSRM la suit au lieu de proposer

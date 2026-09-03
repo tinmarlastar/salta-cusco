@@ -1,5 +1,5 @@
 /* Carte Leaflet : fonds, traces, jalons et curseur de profil.
-   Aucune clé d'API : les trois fonds sont libres d'accès avec attribution. */
+   Aucune clé d'API : les deux fonds sont libres d'accès avec attribution. */
 
 const FONDS = {
   satellite: {
@@ -11,14 +11,10 @@ const FONDS = {
     url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
     options: { maxZoom: 17, attribution: '© OpenTopoMap, © contributeurs OpenStreetMap' },
   },
-  plan: {
-    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-    options: { maxZoom: 19, attribution: '© CARTO, © contributeurs OpenStreetMap' },
-  },
 };
 
 // Vue d'ensemble (aucune étape choisie) : le tracé complet en blanc du sel,
-// bien visible sur les trois fonds de carte.
+// bien visible sur les deux fonds de carte.
 const TRAIT_ENSEMBLE = { color: '#edebe4', weight: 2.5, opacity: .9 };
 // Une étape est choisie : les autres jours s'effacent pour la faire ressortir.
 const TRAIT_DORMANT = { color: '#8e99ae', weight: 2, opacity: .4 };

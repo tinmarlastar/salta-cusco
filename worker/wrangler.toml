@@ -15,4 +15,4 @@ bucket_name = "souvenirs-medias"
 
 [vars]
 # Origines autorisées à appeler le service, séparées par des virgules.
-ORIGINES_AUTORISEES = "https://tinmarlastar.github.io,http://localhost:8123,http://127.0.0.1:8123"
+ORIGINES_AUTORISEES = "https://tinmarlastar.github.io,https://hub.tinmarlastar.workers.dev,http://localhost:8123,http://127.0.0.1:8123,http://localhost:8807"

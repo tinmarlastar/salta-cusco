@@ -9,8 +9,8 @@
     "hebergement": "Standard",
     "pension": "Pension complète",
     "moto": "Royal Enfield Himalayan 450",
-    "distanceKm": 3165,
-    "pisteKm": 695,
+    "distanceKm": 3156,
+    "pisteKm": 586,
     "altitudeMaxM": 4854,
     "photo": "img/etapes/hero-piste-andes.jpg",
     "presentation": "Une aventure moto à travers les merveilles andines de l'Amérique du Sud : quatre pays de haute altitude en quinze jours. Au départ de Salta, en Argentine, on traverse les paysages grandioses du nord chilien et du désert d'Atacama, puis le sud de la Bolivie et ses hauts plateaux déserts, jusqu'à l'unique Salar de Uyuni, le plus vaste désert de sel du monde. Le périple continue en Bolivie avant d'atteindre les rives mystiques du lac Titicaca, le plus haut lac navigable de la planète, puis traverse le sud du Pérou pour s'achever à Cusco, porte d'entrée inca du monde andin.",
@@ -131,32 +131,31 @@
     },
     {
       "jour": 7,
-      "titre": "Uyuni → Tahua",
+      "titre": "Uyuni → Uyuni",
       "ride": true,
       "pays": ["BO"],
-      "km": 140,
-      "kmPiste": 140,
+      "km": 120,
+      "kmPiste": 76,
       "depart": { "nom": "Uyuni", "lat": -20.4628, "lon": -66.8239, "altitudeM": 3675 },
-      "arrivee": { "nom": "Tahua", "lat": -19.9800, "lon": -67.6200, "altitudeM": 3661 },
-      "recit": "Le grand jour est arrivé : la traversée intégrale en moto du plus grand salar du monde. 11 000 km² de sel, que nous allons traverser sur 140 kilomètres. Une étendue d'un blanc pur à perte de vue. Ici on roule à la boussole, direction nord-ouest. On vise l'une des grandes îles en plein milieu du salar d'Uyuni, l'Isla Pescado. Nous organiserons un pique-nique inoubliable sur l'île, avec une vue unique sur le salar entouré de cactus centenaires de haute altitude. Sans nul doute, ce ride restera l'une des journées les plus mémorables dans la vie d'un motard. Arrivée en fin de journée au nord du salar, dans le petit village de Tahua, où nous dormirons dans un hôtel de sel. Un coucher de soleil splendide pour terminer une journée bien salée.",
+      "arrivee": { "nom": "Uyuni", "lat": -20.4628, "lon": -66.8239, "altitudeM": 3675 },
+      "recit": "La traversée intégrale du salar devait mener à Tahua, cent quarante kilomètres de sel jusqu'à l'hôtel du nord. Elle s'arrête au soixantième : un motard est blessé. Il est évacué en ambulance jusqu'à La Paz — huit heures de route — et le groupe fait demi-tour. On avait quitté l'asphalte à Colchani et roulé trente-huit kilomètres sur le blanc, assez pour voir ce que c'est, cette étendue plate à perte de vue où l'on navigue à la boussole. Retour par la même trace, et nuit à Uyuni. L'Isla Incahuasi et ses cactus centenaires attendront : le salar aura été vu, pas traversé.",
       "points": [
-        { "nom": "Colchani", "lat": -20.3000, "lon": -66.9333, "altitudeM": 3668, "note": "Entrée sur le salar, dernier village avant le sel." },
-        { "nom": "Isla Incahuasi", "lat": -20.2426, "lon": -67.6256, "altitudeM": 3707, "note": "L'île aux cactus centenaires, au milieu du désert de sel. Pique-nique." }
+        { "nom": "Colchani", "lat": -20.3000, "lon": -66.9333, "altitudeM": 3668, "note": "Entrée sur le salar, dernier village avant le sel. Franchi deux fois." },
+        { "nom": "Demi-tour", "lat": -20.2701, "lon": -67.2939, "altitudeM": 3658, "note": "Soixantième kilomètre : un motard blessé, évacué en ambulance sur La Paz. Le groupe rentre à Uyuni." }
       ],
       "photos": ["img/etapes/j07-salar-uyuni.jpg", "img/etapes/hero-salar.jpg"]
     },
     {
       "jour": 8,
-      "titre": "Tahua → Oruro",
+      "titre": "Uyuni → Oruro",
       "ride": true,
       "pays": ["BO"],
-      "km": 305,
-      "kmPiste": 45,
-      "depart": { "nom": "Tahua", "lat": -19.9800, "lon": -67.6200, "altitudeM": 3661 },
+      "km": 316,
+      "kmPiste": 0,
+      "depart": { "nom": "Uyuni", "lat": -20.4628, "lon": -66.8239, "altitudeM": 3675 },
       "arrivee": { "nom": "Oruro", "lat": -17.9696, "lon": -67.1147, "altitudeM": 3730 },
-      "recit": "On continue notre traversée de la Bolivie du sud au nord, en démarrant la journée par 45 kilomètres de piste autour du volcan Tunupa, culminant à plus de 5 400 mètres. Un vrai spectacle. Déjeuner au bord du lac Poopó, dans le village de Challapata, pour s'imprégner de la culture andine. Puis nous reprenons la route en direction d'Oruro, la mythique ville minière d'altitude du pays, très connue pour son carnaval classé par l'Unesco.",
+      "recit": "Le salar est derrière nous, et le volcan Tunupa avec lui : la journée ne commence plus au bord du sel mais dans les rues d'Uyuni. Trois cent seize kilomètres d'asphalte plein nord à travers l'altiplano bolivien, sans un mètre de piste — de quoi laisser souffler le groupe. On longe la rive du lac Poopó, déjeuner à Challapata pour s'imprégner de la culture andine, puis c'est Oruro, la mythique ville minière d'altitude, connue pour son carnaval classé par l'Unesco.",
       "points": [
-        { "nom": "Volcán Tunupa", "lat": -19.8333, "lon": -67.6413, "altitudeM": 5152, "note": "45 kilomètres de piste autour du volcan qui surplombe le salar." },
         { "nom": "Challapata", "lat": -18.9022, "lon": -66.7751, "altitudeM": 3727, "note": "Déjeuner au bord du lac Poopó." }
       ],
       "photos": ["img/etapes/j08-carnaval-oruro.jpg"]

@@ -9,7 +9,7 @@ aucune API : tout ce que ce script produit est figé sur disque.
 
 Chaque étape est une suite de segments. Un segment « route » est calculé par
 OSRM, qui suit le vrai bitume. Un segment « piste » est tracé à la main : là où
-le voyage quitte le réseau routier — la traversée du salar d'Uyuni — OSRM
+le voyage quitte le réseau routier — l'incursion sur le salar d'Uyuni — OSRM
 propose un détour de plusieurs dizaines de kilomètres par la route nationale,
 ce qui ne ressemble en rien au trajet réel.
 
@@ -50,7 +50,6 @@ SUSQUES = (-23.3992, -66.3676)
 JAMA = (-23.2399, -67.0176)
 OLLAGUE = (-21.2242, -68.2535)
 UYUNI = (-20.4628, -66.8239)
-TAHUA = (-19.9800, -67.6200)
 ORURO = (-17.9696, -67.1147)
 COPACABANA = (-16.1666, -69.0856)
 LLACHON = (-15.7229, -69.7839)
@@ -59,11 +58,12 @@ QUINCE_MIL = (-13.2308, -70.7543)
 CUSCO = (-13.5168, -71.9788)
 
 COLCHANI = (-20.3000, -66.9333)
-INCAHUASI = (-20.2426, -67.6256)
 
-# Traversée du salar d'Uyuni. « Ici on roule à la boussole, direction
-# Nord-Ouest » : des lignes droites, ce que le réseau routier ne sait pas dire.
-PISTE_SALAR = [COLCHANI, INCAHUASI, TAHUA]
+# Le point où le jour 7 a fait demi-tour, à soixante kilomètres d'Uyuni : vingt-
+# deux d'asphalte jusqu'à Colchani, puis trente-huit sur le sel. Relevé sur le
+# tracé qui menait à Tahua, pour que l'aller-retour suive exactement la route
+# prévue — c'est bien dessus que le groupe roulait quand il s'est arrêté.
+DEMI_TOUR = (-20.2701, -67.2939)
 
 ETAPES = [
     {"jour": 2, "km_brochure": 280, "segments": [
@@ -71,19 +71,21 @@ ETAPES = [
                    (-23.1974, -65.1935), HUMAHUACA])]},
     {"jour": 3, "km_brochure": 217, "segments": [
         ("route", [HUMAHUACA, (-23.7466, -65.4992), (-23.5964, -65.8823), SUSQUES])]},
-    # Étapes 4, 5 et 6 : itinéraire modifié en cours de voyage. San Pedro de
-    # Atacama et la piste du Sud Lipez sont tombés, remplacés par une nuit à
-    # Jama au pied du col, une longue liaison jusqu'à Ollagüe et l'entrée en
-    # Bolivie par Avaroa. Ces trois étapes n'ont donc plus de brochure à qui se
-    # comparer, et leur `km_brochure` ne vient plus d'elle. Le jour 5 porte le
+    # Étapes 4 à 8 : itinéraire modifié deux fois en cours de voyage. D'abord
+    # la frontière du Paso de Jama fermée par le vent — San Pedro de Atacama et
+    # la piste du Sud Lipez tombent, remplacés par une nuit à Jama, la liaison
+    # jusqu'à Ollagüe et l'entrée en Bolivie par Avaroa. Puis, au jour 7, un
+    # motard blessé sur le salar : demi-tour au soixantième kilomètre, et le
+    # jour 8 repart d'Uyuni au lieu de Tahua. Ces cinq étapes n'ont donc plus de
+    # brochure à qui se comparer, et leur `km_brochure` ne vient plus d'elle. Le jour 5 porte le
     # relevé du compteur d'un motard, écrit le soir même dans le carnet de
     # route : c'est une mesure du terrain, l'écart imprimé y vérifie donc
     # encore quelque chose. Les jours 4 et 6 n'ont rien de tel et répètent la
     # distance calculée, arrondie ; leur écart est nul par construction et ne
     # vérifie rien. Laisser le champ vide aurait été plus franc, mais il
     # faudrait alors une exception dans la boucle et dans les propriétés du
-    # geojson, pour deux lignes de données ; les neuf autres étapes gardent un
-    # écart qui veut dire quelque chose, et c'est là que se joue la
+    # geojson, pour quatre lignes de données ; les sept étapes intactes gardent
+    # un écart qui veut dire quelque chose, et c'est là que se joue la
     # vérification.
     {"jour": 4, "km_brochure": 115, "segments": [
         ("route", [SUSQUES, JAMA])]},
@@ -97,11 +99,18 @@ ETAPES = [
     # le détour par la nationale qui avait motivé les tracés manuels.
     {"jour": 6, "km_brochure": 228, "segments": [
         ("route", [OLLAGUE, UYUNI])]},
-    {"jour": 7, "km_brochure": 140, "segments": [
+    # L'aller et le retour sont écrits séparément plutôt que par un miroir
+    # calculé : quatre segments qui se lisent comme la journée s'est passée,
+    # et le tracé se superpose à lui-même sur la carte — ce qui est la vérité.
+    {"jour": 7, "km_brochure": 120, "segments": [
         ("route", [UYUNI, COLCHANI]),
-        ("piste", PISTE_SALAR)]},
-    {"jour": 8, "km_brochure": 305, "segments": [
-        ("route", [TAHUA, (-19.8333, -67.6413), (-18.9022, -66.7751), ORURO])]},
+        ("piste", [COLCHANI, DEMI_TOUR]),
+        ("piste", [DEMI_TOUR, COLCHANI]),
+        ("route", [COLCHANI, UYUNI])]},
+    # Plus de point de passage forcé : la nationale traverse Challapata, OSRM y
+    # passe seul, et le jalon de l'étape tombe à 200 mètres du tracé.
+    {"jour": 8, "km_brochure": 316, "segments": [
+        ("route", [UYUNI, ORURO])]},
     {"jour": 9, "km_brochure": 350, "segments": [
         ("route", [ORURO, COPACABANA])]},
     {"jour": 11, "km_brochure": 240, "segments": [

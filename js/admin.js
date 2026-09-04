@@ -575,7 +575,7 @@ function gabaritModuleModeration(contributions) {
   return menu + corps;
 }
 
-/* Le module Visites : des cartes de chiffres, mais sans jauge. Il n'y a pas de
+/* Le module Visiteurs : des cartes de chiffres, mais sans jauge. Il n'y a pas de
    plafond à la fréquentation, et une barre qui se remplit y aurait suggéré un
    quota inexistant. */
 
@@ -689,7 +689,7 @@ function gabaritNav() {
   return `<nav class="admin-nav" aria-label="Modules de l'administration">
     ${entree('position', 'Où en sont les motos')}
     ${entree('souvenirs', 'Modération')}
-    ${entree('visites', 'Visites')}
+    ${entree('visites', 'Visiteurs')}
   </nav>`;
 }
 

@@ -1247,11 +1247,21 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
   background: var(--nuit-3);
 }
 
+/* `pre-line` et non `normal` : une note est tapée au pouce, le soir, sur un
+   téléphone — les retours à la ligne qu'on y met sont du sens, pas de la mise
+   en forme, et le HTML les écrasait en espaces. Les trois écrans qui affichent
+   une note partagent cette règle : la fiche d'étape, l'aperçu de la file
+   d'envoi et la modération.
+
+   `pre-line` plutôt que `pre-wrap` : il garde les retours à la ligne mais
+   ramène les suites d'espaces à un seul. Sur un clavier de téléphone, les
+   espaces en trop sont des accidents ; les retours à la ligne, non. */
 .souvenir__texte {
   margin: 0;
   font-size: .875rem;
   line-height: 1.55;
   color: var(--texte-2);
+  white-space: pre-line;
 }
 
 .souvenir__actions { display: flex; gap: .5rem; margin: .375rem 0 0; }

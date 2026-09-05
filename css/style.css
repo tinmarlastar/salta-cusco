@@ -1511,6 +1511,35 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
 }
 .souvenir__retirer:hover { background: var(--colorada); }
 
+/* En modération, la croix ne supprime pas : elle marque, et le retrait ne
+   devient réel qu'au « Enregistrer ». Une photo marquée doit donc se lire comme
+   une intention — encore là, mais clairement mise de côté — et non comme un
+   trou : on doit pouvoir reconnaître ce qu'on s'apprête à perdre, et le rendre
+   d'un clic.
+
+   La marque ne peut donc PAS reposer sur la seule opacité. Le carnet est plein
+   de photos de sel et de ciel : à 30 % sur fond clair, une traversée de salar
+   disparaît pour de bon, et l'écran ment sur ce qu'il propose d'effacer. D'où
+   un cadre plein et des hachures, qui tiennent aussi bien sur une photo
+   blanche que sur une nuit d'altiplano, et une décoloration mesurée par-dessus.
+
+   Le rouge est celui de la Laguna Colorada, que le site emploie déjà partout
+   où quelque chose se retire. */
+.souvenir__figure.est-retire .souvenir__media { opacity: .65; filter: grayscale(1); }
+.souvenir__figure.est-retire .souvenir__lecture { opacity: .35; }
+.souvenir__figure.est-retire .souvenir__retirer { background: var(--colorada); }
+.souvenir__figure.est-retire::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 2px solid var(--colorada);
+  /* Hachures fines plutôt qu'un voile uni : un voile assombrit une photo claire
+     et éclaircit une photo sombre, les hachures se voient sur les deux. */
+  background: repeating-linear-gradient(-45deg,
+    transparent 0 7px, color-mix(in srgb, var(--colorada) 22%, transparent) 7px 10px);
+  pointer-events: none;
+}
+
 .souvenir.est-en-attente { opacity: .6; border-left: 2px solid var(--soufre); }
 /* Une entrée qui attend le réseau se fait discrète ; une entrée qui attend un
    geste de l'auteur, non. */

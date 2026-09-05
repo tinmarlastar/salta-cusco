@@ -11,8 +11,8 @@
 
 import {
   chargerConfig, listerTout, supprimerContribution, modifierContribution,
-  lireReglagesPosition, ecrirePosition, lireVisites, lireCalendrier,
-  ErreurService,
+  supprimerFichier, lireReglagesPosition, ecrirePosition, lireVisites,
+  lireCalendrier, ErreurService,
 } from './souvenirs.js';
 import {
   gabaritGalerie, brancherVisionneuse, dateDeLaNote, paysDeLaJournee,
@@ -29,6 +29,12 @@ let motDePasse = sessionStorage.getItem('souvenirs.admin') || '';
 // Quel module afficher : « position » par défaut, le geste le plus courant
 // une fois le voyage commencé.
 let ongletAdmin = 'position';
+
+// La dernière liste rendue par le service, gardée pour l'édition : ouvrir
+// « Modifier » doit redessiner la galerie avec ses croix de retrait, et les
+// fichiers d'une note ne sont écrits nulle part dans le HTML de sa carte. On la
+// relit à chaque affichage, elle ne fait donc que suivre ce que le service dit.
+let contributionsChargees = [];
 
 // Journée choisie dans le menu de modération ; `null` signifie « toutes ».
 // Gardée hors de `afficher()`, qui redessine tout après chaque suppression :
@@ -443,15 +449,18 @@ function gabaritModulePosition() {
    texte et jusqu'à la clé du média passent par `echapper`, y compris en
    position d'attribut ou d'URL — c'est cette page qui en a le plus besoin,
    puisqu'elle affiche justement ce que la modération n'a pas encore vu. */
+/* Tous les fichiers d'une note, pas seulement le premier : supprimer une
+   contribution emporte tout ce qu'elle porte. `media` au singulier reste le
+   repli pour un service pas encore redéployé. Sorti de `gabaritContribution`
+   parce que l'édition en a besoin aussi, pour redessiner la galerie. */
+function fichiersDe(contribution) {
+  if (contribution.medias?.length) return contribution.medias;
+  return contribution.media ? [contribution.media] : [];
+}
+
 function gabaritContribution(contribution) {
   const pays = paysArrivee.get(contribution.jour) || null;
-  // Tous les fichiers, pas seulement le premier : supprimer une contribution
-  // emporte tout ce qu'elle porte. `media` au singulier reste le repli pour
-  // un service pas encore redéployé.
-  const medias = contribution.medias?.length
-    ? contribution.medias
-    : (contribution.media ? [contribution.media] : []);
-  const apercu = gabaritGalerie(medias);
+  const apercu = gabaritGalerie(fichiersDe(contribution));
   // Le texte d'origine voyage sur l'article : c'est lui qu'on remet dans la
   // zone de saisie à l'ouverture, et qu'on rétablit sur « Annuler », sans
   // avoir à retrouver la contribution dans la liste chargée.
@@ -484,8 +493,24 @@ function gabaritContribution(contribution) {
    route, au même titre que le jeton de l'auteur — avant, la seule façon de
    rattraper une faute de frappe depuis ici était de supprimer la note, et de
    perdre ses photos avec. */
+/* Redessine la galerie d'une carte, croix de retrait comprises ou non.
+
+   `gabaritGalerie` est celui du site public, et son mode `avecRetraits` est
+   exactement ce qu'il faut ici : mêmes croix, même style, rien de neuf à
+   dessiner. La visionneuse n'est pas à rebrancher — elle écoute un conteneur
+   stable dont seul le contenu change. */
+function redessinerGalerie(carte, { avecRetraits }) {
+  const contribution = contributionsChargees.find((c) => c.id === carte.dataset.id);
+  const galerie = carte.querySelector('.souvenir__galerie');
+  if (!contribution || !galerie) return;
+  galerie.outerHTML = gabaritGalerie(fichiersDe(contribution), { avecRetraits });
+}
+
 function ouvrirEdition(carte) {
   if (carte.querySelector('.souvenir__edition')) return;
+  // Les croix n'apparaissent que pendant l'édition : hors de ce moment, un
+  // clic dessus n'aurait rien pour l'appliquer ni rien pour l'annuler.
+  redessinerGalerie(carte, { avecRetraits: true });
 
   const jourActuel = Number(carte.dataset.jour);
   // Les quinze journées, titrées comme dans le menu de filtrage — « J7 · Uyuni
@@ -520,6 +545,9 @@ function ouvrirEdition(carte) {
 }
 
 function fermerEdition(carte) {
+  // La galerie revient intacte : les retraits marqués sont oubliés, comme
+  // l'est le texte tapé dans la zone de saisie. C'est la promesse d'« Annuler ».
+  redessinerGalerie(carte, { avecRetraits: false });
   carte.querySelector('.souvenir__edition')?.remove();
   carte.querySelector('.souvenir__texte')?.removeAttribute('hidden');
   const actions = carte.querySelector('.souvenir__actions');
@@ -532,21 +560,58 @@ async function enregistrerEdition(carte) {
   const texte = champ.value.trim();
   const jour = Number(carte.querySelector('.souvenir__edition select')?.value ?? carte.dataset.jour);
 
-  // Rien n'a bougé : on referme sans rien demander au service. Les deux
-  // champs comptent — déplacer une note sans toucher à son texte est le geste
-  // le plus courant ici.
+  const figures = carte.querySelectorAll('.souvenir__figure');
+  const retires = [...carte.querySelectorAll('.souvenir__figure.est-retire [data-media]')]
+    .map((croix) => croix.dataset.media);
+
+  // Rien n'a bougé : on referme sans rien demander au service. Les trois
+  // gestes comptent — déplacer une note sans toucher à son texte est le plus
+  // courant ici, retirer une photo sans rien récrire vient juste après.
   const memeTexte = texte === (carte.dataset.texte || '');
   const memeJour = jour === Number(carte.dataset.jour);
-  if (memeTexte && memeJour) { fermerEdition(carte); return; }
+  if (memeTexte && memeJour && !retires.length) { fermerEdition(carte); return; }
 
-  try {
-    await modifierContribution({ id: carte.dataset.id, texte, jour, motDePasse });
-  } catch (souci) {
-    // Le refus le plus courant est « La note est vide » : le service interdit
-    // de vider une note qui ne porte aucune photo. Son message est déjà juste
-    // et en français, on l'affiche tel quel.
-    alert(souci instanceof ErreurService ? souci.message : 'Le service ne répond pas, réessaie plus tard.');
+  /* Tout retirer d'une note sans texte la viderait entièrement, et le service
+     ne l'arrêterait pas : son garde-fou accepte une note créée comme « média »
+     même une fois ses fichiers partis, parce qu'il regarde la colonne `type`
+     autant que les fichiers réels. On refuse donc ici, où l'on sait ce que le
+     geste va produire — et on nomme le geste qui convient à cette intention,
+     qui est de supprimer la note, pas de la vider. */
+  if (!texte && figures.length && retires.length === figures.length) {
+    alert('Cette note n\'aurait plus ni texte ni photo. Pour la faire '
+      + 'disparaître, utilise « Supprimer » plutôt que de la vider.');
     return;
+  }
+
+  /* Les retraits d'abord, la note ensuite : le service valide « la note n'est
+     pas vide » au moment du `PATCH`, il doit donc voir l'état final et non un
+     état intermédiaire. Un par un, faute de route qui en prenne plusieurs. */
+  for (const idMedia of retires) {
+    try {
+      await supprimerFichier({ idMedia, motDePasse });
+    } catch (souci) {
+      // On s'arrête au premier échec, et on recharge : des fichiers sont déjà
+      // partis, l'écran doit montrer ce qui s'est réellement passé plutôt que
+      // de laisser croire à un tout-ou-rien que cette boucle n'offre pas.
+      alert(souci instanceof ErreurService ? souci.message : 'Retrait impossible pour le moment.');
+      afficher();
+      return;
+    }
+  }
+
+  if (!memeTexte || !memeJour) {
+    try {
+      await modifierContribution({ id: carte.dataset.id, texte, jour, motDePasse });
+    } catch (souci) {
+      // Le refus le plus courant est « La note est vide » : le service interdit
+      // de vider une note qui ne porte aucune photo. Son message est déjà juste
+      // et en français, on l'affiche tel quel.
+      alert(souci instanceof ErreurService ? souci.message : 'Le service ne répond pas, réessaie plus tard.');
+      // Si des photos sont déjà parties, la carte affichée ment : on recharge.
+      // Sinon on laisse la zone de saisie ouverte, pour corriger sans retaper.
+      if (retires.length) afficher();
+      return;
+    }
   }
   // Rechargement complet, comme après une suppression : la note affiche
   // désormais « modifié » sur le site, et c'est le service qui fait foi sur ce
@@ -714,6 +779,7 @@ async function afficher() {
   let contributions;
   try {
     contributions = await listerTout(motDePasse);
+    contributionsChargees = contributions;
   } catch (souci) {
     sessionStorage.removeItem('souvenirs.admin');
     motDePasse = '';
@@ -822,6 +888,25 @@ racine.addEventListener('click', async (evenement) => {
   const boutonEnregistrer = evenement.target.closest('[data-action="enregistrer-position"]');
   if (boutonEnregistrer) {
     await enregistrerPosition();
+    return;
+  }
+
+  /* Une croix de retrait, en modération, ne supprime rien : elle marque, et le
+     marquage s'annule d'un second clic. C'est toute la différence avec le site
+     public, où le même bouton efface le fichier sur-le-champ — là-bas l'auteur
+     agit sur sa propre note, sans écran d'édition pour porter un « Annuler ».
+
+     Le glyphe change avec l'état. Une croix qui resterait une croix ne dirait
+     pas que le geste est réversible, et c'est précisément ce qu'il faut
+     comprendre avant d'oser cliquer. */
+  const croixRetrait = evenement.target.closest('button[data-action="retirer-media"]');
+  if (croixRetrait) {
+    const figure = croixRetrait.closest('.souvenir__figure');
+    const retire = figure.classList.toggle('est-retire');
+    croixRetrait.textContent = retire ? '↺' : '×';
+    croixRetrait.setAttribute('aria-label',
+      retire ? 'Rendre ce fichier à la note' : 'Retirer ce fichier de la note');
+    croixRetrait.setAttribute('aria-pressed', String(retire));
     return;
   }
 

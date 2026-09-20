@@ -2218,6 +2218,33 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
   flex: 1 1 0;
   min-width: 2px;
   background: var(--soufre);
+  cursor: pointer;
+}
+
+/* La journée qu'on lit, peinte dans la couleur du texte : `--sel` est le seul
+   jeton dont les quatre habillages garantissent qu'il tranche sur `--nuit-2`,
+   le fond du graphique — mesuré entre 12,7 et 15,6 de contraste.
+
+   Mais tranche-t-elle sur ses VOISINES, qui sont la vraie question ? Non : dans
+   l'habillage par défaut, `--sel` et `--soufre` sont deux clairs voisins, et la
+   mesure tombe à 1,6 là où une forme en demande 3. Trois habillages sur quatre
+   échouaient à ce test. D'où la seconde marque, qui ne dépend d'aucune teinte :
+   pendant qu'on lit une journée, les autres s'effacent. L'opacité se comporte
+   pareil sur un fond sombre et sur du papier. */
+.visites__barre.est-visee { background: var(--sel); }
+.visites__serie.est-en-lecture .visites__barre:not(.est-visee) { opacity: .4; }
+
+/* Le bandeau de lecture. Sa hauteur est réservée par `min-height` : sans
+   elle, la page sauterait d'une ligne au premier survol, et le graphique
+   fuirait sous le curseur au moment précis où on le vise. */
+.visites__lecture {
+  min-height: 1.25rem;
+  margin: 0 0 .375rem;
+  padding: 0 .875rem;
+  font-family: var(--mono);
+  font-size: .6875rem;
+  letter-spacing: .04em;
+  color: var(--texte-2);
 }
 
 .visites__bornes {

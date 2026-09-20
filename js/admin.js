@@ -657,24 +657,50 @@ function gabaritChiffre(libelle, valeur, precision) {
   </div>`;
 }
 
+const pluriel = (n) => (n > 1 ? 's' : '');
+
 /* La série des jours, en barres verticales : c'est la forme d'une
    fréquentation, et elle répond du même coup à « est-ce que ça monte ? », ce
    qu'une liste de nombres ne dit qu'au prix d'une lecture ligne à ligne.
    Rapportée au jour le plus fréquenté, comme le classement des étapes : au
-   total, aucune barre ne serait visible. */
+   total, aucune barre ne serait visible.
+
+   La hauteur dit les VISITEURS et non plus les pages vues. Ce module s'appelle
+   Visiteurs, la question qu'on lui pose est « combien de monde, et quand » —
+   et le chiffre qui y répondait n'avait aucune forme : il ne vivait que dans
+   l'infobulle. Les pages vues restent lisibles, dans le bandeau, à un survol
+   de distance.
+
+   Le détail de chaque journée voyage désormais dans `data-lecture` plutôt que
+   dans `title`. L'attribut `title` n'existe pas au doigt — un téléphone n'a
+   pas de survol —, si bien que sur la moitié des écrans le détail était
+   simplement inatteignable. Une barre mesure quinze pixels de large : même à
+   la souris, viser trente et une cibles l'une après l'autre pour comparer deux
+   journées n'était pas une lecture. */
 function gabaritSerie(jours) {
   if (!jours.length) return '';
-  const sommet = Math.max(...jours.map((j) => j.pages), 1);
-  const barres = jours.map((j) => {
-    const hauteur = Math.max(2, (j.pages / sommet) * 100);
-    const titre = `${dateCourteFr(j.date)} — ${j.visiteurs} visiteur${j.visiteurs > 1 ? 's' : ''}, ${j.pages} page${j.pages > 1 ? 's' : ''}`;
-    return `<div class="visites__barre" style="height:${hauteur.toFixed(1)}%" title="${echapper(titre)}"></div>`;
+  const sommet = Math.max(...jours.map((j) => j.visiteurs), 1);
+  const pointe = jours.reduce((haut, j) => (j.visiteurs > haut.visiteurs ? j : haut), jours[0]);
+  const barres = jours.map((j, i) => {
+    const hauteur = Math.max(2, (j.visiteurs / sommet) * 100);
+    const lecture = `${dateCourteFr(j.date)} — ${j.visiteurs} visiteur${pluriel(j.visiteurs)}`
+      + `, ${j.pages} page${pluriel(j.pages)} vue${pluriel(j.pages)}`;
+    return `<div class="visites__barre" style="height:${hauteur.toFixed(1)}%"
+      data-jour="${i}" data-lecture="${echapper(lecture)}"></div>`;
   }).join('');
+
+  // Au repos, le bandeau ne reste pas vide : il dit l'étendue de la série et
+  // son sommet, c'est-à-dire ce qu'on cherche à savoir avant même de viser une
+  // journée. Un bandeau vide aurait aussi fait sauter la mise en page au
+  // premier survol.
+  const repos = `${jours.length} jour${pluriel(jours.length)} · sommet le `
+    + `${dateCourteFr(pointe.date)}, ${pointe.visiteurs} visiteur${pluriel(pointe.visiteurs)}`;
 
   return `<section class="conso__service">
     <h2 class="conso__nom">Jour après jour</h2>
-    <div class="visites__serie" role="img"
-         aria-label="Fréquentation quotidienne du ${echapper(dateCourteFr(jours[0].date))} au ${echapper(dateCourteFr(jours[jours.length - 1].date))}">
+    <p class="visites__lecture" data-repos="${echapper(repos)}" aria-live="polite">${echapper(repos)}</p>
+    <div class="visites__serie" tabindex="0" role="group"
+         aria-label="Visiteurs par jour du ${echapper(dateCourteFr(jours[0].date))} au ${echapper(dateCourteFr(jours[jours.length - 1].date))}. Flèches gauche et droite pour parcourir les journées.">
       ${barres}
     </div>
     <p class="visites__bornes">
@@ -682,6 +708,39 @@ function gabaritSerie(jours) {
       <span>${echapper(dateCourteFr(jours[jours.length - 1].date))}</span>
     </p>
   </section>`;
+}
+
+/* Lire une journée de la série : le bandeau l'affiche, la barre se marque.
+
+   `figer` distingue les deux gestes. Le survol ne fait que montrer — quitter
+   le graphique rend la lecture à ce qui était choisi — tandis qu'un clic, un
+   appui du doigt ou une flèche du clavier choisissent une journée et l'y
+   laissent. Sans cette distinction, passer la souris au-dessus du graphique
+   pour aller ailleurs effacerait la journée qu'on venait de retenir.
+
+   La journée choisie est gardée sur l'élément lui-même et non dans une
+   variable de module : la page se redessine entièrement à chaque
+   rafraîchissement, et une variable y survivrait pour désigner une barre qui
+   n'existe plus. */
+function lireJourVisite(serie, indice, { figer = false } = {}) {
+  if (!serie) return;
+  const barres = [...serie.querySelectorAll('.visites__barre')];
+  const barre = indice === null || indice === undefined ? null : barres[indice];
+  for (const autre of barres) autre.classList.toggle('est-visee', autre === barre);
+  // Les voisines s'effacent pendant la lecture : voir le commentaire de
+  // `.visites__barre.est-visee` dans la feuille de style — le seul changement
+  // de couleur ne suffit pas à distinguer la barre lue dans trois habillages.
+  serie.classList.toggle('est-en-lecture', Boolean(barre));
+  const bandeau = serie.parentElement?.querySelector('.visites__lecture');
+  if (bandeau) bandeau.textContent = barre ? barre.dataset.lecture : (bandeau.dataset.repos || '');
+  if (!figer) return;
+  if (barre) serie.dataset.fige = String(indice);
+  else delete serie.dataset.fige;
+}
+
+/** La journée retenue sur une série, ou `null` si la lecture est au repos. */
+function jourFigeDe(serie) {
+  return serie.dataset.fige === undefined ? null : Number(serie.dataset.fige);
 }
 
 function nomEtape(numero) {
@@ -864,6 +923,53 @@ function redessinerPosition() {
 // conteneur stable dont seul le contenu change à chaque rendu. La
 // délégation d'événement est donc suffisante : pas besoin de reposer
 // l'écouteur après chaque suppression ou changement de module.
+/* Le survol montre une journée, le départ la rend à celle qui est retenue.
+
+   `mouseout` et non `mouseleave` : la page se redessine en entier à chaque
+   rafraîchissement, les écouteurs sont donc délégués sur `racine`, qui ne
+   change jamais — et `mouseleave` ne remonte pas jusqu'à lui. On vérifie alors
+   soi-même qu'on quitte bien le graphique, et non qu'on passe d'une barre à sa
+   voisine. */
+racine.addEventListener('mouseover', (evenement) => {
+  const barre = evenement.target.closest('.visites__barre');
+  if (barre) lireJourVisite(barre.closest('.visites__serie'), Number(barre.dataset.jour));
+});
+
+racine.addEventListener('mouseout', (evenement) => {
+  const serie = evenement.target.closest('.visites__serie');
+  if (!serie || serie.contains(evenement.relatedTarget)) return;
+  lireJourVisite(serie, jourFigeDe(serie));
+});
+
+/* Les flèches parcourent les journées, comme dans n'importe quelle liste.
+
+   Sans clavier, ce graphique n'aurait qu'une lecture à la souris : trente et
+   une barres de quinze pixels, et rien pour qui n'en a pas. Le graphique est
+   un seul arrêt de tabulation — trente et un l'auraient rendu impraticable à
+   traverser — et les flèches font le reste, `Échap` rend la lecture au repos.
+
+   Arriver par la gauche choisit la dernière journée, par la droite la
+   première : dans les deux cas on entre par le bord d'où l'on vient. */
+racine.addEventListener('keydown', (evenement) => {
+  const serie = evenement.target.closest?.('.visites__serie');
+  if (!serie) return;
+  const nombre = serie.querySelectorAll('.visites__barre').length;
+  if (!nombre) return;
+  const actuel = jourFigeDe(serie);
+  const deplacements = {
+    ArrowLeft: () => Math.max(0, (actuel === null ? nombre : actuel) - 1),
+    ArrowRight: () => Math.min(nombre - 1, (actuel === null ? -1 : actuel) + 1),
+    Home: () => 0,
+    End: () => nombre - 1,
+    Escape: () => null,
+  };
+  const deplacer = deplacements[evenement.key];
+  if (!deplacer) return;
+  // Sans ça, les flèches feraient aussi défiler la page sous le graphique.
+  evenement.preventDefault();
+  lireJourVisite(serie, deplacer(), { figer: true });
+});
+
 racine.addEventListener('click', async (evenement) => {
   const boutonNav = evenement.target.closest('[data-onglet-admin]');
   if (boutonNav) {
@@ -888,6 +994,17 @@ racine.addEventListener('click', async (evenement) => {
   const boutonEnregistrer = evenement.target.closest('[data-action="enregistrer-position"]');
   if (boutonEnregistrer) {
     await enregistrerPosition();
+    return;
+  }
+
+  const barreVisite = evenement.target.closest('.visites__barre');
+  if (barreVisite) {
+    const serie = barreVisite.closest('.visites__serie');
+    const indice = Number(barreVisite.dataset.jour);
+    // Un second appui sur la même journée la relâche : au doigt, c'est le seul
+    // moyen de sortir d'une lecture sans en choisir une autre — il n'y a pas
+    // de « quitter le graphique » quand on n'a pas de curseur.
+    lireJourVisite(serie, jourFigeDe(serie) === indice ? null : indice, { figer: true });
     return;
   }
 

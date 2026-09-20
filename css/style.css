@@ -2206,11 +2206,17 @@ a.bouton-accueil:hover { background: var(--soufre); color: var(--sur-accent); }
    répond du même coup à « est-ce que ça monte ? ». 4,5 rem de haut — assez pour
    qu'une différence se voie, assez peu pour que la page reste une page de
    chiffres et non un tableau de bord. */
+/* Neuf rem, et non plus quatre et demi. Vingt-trois barres sur soixante-douze
+   pixels écrasaient l'écart qu'on vient justement lire : entre une journée à
+   trois visiteurs et une à un seul, il restait deux pixels. Doubler la hauteur
+   sans toucher à la largeur redonne aux petites journées une épaisseur
+   lisible, et c'est la fin de la série — celle où la fréquentation retombe
+   après le voyage — qui en profite le plus. */
 .visites__serie {
   display: flex;
   align-items: flex-end;
   gap: 2px;
-  height: 4.5rem;
+  height: 9rem;
   padding: .5rem .875rem 0;
   background: var(--nuit-2);
 }
